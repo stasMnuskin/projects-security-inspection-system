@@ -2,6 +2,11 @@ const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   const Inspection = sequelize.define('Inspection', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
     site: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -24,7 +29,13 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 'pending',
     },
+  }, {
+    tableName: 'Inspections'
   });
+
+  Inspection.associate = (models) => {
+    Inspection.belongsTo(models.User, { foreignKey: 'UserId' });
+  };
 
   return Inspection;
 };

@@ -1,4 +1,5 @@
 'use strict';
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Inspections', {
@@ -14,7 +15,8 @@ module.exports = {
       },
       date: {
         type: Sequelize.DATE,
-        allowNull: false
+        allowNull: false,
+        defaultValue: Sequelize.NOW
       },
       type: {
         type: Sequelize.STRING,
@@ -29,7 +31,7 @@ module.exports = {
         allowNull: false,
         defaultValue: 'pending'
       },
-      userId: {
+      UserId: {
         type: Sequelize.INTEGER,
         references: {
           model: 'Users',

@@ -72,9 +72,26 @@ User Routes
 POST /api/users/register: Register a new user
 Body: { username, email, password, role }
 
-
 POST /api/users/login: Login a user
 Body: { email, password }
+
+Inspection Routes
+
+POST /api/inspections: Create a new inspection (requires authentication)
+
+Body: { site, type, details }
+
+
+GET /api/inspections: Get all inspections (requires authentication)
+GET /api/inspections/:id: Get a specific inspection (requires authentication)
+PUT /api/inspections/:id: Update an inspection (requires authentication)
+
+Body: { site, type, details, status }
+
+
+DELETE /api/inspections/:id: Delete an inspection (requires authentication)
+
+To use authenticated routes, include the JWT token in the header:
 
 GET /api/users/me: Get current user info (requires authentication)
 
