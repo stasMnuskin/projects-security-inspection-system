@@ -59,6 +59,28 @@ security-inspection-system/
 │   ├── package.json
 │   └── .env
 └── frontend/ 
+
+Database Setup
+To set up the database schema, run:
+npx sequelize-cli db:migrate
+To undo the last migration:
+npx sequelize-cli db:migrate:undo
+
+API Endpoints
+User Routes
+
+POST /api/users/register: Register a new user
+Body: { username, email, password, role }
+
+
+POST /api/users/login: Login a user
+Body: { email, password }
+
+GET /api/users/me: Get current user info (requires authentication)
+
+To use authenticated routes, include the JWT token in the header:
+x-auth-token: YOUR_JWT_TOKEN
+
 Contributing
 Please read CONTRIBUTING.md for details on my code of conduct and the process for submitting pull requests.
 License
