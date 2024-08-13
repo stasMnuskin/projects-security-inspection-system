@@ -1,38 +1,15 @@
 const express = require('express');
-const { check } = require('express-validator');
 const inspectionController = require('../controllers/inspectionController');
 const auth = require('../middleware/auth');
+const roleAuth = require('../middleware/roleAuth');
+const { validateInspection, validateInspectionId, validate } = require('../middleware/validators');
 
 const router = express.Router();
 
-router.post(
-  '/',
-  [
-    auth,
-    [
-      check('site', 'Site is required').not().isEmpty(),
-      check('type', 'Type is required').not().isEmpty(),
-      check('details', 'Details are required').not().isEmpty(),
-    ],
-  ],
-  inspectionController.createInspection
-);
-
-router.get('/', auth, inspectionController.getInspections);
-router.get('/:id', auth, inspectionController.getInspection);
-router.put(
-  '/:id',
-  [
-    auth,
-    [
-      check('site', 'Site is required').not().isEmpty(),
-      check('type', 'Type is required').not().isEmpty(),
-      check('details', 'Details are required').not().isEmpty(),
-      check('status', 'Status is required').isIn(['pending', 'completed', 'requires_action']),
-    ],
-  ],
-  inspectionController.updateInspection
-);
-router.delete('/:id', auth, inspectionController.deleteInspection);
+router.post('/', [auth, roleAuth('admin', 'inspector'), ...validateInspection, validate], inspectionController.createInspection);
+router.get('/', [auth, roleAuth('admin', 'inspector', 'technician')], inspectionController.getInspections);
+router.get('/:id', [auth, roleAuth('admin', 'inspector', 'technician'), ...validateInspectionId, validate], inspectionController.getInspection);
+router.put('/:id', [auth, roleAuth('admin', 'inspector'), ...validateInspectionId, ...validateInspection, validate], inspectionController.updateInspection);
+router.delete('/:id', [auth, roleAuth('admin'), ...validateInspectionId, validate], inspectionController.deleteInspection);
 
 module.exports = router;

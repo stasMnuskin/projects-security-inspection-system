@@ -1,7 +1,14 @@
-const { DataTypes } = require('sequelize');
+'use strict';
+const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const Inspection = sequelize.define('Inspection', {
+  class Inspection extends Model {
+    static associate(models) {
+      Inspection.belongsTo(models.User, { foreignKey: 'UserId' });
+    }
+  }
+
+  Inspection.init({
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -23,6 +30,13 @@ module.exports = (sequelize) => {
     details: {
       type: DataTypes.JSON,
       allowNull: false,
+      validate: {
+        hasSeverity(value) {
+          if (!value.severity) {
+            throw new Error('Severity must be specified in details');
+          }
+        }
+      }
     },
     status: {
       type: DataTypes.ENUM('pending', 'completed', 'requires_action'),
@@ -30,12 +44,10 @@ module.exports = (sequelize) => {
       defaultValue: 'pending',
     },
   }, {
+    sequelize,
+    modelName: 'Inspection',
     tableName: 'Inspections'
   });
-
-  Inspection.associate = (models) => {
-    Inspection.belongsTo(models.User, { foreignKey: 'UserId' });
-  };
 
   return Inspection;
 };

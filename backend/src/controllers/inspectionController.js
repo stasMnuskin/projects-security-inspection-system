@@ -2,11 +2,6 @@ const { Inspection, User } = require('../models');
 const { validationResult } = require('express-validator');
 
 exports.createInspection = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   try {
     const { site, type, details } = req.body;
     const inspection = await Inspection.create({
