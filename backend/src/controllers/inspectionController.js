@@ -1,15 +1,51 @@
-const { Inspection, User } = require('../models');
 const { validationResult } = require('express-validator');
+const db = require('../models');
+const notificationController = require('./notificationController');
 
 exports.createInspection = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
-    const { site, type, details } = req.body;
-    const inspection = await Inspection.create({
-      site,
-      type,
+    const { entrepreneurId, siteId, inspectionTypeId, details } = req.body;
+    
+    const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId);
+    if (!entrepreneur) {
+      return res.status(404).json({ message: 'Entrepreneur not found' });
+    }
+
+    const site = await db.Site.findByPk(siteId);
+    if (!site) {
+      return res.status(404).json({ message: 'Site not found' });
+    }
+
+    const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
+    if (!inspectionType) {
+      return res.status(404).json({ message: 'Inspection Type not found' });
+    }
+
+    if (site.entrepreneurId !== entrepreneurId) {
+      return res.status(400).json({ message: 'Site does not belong to the specified entrepreneur' });
+    }
+
+    const inspection = await db.Inspection.create({
+      entrepreneurId,
+      siteId,
+      inspectionTypeId,
       details,
-      UserId: req.user.id,
+      userId: req.user.id,
     });
+
+    if (inspection.status === 'requires_action') {
+      await notificationController.createNotification(
+        req.user.id,
+        `New inspection requires action: ${inspection.id}`,
+        'warning'
+      );
+    }
+    
     res.status(201).json(inspection);
   } catch (error) {
     console.error('Error creating inspection:', error);
@@ -17,10 +53,14 @@ exports.createInspection = async (req, res) => {
   }
 };
 
-exports.getInspections = async (req, res) => {
+exports.getAllInspections = async (req, res) => {
   try {
-    const inspections = await Inspection.findAll({
-      include: [{ model: User, attributes: ['username', 'email'] }],
+    const inspections = await db.Inspection.findAll({
+      include: [
+        { model: db.Entrepreneur },
+        { model: db.Site },
+        { model: db.InspectionType }
+      ]
     });
     res.json(inspections);
   } catch (error) {
@@ -31,8 +71,12 @@ exports.getInspections = async (req, res) => {
 
 exports.getInspection = async (req, res) => {
   try {
-    const inspection = await Inspection.findByPk(req.params.id, {
-      include: [{ model: User, attributes: ['username', 'email'] }],
+    const inspection = await db.Inspection.findByPk(req.params.id, {
+      include: [
+        { model: db.Entrepreneur },
+        { model: db.Site },
+        { model: db.InspectionType }
+      ]
     });
     if (!inspection) {
       return res.status(404).json({ message: 'Inspection not found' });
@@ -51,12 +95,18 @@ exports.updateInspection = async (req, res) => {
   }
 
   try {
-    const { site, type, details, status } = req.body;
-    const inspection = await Inspection.findByPk(req.params.id);
+    const { entrepreneurId, siteId, inspectionTypeId, details, status } = req.body;
+    const inspection = await db.Inspection.findByPk(req.params.id);
     if (!inspection) {
       return res.status(404).json({ message: 'Inspection not found' });
     }
-    await inspection.update({ site, type, details, status });
+    await inspection.update({
+      entrepreneurId,
+      siteId,
+      inspectionTypeId,
+      details,
+      status
+    });
     res.json(inspection);
   } catch (error) {
     console.error('Error updating inspection:', error);
@@ -64,9 +114,9 @@ exports.updateInspection = async (req, res) => {
   }
 };
 
-exports.deleteInspection = async (req, res) => {
+exports.delete = async (req, res) => {
   try {
-    const inspection = await Inspection.findByPk(req.params.id);
+    const inspection = await db.Inspection.findByPk(req.params.id);
     if (!inspection) {
       return res.status(404).json({ message: 'Inspection not found' });
     }

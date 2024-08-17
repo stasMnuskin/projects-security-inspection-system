@@ -12,8 +12,7 @@ exports.getStatistics = async (req, res) => {
     
     res.json({ stats, performance });
   } catch (error) {
-    console.error('Error fetching statistics:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    next(error);
   }
 };
 
@@ -24,7 +23,6 @@ exports.getAlerts = async (req, res) => {
     
     res.json({ overdueInspections, criticalIssues });
   } catch (error) {
-    console.error('Error fetching alerts:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    next(error);
   }
 };
