@@ -2,6 +2,7 @@ const { User } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
+const errorHandler = require('../utils/appError');
 
 exports.registerUser = async (req, res, next) => {
   const errors = validationResult(req);
@@ -41,7 +42,7 @@ exports.registerUser = async (req, res, next) => {
       }
     );
   } catch (err) {
-    next(err);
+    errorHandler(err, req, res);
   }
 };
 
@@ -81,7 +82,8 @@ exports.loginUser = async (req, res) => {
       }
     );
   } catch (err) {
-    next(err);;
+    errorHandler(err, req, res);
+
   }
 };
 
@@ -117,7 +119,8 @@ exports.updateUser = async (req, res, next) => {
 
     res.json(user);
   } catch (err) {
-    next(err);
+    errorHandler(err, req, res);
+
   }
 };
 
@@ -131,7 +134,7 @@ exports.deleteUser = async (req, res, next) => {
     await user.destroy();
     res.json({ msg: 'User deleted' });
   } catch (err) {
-    next(err);
+    errorHandler(err, req, res);
   }
 };
 
@@ -147,8 +150,8 @@ exports.assignSiteToUser = async (req, res) => {
 
     await user.addSite(site);
     res.json({ message: 'Site assigned to user successfully' });
-  } catch (error) {
-    console.error('Error assigning site to user:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+  } catch (err) {
+    errorHandler(err, req, res);
+
   }
 };

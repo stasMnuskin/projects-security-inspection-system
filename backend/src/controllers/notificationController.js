@@ -1,4 +1,5 @@
 const db = require('../models');
+const errorHandler = require('../utils/appError');
 
 let io;
 
@@ -14,8 +15,7 @@ exports.createNotification = async (userId, message, type = 'info') => {
     }
     return notification;
   } catch (error) {
-    console.error('Error creating notification:', error);
-    throw error;
+    errorHandler(error);
   }
 };
 
@@ -27,8 +27,7 @@ exports.getUserNotifications = async (req, res) => {
     });
     res.json(notifications);
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error);
   }
 };
 
@@ -43,7 +42,6 @@ exports.markNotificationAsRead = async (req, res) => {
     await notification.update({ isRead: true });
     res.json({ message: 'Notification marked as read' });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error);
   }
 };

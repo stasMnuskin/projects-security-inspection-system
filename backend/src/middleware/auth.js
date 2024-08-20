@@ -9,6 +9,9 @@ module.exports = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    
+
     const user = await db.User.findByPk(decoded.user.id, {
       include: [{ model: db.Site }]
     });
@@ -20,6 +23,7 @@ module.exports = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
+    console.error('Error in auth middleware:', err);
     res.status(401).json({ msg: 'Token is not valid' });
   }
 };

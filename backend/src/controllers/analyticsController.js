@@ -1,5 +1,6 @@
 const statisticsService = require('../services/statisticsService');
 const alertService = require('../services/alertService');
+const errorHandler = require('../utils/appError');
 
 exports.getStatistics = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ exports.getStatistics = async (req, res) => {
     
     res.json({ stats, performance });
   } catch (error) {
-    next(error);
+    errorHandler(error, req, res);
   }
 };
 
@@ -23,6 +24,6 @@ exports.getAlerts = async (req, res) => {
     
     res.json({ overdueInspections, criticalIssues });
   } catch (error) {
-    next(error);
+    errorHandler(error, req, res);
   }
 };

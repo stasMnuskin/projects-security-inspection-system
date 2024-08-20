@@ -1,5 +1,6 @@
 const { Entrepreneur } = require('../models');
 const { validationResult } = require('express-validator');
+const errorHandler = require('../utils/appError');
 
 exports.createEntrepreneur = async (req, res) => {
   const errors = validationResult(req);
@@ -11,7 +12,7 @@ exports.createEntrepreneur = async (req, res) => {
     const entrepreneur = await Entrepreneur.create(req.body);
     res.status(201).json(entrepreneur);
   } catch (error) {
-    next(error);
+    errorHandler(error, req, res);
   }
 };
 
@@ -20,7 +21,7 @@ exports.getAllEntrepreneurs = async (req, res) => {
     const entrepreneurs = await Entrepreneur.findAll();
     res.json(entrepreneurs);
   } catch (error) {
-    next(error);;
+    errorHandler(error, req, res);
   }
 };
 
@@ -32,7 +33,7 @@ exports.getEntrepreneur = async (req, res) => {
     }
     res.json(entrepreneur);
   } catch (error) {
-    next(error);
+    errorHandler(error, req, res);
   }
 };
 
@@ -50,7 +51,7 @@ exports.updateEntrepreneur = async (req, res) => {
     await entrepreneur.update(req.body);
     res.json(entrepreneur);
   } catch (error) {
-    next(error);
+    errorHandler(error, req, res);
   }
 };
 
@@ -63,6 +64,6 @@ exports.deleteEntrepreneur = async (req, res) => {
     await entrepreneur.destroy();
     res.json({ message: 'Entrepreneur deleted successfully' });
   } catch (error) {
-    next(error);
+    errorHandler(error, req, res);
   }
 };

@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const db = require('../models');
-const notificationController = require('./notificationController');
+const errorHandler = require('../utils/appError');
 
 exports.createInspection = async (req, res) => {
   const errors = validationResult(req);
@@ -38,18 +38,9 @@ exports.createInspection = async (req, res) => {
       userId: req.user.id,
     });
 
-    if (inspection.status === 'requires_action') {
-      await notificationController.createNotification(
-        req.user.id,
-        `New inspection requires action: ${inspection.id}`,
-        'warning'
-      );
-    }
-    
     res.status(201).json(inspection);
   } catch (error) {
-    console.error('Error creating inspection:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error, req, res);
   }
 };
 
@@ -57,15 +48,15 @@ exports.getAllInspections = async (req, res) => {
   try {
     const inspections = await db.Inspection.findAll({
       include: [
-        { model: db.Entrepreneur },
-        { model: db.Site },
-        { model: db.InspectionType }
-      ]
+        { model: db.Entrepreneur, attributes: ['name'] },
+        { model: db.Site, attributes: ['name'] },
+        { model: db.InspectionType, attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']]
     });
     res.json(inspections);
   } catch (error) {
-    console.error('Error fetching inspections:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error, req, res);
   }
 };
 
@@ -73,9 +64,9 @@ exports.getInspection = async (req, res) => {
   try {
     const inspection = await db.Inspection.findByPk(req.params.id, {
       include: [
-        { model: db.Entrepreneur },
-        { model: db.Site },
-        { model: db.InspectionType }
+        { model: db.Entrepreneur, attributes: ['name'] },
+        { model: db.Site, attributes: ['name'] },
+        { model: db.InspectionType, attributes: ['name'] }
       ]
     });
     if (!inspection) {
@@ -83,8 +74,7 @@ exports.getInspection = async (req, res) => {
     }
     res.json(inspection);
   } catch (error) {
-    console.error('Error fetching inspection:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error, req, res);
   }
 };
 
@@ -100,17 +90,42 @@ exports.updateInspection = async (req, res) => {
     if (!inspection) {
       return res.status(404).json({ message: 'Inspection not found' });
     }
+    
+    if (entrepreneurId && entrepreneurId !== inspection.entrepreneurId) {
+      const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId);
+      if (!entrepreneur) {
+        return res.status(404).json({ message: 'Entrepreneur not found' });
+      }
+    }
+
+    if (siteId && siteId !== inspection.siteId) {
+      const site = await db.Site.findByPk(siteId);
+      if (!site) {
+        return res.status(404).json({ message: 'Site not found' });
+      }
+      if (site.entrepreneurId !== (entrepreneurId || inspection.entrepreneurId)) {
+        return res.status(400).json({ message: 'Site does not belong to the specified entrepreneur' });
+      }
+    }
+
+    if (inspectionTypeId && inspectionTypeId !== inspection.inspectionTypeId) {
+      const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
+      if (!inspectionType) {
+        return res.status(404).json({ message: 'Inspection Type not found' });
+      }
+    }
+
     await inspection.update({
-      entrepreneurId,
-      siteId,
-      inspectionTypeId,
-      details,
-      status
+      entrepreneurId: entrepreneurId || inspection.entrepreneurId,
+      siteId: siteId || inspection.siteId,
+      inspectionTypeId: inspectionTypeId || inspection.inspectionTypeId,
+      details: details || inspection.details,
+      status: status || inspection.status
     });
+    
     res.json(inspection);
   } catch (error) {
-    console.error('Error updating inspection:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error, req, res);
   }
 };
 
@@ -123,7 +138,6 @@ exports.delete = async (req, res) => {
     await inspection.destroy();
     res.json({ message: 'Inspection deleted successfully' });
   } catch (error) {
-    console.error('Error deleting inspection:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    errorHandler(error, req, res);
   }
 };

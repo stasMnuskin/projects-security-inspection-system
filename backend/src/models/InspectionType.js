@@ -4,26 +4,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    description: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
     formStructure: {
       type: DataTypes.JSON,
-      allowNull: false
-    },
-    frequency: {
-      type: DataTypes.ENUM('daily', 'weekly', 'monthly', 'quarterly', 'annually'),
       allowNull: false,
-      defaultValue: 'monthly'
-    },
-    estimatedDuration: {
-      type: DataTypes.INTEGER,
-      allowNull: true
-    },
-    requiredEquipment: {
-      type: DataTypes.ARRAY(DataTypes.STRING),
-      allowNull: true
+      defaultValue: {} // ערך ברירת מחדל ריק
     },
     siteId: {
       type: DataTypes.INTEGER,
