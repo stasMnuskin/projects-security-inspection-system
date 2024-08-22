@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { app } = require('../../src/server');
-const { clearDatabase, createUser, createEntrepreneur, createSite, createInspectionType } = require('../fixtures/db');
+const { clearDatabase, createUser, createEntrepreneur, createSite, createInspectionType, createInspection } = require('../fixtures/db');
 const { generateTestToken } = require('../../src/utils/authHelpers');
 
 describe('Inspection Controller', () => {
