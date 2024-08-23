@@ -2,7 +2,10 @@ let client;
 
 if (process.env.NODE_ENV !== 'test') {
   const Redis = require('ioredis');
-  client = new Redis(process.env.REDIS_URL);
+  client = new Redis({
+    host: process.env.DB_HOST,
+    port: process.env.REDIS_PORT
+  });
 }
 
 module.exports = {
