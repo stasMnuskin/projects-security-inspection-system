@@ -4,6 +4,7 @@ npm-debug.log
 
 # Environment
 .env
+.env.test
 
 # Logs
 logs

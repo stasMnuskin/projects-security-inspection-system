@@ -35,12 +35,6 @@ module.exports = {
       onDelete: 'CASCADE'
     });
 
-    // שלב 2: כאן תוכל להוסיף לוגיקה למילוי הערכים החדשים לרשומות קיימות
-    // לדוגמה:
-    // await queryInterface.sequelize.query(
-    //   `UPDATE "Inspections" SET "entrepreneurId" = 1, "siteId" = 1, "inspectionTypeId" = 1`
-    // );
-
     await queryInterface.changeColumn('Inspections', 'entrepreneurId', {
       type: Sequelize.INTEGER,
       allowNull: false
