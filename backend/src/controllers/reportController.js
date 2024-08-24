@@ -2,21 +2,22 @@ const cache = require('../utils/cache');
 const { Op } = require('sequelize');
 const { Inspection, Entrepreneur, Site, InspectionType } = require('../models');
 const logger = require('../utils/logger');
+const AppError = require('../utils/appError');
 
-exports.getInspectionsByDateRange = async (req, res) => {
+exports.getInspectionsByDateRange = async (req, res, next) => {
   console.time('getInspectionsByDateRange');
   try {
     const { startDate, endDate } = req.query;
     
     if (!startDate || !endDate) {
-      return res.status(400).json({ message: 'Start date and end date are required' });
+      throw new AppError('Start date and end date are required', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return res.status(400).json({ message: 'Invalid date format' });
+      throw new AppError('Invalid date format', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
     
     const inspections = await Inspection.findAll({
@@ -31,7 +32,11 @@ exports.getInspectionsByDateRange = async (req, res) => {
         { model: InspectionType, attributes: ['name'] }
       ]
     });
-    
+
+    if (!inspections) {
+      throw new AppError('inspections not found', 404, 'Inspections_NOT_FOUND').setRequestDetails(req);
+    }
+
     logger.info(`Found inspections: ${inspections.length}`);
     console.timeEnd('getInspectionsByDateRange');
     
@@ -39,11 +44,11 @@ exports.getInspectionsByDateRange = async (req, res) => {
   } catch (error) {
     console.timeEnd('getInspectionsByDateRange');
     logger.error('Error in getInspectionsByDateRange:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    next(error);
   }
 };
 
-exports.getInspectionStatsByEntrepreneur = async (req, res) => {
+exports.getInspectionStatsByEntrepreneur = async (req, res, next) => {
   try {
       const stats = await Inspection.findAll({
           attributes: [
@@ -57,14 +62,19 @@ exports.getInspectionStatsByEntrepreneur = async (req, res) => {
           nest: true
       });
 
+
+      if (!stats) {
+        throw new AppError('stats not found', 404, 'STATS_NOT_FOUND').setRequestDetails(req);
+      }
+
       res.json(stats);
   } catch (error) {
     logger.error('Error fetching inspection stats:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    next(error);
   }
 };
 
-exports.getInspectionStatusSummary = async (req, res) => {
+exports.getInspectionStatusSummary = async (req, res, next) => {
   try {
       const summary = await Inspection.findAll({
           attributes: [
@@ -75,15 +85,20 @@ exports.getInspectionStatusSummary = async (req, res) => {
           raw: true
       });
 
+
+      if (!summary) {
+        throw new AppError('Summary not found', 404, 'Summary_NOT_FOUND').setRequestDetails(req);
+      }
+
       res.json(summary);
   } catch (error) {
     
     logger.error('Error fetching inspection status summary:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    next(error)
   }
 };
 
-exports.exportInspectionsToCsv = async (req, res) => {
+exports.exportInspectionsToCsv = async (req, res, next) => {
   try {
       const inspections = await Inspection.findAll({
           include: [
@@ -94,6 +109,11 @@ exports.exportInspectionsToCsv = async (req, res) => {
           raw: true,
           nest: true
       });
+
+
+      if (!inspections) {
+        throw new AppError('Inspections not found', 404, 'Inspections_NOT_FOUND').setRequestDetails(req);
+      }
 
       const csvWriter = csv({
           path: 'inspections.csv',
@@ -114,11 +134,11 @@ exports.exportInspectionsToCsv = async (req, res) => {
       });
   } catch (error) {
     logger.error('Error exporting inspections to CSV:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    next(error);
   }
 };
 
-exports.exportInspectionsToPdf = async (req, res) => {
+exports.exportInspectionsToPdf = async (req, res, next) => {
   try {
       const inspections = await Inspection.findAll({
           include: [
@@ -129,6 +149,10 @@ exports.exportInspectionsToPdf = async (req, res) => {
           raw: true,
           nest: true
       });
+
+      if (!inspections) {
+        throw new AppError('Inspections not found', 404, 'Inspections_NOT_FOUND').setRequestDetails(req);
+      }
 
       const doc = new PDFDocument();
       let filename = 'inspections.pdf';
@@ -152,6 +176,6 @@ exports.exportInspectionsToPdf = async (req, res) => {
       doc.end();
   } catch (error) {
     logger.error('Error exporting inspections to PDF:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    next(error);
   }
 };

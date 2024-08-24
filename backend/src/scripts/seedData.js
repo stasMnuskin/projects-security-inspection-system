@@ -2,16 +2,12 @@ const db = require('../models');
 
 async function seedData() {
   try {
-    // יצירת יזם
     const entrepreneur = await db.Entrepreneur.create({ name: 'Test Entrepreneur' });
-
-    // יצירת אתר
     const site = await db.Site.create({ 
       name: 'Test Site', 
       entrepreneurId: entrepreneur.id 
     });
 
-    // יצירת סוג ביקורת
     await db.InspectionType.create({ 
       name: 'Test Inspection Type', 
       siteId: site.id,

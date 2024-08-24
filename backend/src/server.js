@@ -12,7 +12,7 @@ const userRoutes = require('./routes/userRoutes');
 
 const db = require('./models');
 const cache = require('./utils/cache');
-const errorHandler = require('./utils/appError');
+const AppError = require('./utils/appError');
 const logger = require('./utils/logger');
 const loggerMiddleware = require('./middleware/loggerMiddleware');
 const notificationController = require('./controllers/notificationController');
@@ -36,7 +36,18 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 
-app.use(errorHandler);
+app.use((err, req, res, next) => {
+  if (!(err instanceof AppError)) {
+    err = new AppError('An unexpected error occurred', 500, 'INTERNAL_SERVER_ERROR')
+      .setRequestDetails(req);
+  }
+
+  if (!err.path || !err.method) {
+    err.setRequestDetails(req);
+  }
+
+  res.status(err.statusCode).json(err.toJSON());
+});
 
 const PORT = process.env.PORT || 5000;
 

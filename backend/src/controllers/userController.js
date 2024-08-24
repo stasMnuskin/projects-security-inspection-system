@@ -2,12 +2,12 @@ const { User } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const errorHandler = require('../utils/appError');
+const AppError = require('../utils/appError');
 
 exports.registerUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
   }
 
   const { username, email, password, role } = req.body;
@@ -15,7 +15,7 @@ exports.registerUser = async (req, res, next) => {
   try {
     let user = await User.findOne({ where: { email } });
     if (user) {
-      return res.status(400).json({ msg: 'User already exists' });
+      throw new AppError('User already exists', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
 
     user = await User.create({
@@ -41,15 +41,15 @@ exports.registerUser = async (req, res, next) => {
         res.json({ token });
       }
     );
-  } catch (err) {
-    errorHandler(err, req, res);
+  } catch (error) {
+    next(error);
   }
 };
 
-exports.loginUser = async (req, res) => {
+exports.loginUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    throw new AppError('User already exists', 400, 'BAD_REQUEST').setRequestDetails(req);
   }
 
   const { email, password } = req.body;
@@ -57,12 +57,12 @@ exports.loginUser = async (req, res) => {
   try {
     let user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
+      throw new AppError('Invalid Credentials', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
 
     const isMatch = await user.validPassword(password);
     if (!isMatch) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
+      throw new AppError('Invalid Credentials', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
 
     const payload = {
@@ -81,9 +81,8 @@ exports.loginUser = async (req, res) => {
         res.json({ token });
       }
     );
-  } catch (err) {
-    errorHandler(err, req, res);
-
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -92,23 +91,28 @@ exports.getCurrentUser = async (req, res, next) => {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
+
+    if (!user) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND').setRequestDetails(req);
+    }
+
     res.json(user);
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 
 exports.updateUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
   }
 
   try {
     const { username, email, role } = req.body;
     const user = await User.findByPk(req.params.id);
     if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND').setRequestDetails(req);
     }
 
     user.username = username || user.username;
@@ -118,9 +122,8 @@ exports.updateUser = async (req, res, next) => {
     await user.save();
 
     res.json(user);
-  } catch (err) {
-    errorHandler(err, req, res);
-
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -128,30 +131,29 @@ exports.deleteUser = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND').setRequestDetails(req);
     }
 
     await user.destroy();
     res.json({ msg: 'User deleted' });
-  } catch (err) {
-    errorHandler(err, req, res);
+  } catch (error) {
+    next(error);
   }
 };
 
-exports.assignSiteToUser = async (req, res) => {
+exports.assignSiteToUser = async (req, res, next) => {
   try {
     const { userId, siteId } = req.body;
     const user = await db.User.findByPk(userId);
     const site = await db.Site.findByPk(siteId);
 
     if (!user || !site) {
-      return res.status(404).json({ message: 'User or Site not found' });
+      throw new AppError('User or Site not found', 404, 'USER_OR_SITE_NOT_FOUND').setRequestDetails(req);
     }
 
     await user.addSite(site);
     res.json({ message: 'Site assigned to user successfully' });
-  } catch (err) {
-    errorHandler(err, req, res);
-
+  } catch (error) {
+    next(error);
   }
 };

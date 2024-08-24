@@ -1,11 +1,11 @@
 const { validationResult } = require('express-validator');
 const db = require('../models');
-const errorHandler = require('../utils/appError');
+const AppError = require('../utils/appError');
 
-exports.createInspection = async (req, res) => {
+exports.createInspection = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
   }
 
   try {
@@ -13,21 +13,21 @@ exports.createInspection = async (req, res) => {
     
     const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId);
     if (!entrepreneur) {
-      return res.status(404).json({ message: 'Entrepreneur not found' });
+      throw new AppError('Entrepreneur not found', 404, 'Entrepreneur_NOT_FOUND').setRequestDetails(req);
     }
 
     const site = await db.Site.findByPk(siteId);
     if (!site) {
-      return res.status(404).json({ message: 'Site not found' });
+      throw new AppError('Site not found', 404, 'Site_NOT_FOUND').setRequestDetails(req);
     }
 
     const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
     if (!inspectionType) {
-      return res.status(404).json({ message: 'Inspection Type not found' });
+      throw new AppError('Inspection Type not found', 404, 'Inspection Type_NOT_FOUND').setRequestDetails(req);
     }
 
     if (site.entrepreneurId !== entrepreneurId) {
-      return res.status(400).json({ message: 'Site does not belong to the specified entrepreneur' });
+      throw new AppError('Site does not belong to the specified entrepreneur', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
 
     const inspection = await db.Inspection.create({
@@ -38,13 +38,17 @@ exports.createInspection = async (req, res) => {
       userId: req.user.id,
     });
 
+    if (!inspection) {
+      throw new AppError('INTERNAL_ERROR', 500, 'INTERNAL_ERROR').setRequestDetails(req);
+    }
+
     res.status(201).json(inspection);
   } catch (error) {
-    errorHandler(error, req, res);
+    next(error);
   }
 };
 
-exports.getAllInspections = async (req, res) => {
+exports.getAllInspections = async (req, res, next) => {
   try {
     const inspections = await db.Inspection.findAll({
       include: [
@@ -54,13 +58,18 @@ exports.getAllInspections = async (req, res) => {
       ],
       order: [['createdAt', 'DESC']]
     });
+
+    if (!inspections) {
+      throw new AppError('Inspections not found', 404, 'INSPECTIONS_NOT_FOUND').setRequestDetails(req);
+    }
+
     res.json(inspections);
   } catch (error) {
-    errorHandler(error, req, res);
+    next(error);
   }
 };
 
-exports.getInspection = async (req, res) => {
+exports.getInspection = async (req, res, next) => {
   try {
     const inspection = await db.Inspection.findByPk(req.params.id, {
       include: [
@@ -70,48 +79,49 @@ exports.getInspection = async (req, res) => {
       ]
     });
     if (!inspection) {
-      return res.status(404).json({ message: 'Inspection not found' });
+      throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
     }
     res.json(inspection);
   } catch (error) {
-    errorHandler(error, req, res);
+    next(error);
   }
 };
 
-exports.updateInspection = async (req, res) => {
+exports.updateInspection = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
   }
 
   try {
     const { entrepreneurId, siteId, inspectionTypeId, details, status } = req.body;
     const inspection = await db.Inspection.findByPk(req.params.id);
     if (!inspection) {
-      return res.status(404).json({ message: 'Inspection not found' });
+      throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
     }
     
     if (entrepreneurId && entrepreneurId !== inspection.entrepreneurId) {
       const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId);
       if (!entrepreneur) {
-        return res.status(404).json({ message: 'Entrepreneur not found' });
+        throw new AppError('Entrepreneur not found', 404, 'Entrepreneur_NOT_FOUND').setRequestDetails(req);
       }
     }
 
     if (siteId && siteId !== inspection.siteId) {
       const site = await db.Site.findByPk(siteId);
       if (!site) {
-        return res.status(404).json({ message: 'Site not found' });
+        throw new AppError('Site not found', 404, 'Site_NOT_FOUND').setRequestDetails(req);
       }
       if (site.entrepreneurId !== (entrepreneurId || inspection.entrepreneurId)) {
-        return res.status(400).json({ message: 'Site does not belong to the specified entrepreneur' });
+        throw new AppError('Site does not belong to the specified entrepreneur', 400, 'BAD_REQUEST').setRequestDetails(req);
       }
     }
 
     if (inspectionTypeId && inspectionTypeId !== inspection.inspectionTypeId) {
       const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
       if (!inspectionType) {
-        return res.status(404).json({ message: 'Inspection Type not found' });
+        throw new AppError('Inspection Type not found', 404, 'Inspection_Type_NOT_FOUND').setRequestDetails(req);
+
       }
     }
 
@@ -123,21 +133,27 @@ exports.updateInspection = async (req, res) => {
       status: status || inspection.status
     });
     
+    if (!inspection) {
+      throw new AppError('INTERNAL_ERROR', 500, 'INTERNAL_ERROR').setRequestDetails(req);
+    }
+
     res.json(inspection);
   } catch (error) {
-    errorHandler(error, req, res);
+    next(error);
   }
 };
 
-exports.delete = async (req, res) => {
+exports.delete = async (req, res, next) => {
   try {
     const inspection = await db.Inspection.findByPk(req.params.id);
+
     if (!inspection) {
-      return res.status(404).json({ message: 'Inspection not found' });
+      throw new AppError('Inspection not found', 404, 'Inspection_NOT_FOUND').setRequestDetails(req);
     }
+
     await inspection.destroy();
     res.json({ message: 'Inspection deleted successfully' });
   } catch (error) {
-    errorHandler(error, req, res);
+    next(error);
   }
 };

@@ -1,5 +1,5 @@
 const db = require('../models');
-const errorHandler = require('../utils/appError');
+const AppError = require('../utils/appError');
 
 let io;
 
@@ -15,33 +15,37 @@ exports.createNotification = async (userId, message, type = 'info') => {
     }
     return notification;
   } catch (error) {
-    errorHandler(error);
+    AppError(error);
   }
 };
 
-exports.getUserNotifications = async (req, res) => {
+exports.getUserNotifications = async (req, res, next) => {
   try {
     const notifications = await db.Notification.findAll({
       where: { userId: req.user.id },
       order: [['createdAt', 'DESC']]
     });
+
+    if (!notifications) {
+      throw new AppError('notifications not found', 404, 'Notifications_NOT_FOUND').setRequestDetails(req);
+    }
     res.json(notifications);
   } catch (error) {
-    errorHandler(error);
+    next(error);
   }
 };
 
-exports.markNotificationAsRead = async (req, res) => {
+exports.markNotificationAsRead = async (req, res, next) => {
   try {
     const notification = await db.Notification.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
     if (!notification) {
-      return res.status(404).json({ message: 'Notification not found' });
+      throw new AppError('notification not found', 404, 'Notification_NOT_FOUND').setRequestDetails(req);
     }
     await notification.update({ isRead: true });
     res.json({ message: 'Notification marked as read' });
   } catch (error) {
-    errorHandler(error);
+    next(error);
   }
 };

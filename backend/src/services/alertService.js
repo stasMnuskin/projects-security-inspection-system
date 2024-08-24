@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 
 exports.checkOverdueInspections = async () => {
   const overdueThreshold = new Date();
-  overdueThreshold.setDate(overdueThreshold.getDate() - 7);  // 7 ימים לדוגמה
+  overdueThreshold.setDate(overdueThreshold.getDate() - 30);
 
   const overdueInspections = await Inspection.findAll({
     where: {
