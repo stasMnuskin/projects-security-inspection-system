@@ -1,8 +1,10 @@
+const AppError = require('../utils/appError');
+
 module.exports = (req, res, next) => {
   const siteId = parseInt(req.params.siteId || req.body.siteId);
 
   if (!siteId) {
-    return res.status(400).json({ message: "Site ID is required" });
+    throw new AppError('Site ID is required', 400, 'BAD_REQUEST').setRequestDetails(req);
   }
 
   if (req.user.role === 'admin') {
@@ -14,6 +16,6 @@ module.exports = (req, res, next) => {
   if (hasAccess) {
     next();
   } else {
-    res.status(403).json({ message: "You don't have access to this site" });
+    throw new AppError('You dont have access to this site', 403, 'FORBIDDEN').setRequestDetails(req);
   }
 };

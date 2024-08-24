@@ -1,4 +1,5 @@
 const { body, param, validationResult } = require('express-validator');
+const AppError = require('../utils/appError');
 
 exports.validateInspection = [
   body('site').notEmpty().withMessage('Site is required'),
@@ -19,5 +20,5 @@ exports.validate = (req, res, next) => {
   if (errors.isEmpty()) {
     return next();
   }
-  return res.status(400).json({ errors: errors.array() });
+  throw new AppError('Validation error', 400, 'BAD_REQUEST').setRequestDetails(req);
 };

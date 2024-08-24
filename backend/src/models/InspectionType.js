@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
     formStructure: {
       type: DataTypes.JSON,
       allowNull: false,
-      defaultValue: {} // ערך ברירת מחדל ריק
+      defaultValue: {} 
     },
     siteId: {
       type: DataTypes.INTEGER,
