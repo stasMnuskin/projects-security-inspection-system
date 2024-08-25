@@ -1,6 +1,7 @@
 const statisticsService = require('../services/statisticsService');
 const alertService = require('../services/alertService');
 const AppError = require('../utils/appError');
+const logger = require('../utils/logger');
 
 exports.getStatistics = async (req, res, next) => {
   try {
@@ -14,7 +15,9 @@ exports.getStatistics = async (req, res, next) => {
       throw new AppError('Stats or performance error', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
     res.json({ stats, performance });
+    logger.info(`Function getStatistics called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in getStatistics:', error);
     next(error);
   }
 };
@@ -27,7 +30,9 @@ exports.getAlerts = async (req, res, next) => {
       throw new AppError('getAlerts', 400, 'BAD_REQUEST').setRequestDetails(req);
     }
     res.json({ overdueInspections, criticalIssues });
+    logger.info(`Function getAlerts called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in getAlerts:', error);
     next(error);
   }
 };

@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const db = require('../models');
+const { User } = require('../models');
 const AppError = require('../utils/appError');
 
 module.exports = async (req, res, next) => {
@@ -7,24 +7,20 @@ module.exports = async (req, res, next) => {
     const token = req.header('x-auth-token');
 
     if (!token) {
-      throw new AppError('No token, authorization denied', 401, 'UNAUTHORIZED').setRequestDetails(req);
+      return next(new AppError('No token, authorization denied', 401, 'NO_TOKEN'));
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    
-
-    const user = await db.User.findByPk(decoded.user.id, {
-      include: [{ model: db.Site }]
-    });
+    const user = await User.findByPk(decoded.id);
 
     if (!user) {
-      throw new AppError('Token is not valid', 401, 'UNAUTHORIZED').setRequestDetails(req);
+      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
     }
 
     req.user = user;
     next();
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    console.error('Auth middleware error:', err);
+    next(new AppError('Token is not valid', 401, 'INVALID_TOKEN'));
   }
 };

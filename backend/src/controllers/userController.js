@@ -1,88 +1,70 @@
 const { User } = require('../models');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { validationResult } = require('express-validator');
 const AppError = require('../utils/appError');
+const logger = require('../utils/logger');
 
 exports.registerUser = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
-  }
-
-  const { username, email, password, role } = req.body;
-
   try {
-    let user = await User.findOne({ where: { email } });
-    if (user) {
-      throw new AppError('User already exists', 400, 'BAD_REQUEST').setRequestDetails(req);
+    const { username, email, password, role } = req.body;
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return next(new AppError('User already exists', 400, 'USER_ALREADY_EXISTS'));
     }
 
-    user = await User.create({
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const user = await User.create({
       username,
       email,
-      password,
+      password: hashedPassword,
       role
     });
 
-    const payload = {
-      user: {
-        id: user.id,
-        role: user.role
-      }
-    };
-
-    jwt.sign(
-      payload,
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '5h' },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
+      { expiresIn: '1d' }
     );
+
+    logger.info(`New user registered: ${email}`);
+    res.status(201).json({ token });
   } catch (error) {
-    next(error);
+    console.error('Registration error:', error);
+    logger.error(`Registration error: ${error.message}`);
+    next(new AppError('Error registering user', 500, 'REGISTRATION_ERROR'));
   }
 };
 
 exports.loginUser = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw new AppError('User already exists', 400, 'BAD_REQUEST').setRequestDetails(req);
-  }
-
-  const { email, password } = req.body;
-
   try {
-    let user = await User.findOne({ where: { email } });
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ where: { email } });
     if (!user) {
-      throw new AppError('Invalid Credentials', 400, 'BAD_REQUEST').setRequestDetails(req);
+      return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
 
-    const isMatch = await user.validPassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      throw new AppError('Invalid Credentials', 400, 'BAD_REQUEST').setRequestDetails(req);
+      return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
 
-    const payload = {
-      user: {
-        id: user.id,
-        role: user.role
-      }
-    };
-
-    jwt.sign(
-      payload,
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '5h' },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
+      { expiresIn: '1d' }
     );
+
+    logger.info(`User logged in: ${email}`);
+    res.json({ token });
   } catch (error) {
-    next(error);
+    console.error('Login error:', error);
+    logger.error(`Login error: ${error.message}`);
+    next(new AppError('Error logging in', 500, 'LOGIN_ERROR'));
   }
 };
 
@@ -91,39 +73,58 @@ exports.getCurrentUser = async (req, res, next) => {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
-
     if (!user) {
-      throw new AppError('User not found', 404, 'USER_NOT_FOUND').setRequestDetails(req);
+      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
     }
-
+    logger.info(`User details fetched: ${user.email}`);
     res.json(user);
   } catch (error) {
-    next(error);
+    logger.error(`Error fetching user: ${error.message}`);
+    next(new AppError('Error fetching user details', 500, 'USER_FETCH_ERROR'));
   }
 };
 
 exports.updateUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
+    return next(new AppError('Validation error', 400, 'VALIDATION_ERROR', true, errors.array()));
   }
 
+  const { username, email, password } = req.body;
+
   try {
-    const { username, email, role } = req.body;
-    const user = await User.findByPk(req.params.id);
+    let user = await User.findByPk(req.user.id);
     if (!user) {
-      throw new AppError('User not found', 404, 'USER_NOT_FOUND').setRequestDetails(req);
+      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
     }
 
-    user.username = username || user.username;
-    user.email = email || user.email;
-    user.role = role || user.role;
+    if (username) user.username = username;
+    if (email) user.email = email;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
 
     await user.save();
 
-    res.json(user);
-  } catch (error) {
-    next(error);
+    logger.info(`User updated: ${user.email}`);
+    res.json({ message: 'User updated successfully' });
+  } catch (err) {
+    logger.error(`Update user error: ${err.message}`);
+    next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
+  }
+};
+
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] }
+    });
+    logger.info('All users fetched');
+    res.json(users);
+  } catch (err) {
+    logger.error(`Error fetching all users: ${err.message}`);
+    next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
   }
 };
 
@@ -131,29 +132,39 @@ exports.deleteUser = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
-      throw new AppError('User not found', 404, 'USER_NOT_FOUND').setRequestDetails(req);
+      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
     }
 
     await user.destroy();
-    res.json({ msg: 'User deleted' });
-  } catch (error) {
-    next(error);
+    logger.info(`User deleted: ${user.email}`);
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    logger.error(`Delete user error: ${err.message}`);
+    next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
   }
 };
 
-exports.assignSiteToUser = async (req, res, next) => {
-  try {
-    const { userId, siteId } = req.body;
-    const user = await db.User.findByPk(userId);
-    const site = await db.Site.findByPk(siteId);
+exports.changeUserRole = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new AppError('Validation error', 400, 'VALIDATION_ERROR', true, errors.array()));
+  }
 
-    if (!user || !site) {
-      throw new AppError('User or Site not found', 404, 'USER_OR_SITE_NOT_FOUND').setRequestDetails(req);
+  const { role } = req.body;
+
+  try {
+    let user = await User.findByPk(req.params.id);
+    if (!user) {
+      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
     }
 
-    await user.addSite(site);
-    res.json({ message: 'Site assigned to user successfully' });
-  } catch (error) {
-    next(error);
+    user.role = role;
+    await user.save();
+
+    logger.info(`User role changed: ${user.email}, New role: ${role}`);
+    res.json({ message: 'User role updated successfully' });
+  } catch (err) {
+    logger.error(`Change user role error: ${err.message}`);
+    next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
   }
 };

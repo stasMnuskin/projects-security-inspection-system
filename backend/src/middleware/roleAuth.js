@@ -1,15 +1,17 @@
 const AppError = require('../utils/appError');
 
-module.exports = (...allowedRoles) => {
+const roleAuth = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
-      throw new AppError('No user information found', 403, 'FORBIDDEN').setRequestDetails(req);
+      return next(new AppError('User not found in request', 401, 'USER_NOT_FOUND'));
     }
     
     if (allowedRoles.includes(req.user.role)) {
       next();
     } else {
-      throw new AppError('Access denied', 403, 'FORBIDDEN').setRequestDetails(req);
+      next(new AppError('Access denied', 403, 'FORBIDDEN'));
     }
   };
 };
+
+module.exports = roleAuth;

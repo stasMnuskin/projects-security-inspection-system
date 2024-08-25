@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const db = require('../models');
 const AppError = require('../utils/appError');
+const logger = require('../utils/logger');
 
 exports.createInspection = async (req, res, next) => {
   const errors = validationResult(req);
@@ -43,7 +44,9 @@ exports.createInspection = async (req, res, next) => {
     }
 
     res.status(201).json(inspection);
+    logger.info(`Function createInspection called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in createInspection:', error);
     next(error);
   }
 };
@@ -64,7 +67,9 @@ exports.getAllInspections = async (req, res, next) => {
     }
 
     res.json(inspections);
+    logger.info(`Function getAllInspections called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in getAllInspections:', error);
     next(error);
   }
 };
@@ -82,7 +87,9 @@ exports.getInspection = async (req, res, next) => {
       throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
     }
     res.json(inspection);
+    logger.info(`Function getInspection called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in getInspection:', error);
     next(error);
   }
 };
@@ -138,7 +145,9 @@ exports.updateInspection = async (req, res, next) => {
     }
 
     res.json(inspection);
+    logger.info(`Function called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in registerUser:', error);
     next(error);
   }
 };
@@ -153,7 +162,9 @@ exports.delete = async (req, res, next) => {
 
     await inspection.destroy();
     res.json({ message: 'Inspection deleted successfully' });
+    logger.info(`Function delete called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
+    logger.error('Error in delete:', error);
     next(error);
   }
 };

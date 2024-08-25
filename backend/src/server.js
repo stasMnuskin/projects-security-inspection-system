@@ -1,8 +1,12 @@
 require('dotenv').config();
 const express = require('express');
+const csrf = require('csurf');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
+const i18n = require('i18n');
+const path = require('path');
 
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
@@ -29,6 +33,24 @@ app.use(loggerMiddleware);
 // WebSocket setup
 notificationController.setIo(io);
 
+app.use(cookieParser());
+if (process.env.NODE_ENV === 'production') {
+  app.use(csrf({ cookie: true }));
+} else {
+  app.use((req, res, next) => {
+    req.csrfToken = () => '';
+    next();
+  });
+}
+
+i18n.configure({
+  locales: ['en', 'he'],
+  directory: path.join(__dirname, 'locales'),
+  defaultLocale: 'en',
+  objectNotation: true
+});
+app.use(i18n.init);
+
 // Routes
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/inspections', inspectionRoutes);
@@ -38,6 +60,7 @@ app.use('/api/users', userRoutes);
 
 app.use((err, req, res, next) => {
   if (!(err instanceof AppError)) {
+    console.error('Global error handler:', err);
     err = new AppError('An unexpected error occurred', 500, 'INTERNAL_SERVER_ERROR')
       .setRequestDetails(req);
   }
@@ -47,6 +70,32 @@ app.use((err, req, res, next) => {
   }
 
   res.status(err.statusCode).json(err.toJSON());
+
+  const statusCode = err.statusCode || 500;
+  const status = err.status || 'error';
+  const message = err.message || 'Something went wrong';
+
+  res.status(statusCode).json({
+    status,
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+
+});
+
+
+app.use((err, req, res, next) => {
+  if (err.code !== 'EBADCSRFTOKEN') return next(err);
+  
+  res.status(403);
+  res.send('Session has expired or form tampered with');
+});
+
+app.use((req, res, next) => {
+  const lang = req.query.lang || req.cookies.lang || 'en';
+  res.cookie('lang', lang, { maxAge: 900000, httpOnly: true });
+  req.setLocale(lang);
+  next();
 });
 
 const PORT = process.env.PORT || 5000;

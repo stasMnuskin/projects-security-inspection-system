@@ -1,69 +1,58 @@
+const bcrypt = require('bcrypt');
 const db = require('../../src/models');
 
-async function clearDatabase() {
-  const tables = ['Inspection', 'InspectionType', 'Site', 'Entrepreneur', 'User'];
-  for (const table of tables) {
-    if (db[table]) {
-      await db[table].destroy({ where: {}, force: true });
-    }
-  }
-}
+const clearDatabase = async () => {
+  await db.Inspection.destroy({ where: {} });
+  await db.InspectionType.destroy({ where: {} });
+  await db.Site.destroy({ where: {} });
+  await db.Entrepreneur.destroy({ where: {} });
+  await db.User.destroy({ where: {} });
+};
 
-async function createUser(overrides = {}) {
-  return db.User.create({
-    username: 'testuser432',
-    email: 'test32@example.com',
-    password: 'password32123',
-    role: 'admin',
-    ...overrides
-  });
-}
+const createUser = async (data = {}) => {
+  const defaultData = {
+    username: 'testuser',
+    email: 'test@example.com',
+    password: await bcrypt.hash('password123', 10),
+    role: 'inspector'
+  };
+  
+  return await db.User.create({ ...defaultData, ...data });
+};
 
-async function createEntrepreneur(overrides = {}) {
-  return db.Entrepreneur.create({
+const createEntrepreneur = async (overrides = {}) => {
+  const defaultData = {
     name: 'Test Entrepreneur',
     contactPerson: 'John Doe',
-    email: 'entrepreneur@test.com',
     phone: '1234567890',
-    ...overrides
-  });
-}
+    email: 'entrepreneur@test.com'
+  };
+  return await db.Entrepreneur.create({ ...defaultData, ...overrides });
+};
 
-async function createSite(overrides = {}) {
-  const entrepreneur = overrides.entrepreneurId ? { id: overrides.entrepreneurId } : await createEntrepreneur();
-  return db.Site.create({
+const createSite = async (overrides = {}) => {
+  const defaultData = {
     name: 'Test Site',
-    entrepreneurId: entrepreneur.id,
-    ...overrides
-  });
-}
+    address: '123 Test St'
+  };
+  return await db.Site.create({ ...defaultData, ...overrides });
+};
 
-async function createInspectionType(overrides = {}) {
-  const site = overrides.siteId ? { id: overrides.siteId } : await createSite();
-  return db.InspectionType.create({
+const createInspectionType = async (overrides = {}) => {
+  const defaultData = {
     name: 'Test Inspection Type',
-    siteId: site.id,
-    formStructure: JSON.stringify({ field1: 'text', field2: 'checkbox' }),
-    ...overrides
-  });
-}
+    formStructure: { field1: 'text', field2: 'checkbox' }
+  };
+  return await db.InspectionType.create({ ...defaultData, ...overrides });
+};
 
-async function createInspection(overrides = {}) {
-  const user = overrides.userId ? { id: overrides.userId } : await createUser();
-  const entrepreneur = overrides.entrepreneurId ? { id: overrides.entrepreneurId } : await createEntrepreneur();
-  const site = overrides.siteId ? { id: overrides.siteId } : await createSite({ entrepreneurId: entrepreneur.id });
-  const inspectionType = overrides.inspectionTypeId ? { id: overrides.inspectionTypeId } : await createInspectionType({ siteId: site.id });
-
-  return db.Inspection.create({
-    entrepreneurId: entrepreneur.id,
-    siteId: site.id,
-    inspectionTypeId: inspectionType.id,
-    userId: user.id,
+const createInspection = async (overrides = {}) => {
+  const defaultData = {
     details: { test: 'data' },
-    status: 'pending',
-    ...overrides
-  });
-}
+    status: 'pending'
+  };
+  return await db.Inspection.create({ ...defaultData, ...overrides });
+};
 
 module.exports = {
   clearDatabase,

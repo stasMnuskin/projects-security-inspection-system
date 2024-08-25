@@ -10,16 +10,16 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
     const { startDate, endDate } = req.query;
     
     if (!startDate || !endDate) {
-      throw new AppError('Start date and end date are required', 400, 'BAD_REQUEST').setRequestDetails(req);
+      return next(new AppError('Start date and end date are required', 400, 'MISSING_DATES'));
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      throw new AppError('Invalid date format', 400, 'BAD_REQUEST').setRequestDetails(req);
+      return next(new AppError('Invalid date format', 400, 'INVALID_DATE_FORMAT'));
     }
-    
+
     const inspections = await Inspection.findAll({
       where: {
         createdAt: {
@@ -32,19 +32,13 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
         { model: InspectionType, attributes: ['name'] }
       ]
     });
-
-    if (!inspections) {
-      throw new AppError('inspections not found', 404, 'Inspections_NOT_FOUND').setRequestDetails(req);
-    }
-
-    logger.info(`Found inspections: ${inspections.length}`);
-    console.timeEnd('getInspectionsByDateRange');
+    
+    // console.timeEnd('getInspectionsByDateRange');
     
     res.json(inspections);
   } catch (error) {
     console.timeEnd('getInspectionsByDateRange');
-    logger.error('Error in getInspectionsByDateRange:', error);
-    next(error);
+    next(new AppError('Error fetching inspections', 500, 'INSPECTION_FETCH_ERROR', true, error.stack));
   }
 };
 
@@ -68,6 +62,7 @@ exports.getInspectionStatsByEntrepreneur = async (req, res, next) => {
       }
 
       res.json(stats);
+      logger.info(`Function called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
     logger.error('Error fetching inspection stats:', error);
     next(error);
@@ -91,6 +86,7 @@ exports.getInspectionStatusSummary = async (req, res, next) => {
       }
 
       res.json(summary);
+      logger.info(`Function called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
     
     logger.error('Error fetching inspection status summary:', error);
