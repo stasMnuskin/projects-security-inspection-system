@@ -11,5 +11,6 @@ router.get('/stats-by-entrepreneur', auth, roleAuth('admin', 'security_officer',
 router.get('/status-summary', auth, roleAuth('admin', 'security_officer', 'inspector'), reportController.getInspectionStatusSummary);
 router.get('/csv', auth, roleAuth('admin', 'manager'), reportController.exportInspectionsToCsv);
 router.get('/pdf', auth, roleAuth('admin', 'manager'), reportController.exportInspectionsToPdf);
+router.get('/inspections', reportController.getInspectionReport);
 
 module.exports = router;

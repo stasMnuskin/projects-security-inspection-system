@@ -10,6 +10,8 @@ const path = require('path');
 
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
+const faultRoutes = require('./routes/faultRoutes');
+
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -57,6 +59,8 @@ app.use('/api/inspections', inspectionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/faults', faultRoutes);
+
 
 app.use((err, req, res, next) => {
   if (!(err instanceof AppError)) {

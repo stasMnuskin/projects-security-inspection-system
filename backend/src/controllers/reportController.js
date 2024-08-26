@@ -175,3 +175,41 @@ exports.exportInspectionsToPdf = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getInspectionReport = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const inspections = await Inspection.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [new Date(startDate), new Date(endDate)]
+        }
+      },
+      include: [
+        { model: Entrepreneur },
+        { model: Site },
+        { model: InspectionType }
+      ]
+    });
+    
+    const report = inspections.reduce((acc, inspection) => {
+      const entrepreneur = inspection.Entrepreneur.name;
+      const site = inspection.Site.name;
+      const inspectionType = inspection.InspectionType.name;
+      
+      if (!acc[entrepreneur]) acc[entrepreneur] = {};
+      if (!acc[entrepreneur][site]) acc[entrepreneur][site] = {};
+      if (!acc[entrepreneur][site][inspectionType]) acc[entrepreneur][site][inspectionType] = [];
+      
+      acc[entrepreneur][site][inspectionType].push(inspection);
+      
+      return acc;
+    }, {});
+    
+    logger.info('Inspection report generated');
+    res.json(report);
+  } catch (error) {
+    logger.error('Error generating inspection report:', error);
+    next(new AppError('Error generating inspection report', 500));
+  }
+};
