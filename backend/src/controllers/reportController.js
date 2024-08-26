@@ -1,14 +1,15 @@
-const cache = require('../utils/cache');
 const { Op } = require('sequelize');
 const { Inspection, Entrepreneur, Site, InspectionType } = require('../models');
-const logger = require('../utils/logger');
 const AppError = require('../utils/appError');
+const logger = require('../utils/logger');
+const cache = require('../utils/cache');
 
 exports.getInspectionsByDateRange = async (req, res, next) => {
-  console.time('getInspectionsByDateRange');
+  const startTime = process.hrtime();
+  
   try {
     const { startDate, endDate } = req.query;
-    
+
     if (!startDate || !endDate) {
       return next(new AppError('Start date and end date are required', 400, 'MISSING_DATES'));
     }
@@ -20,24 +21,62 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
       return next(new AppError('Invalid date format', 400, 'INVALID_DATE_FORMAT'));
     }
 
+    // Try to get data from cache
+    const cacheKey = `inspections:${startDate}:${endDate}`;
+    const cachedData = await cache.get(cacheKey);
+    
+    if (cachedData) {
+      const endTime = process.hrtime(startTime);
+      logger.info(`Retrieved inspections from cache in ${endTime[0]}s ${endTime[1] / 1000000}ms`);
+      return res.json(JSON.parse(cachedData));
+    }
+
+    // If not in cache, fetch from database
     const inspections = await Inspection.findAll({
       where: {
         createdAt: {
           [Op.between]: [start, end]
         }
       },
-      include: [
-        { model: Entrepreneur, attributes: ['name'] },
-        { model: Site, attributes: ['name'] },
-        { model: InspectionType, attributes: ['name'] }
-      ]
+      attributes: ['id', 'createdAt', 'status', 'entrepreneurId', 'siteId', 'inspectionTypeId'],
+      order: [['createdAt', 'DESC']]
     });
-    
-    // console.timeEnd('getInspectionsByDateRange');
-    
-    res.json(inspections);
+
+    // Fetch related data in bulk
+    const entrepreneurIds = [...new Set(inspections.map(i => i.entrepreneurId))];
+    const siteIds = [...new Set(inspections.map(i => i.siteId))];
+    const inspectionTypeIds = [...new Set(inspections.map(i => i.inspectionTypeId))];
+
+    const [entrepreneurs, sites, inspectionTypes] = await Promise.all([
+      Entrepreneur.findAll({ where: { id: entrepreneurIds }, attributes: ['id', 'name'] }),
+      Site.findAll({ where: { id: siteIds }, attributes: ['id', 'name'] }),
+      InspectionType.findAll({ where: { id: inspectionTypeIds }, attributes: ['id', 'name'] })
+    ]);
+
+    // Create lookup objects
+    const entrepreneurLookup = entrepreneurs.reduce((acc, e) => ({ ...acc, [e.id]: e.name }), {});
+    const siteLookup = sites.reduce((acc, s) => ({ ...acc, [s.id]: s.name }), {});
+    const inspectionTypeLookup = inspectionTypes.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
+
+    // Combine data
+    const result = inspections.map(inspection => ({
+      id: inspection.id,
+      createdAt: inspection.createdAt,
+      status: inspection.status,
+      entrepreneur: entrepreneurLookup[inspection.entrepreneurId],
+      site: siteLookup[inspection.siteId],
+      inspectionType: inspectionTypeLookup[inspection.inspectionTypeId]
+    }));
+
+    // Cache the result
+    await cache.set(cacheKey, JSON.stringify(result), 3600); // Cache for 1 hour
+
+    const endTime = process.hrtime(startTime);
+    logger.info(`Retrieved inspections from database in ${endTime[0]}s ${endTime[1] / 1000000}ms`);
+
+    res.json(result);
   } catch (error) {
-    console.timeEnd('getInspectionsByDateRange');
+    logger.error('Error fetching inspections:', error);
     next(new AppError('Error fetching inspections', 500, 'INSPECTION_FETCH_ERROR', true, error.stack));
   }
 };

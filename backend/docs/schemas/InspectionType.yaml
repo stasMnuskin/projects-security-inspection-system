@@ -1,0 +1,41 @@
+components:
+  schemas:
+    InspectionType:
+      type: object
+      required:
+        - name
+        - siteId
+        - formStructure
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        siteId:
+          type: integer
+        formStructure:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+                enum: [text, number, boolean, select, multiselect, date]
+              options:
+                type: array
+                items:
+                  type: string
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly, quarterly, annually]
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true

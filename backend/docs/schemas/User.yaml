@@ -1,0 +1,28 @@
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - username
+        - email
+        - role
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, security_officer, technician, inspector]
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true

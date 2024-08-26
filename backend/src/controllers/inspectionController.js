@@ -97,58 +97,78 @@ exports.getInspection = async (req, res, next) => {
 exports.updateInspection = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
+    return next(new AppError('Validation Error', 400, 'VALIDATION_ERROR').setRequestDetails(req));
   }
+
+  const transaction = await db.sequelize.transaction();
 
   try {
     const { entrepreneurId, siteId, inspectionTypeId, details, status } = req.body;
-    const inspection = await db.Inspection.findByPk(req.params.id);
+    const inspection = await db.Inspection.findByPk(req.params.id, { transaction });
+
     if (!inspection) {
-      throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
+      await transaction.rollback();
+      return next(new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req));
     }
-    
+
+    // Validate relationships if they are being updated
     if (entrepreneurId && entrepreneurId !== inspection.entrepreneurId) {
-      const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId);
+      const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId, { transaction });
       if (!entrepreneur) {
-        throw new AppError('Entrepreneur not found', 404, 'Entrepreneur_NOT_FOUND').setRequestDetails(req);
+        await transaction.rollback();
+        return next(new AppError('Entrepreneur not found', 404, 'ENTREPRENEUR_NOT_FOUND').setRequestDetails(req));
       }
     }
 
     if (siteId && siteId !== inspection.siteId) {
-      const site = await db.Site.findByPk(siteId);
+      const site = await db.Site.findByPk(siteId, { transaction });
       if (!site) {
-        throw new AppError('Site not found', 404, 'Site_NOT_FOUND').setRequestDetails(req);
+        await transaction.rollback();
+        return next(new AppError('Site not found', 404, 'SITE_NOT_FOUND').setRequestDetails(req));
       }
       if (site.entrepreneurId !== (entrepreneurId || inspection.entrepreneurId)) {
-        throw new AppError('Site does not belong to the specified entrepreneur', 400, 'BAD_REQUEST').setRequestDetails(req);
+        await transaction.rollback();
+        return next(new AppError('Site does not belong to the specified entrepreneur', 400, 'INVALID_SITE').setRequestDetails(req));
       }
     }
 
     if (inspectionTypeId && inspectionTypeId !== inspection.inspectionTypeId) {
-      const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
+      const inspectionType = await db.InspectionType.findByPk(inspectionTypeId, { transaction });
       if (!inspectionType) {
-        throw new AppError('Inspection Type not found', 404, 'Inspection_Type_NOT_FOUND').setRequestDetails(req);
-
+        await transaction.rollback();
+        return next(new AppError('Inspection Type not found', 404, 'INSPECTION_TYPE_NOT_FOUND').setRequestDetails(req));
       }
     }
 
-    await inspection.update({
-      entrepreneurId: entrepreneurId || inspection.entrepreneurId,
-      siteId: siteId || inspection.siteId,
-      inspectionTypeId: inspectionTypeId || inspection.inspectionTypeId,
-      details: details || inspection.details,
-      status: status || inspection.status
-    });
-    
-    if (!inspection) {
-      throw new AppError('INTERNAL_ERROR', 500, 'INTERNAL_ERROR').setRequestDetails(req);
+    // Update only the fields that are provided and different from current values
+    const updates = {
+      entrepreneurId: entrepreneurId !== undefined && entrepreneurId !== inspection.entrepreneurId ? entrepreneurId : undefined,
+      siteId: siteId !== undefined && siteId !== inspection.siteId ? siteId : undefined,
+      inspectionTypeId: inspectionTypeId !== undefined && inspectionTypeId !== inspection.inspectionTypeId ? inspectionTypeId : undefined,
+      details: details !== undefined && JSON.stringify(details) !== JSON.stringify(inspection.details) ? details : undefined,
+      status: status !== undefined && status !== inspection.status ? status : undefined
+    };
+
+    // Filter out undefined values
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== undefined)
+    );
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      await transaction.rollback();
+      return res.status(304).json({ message: 'No changes to update' });
     }
 
+    await inspection.update(filteredUpdates, { transaction });
+
+    await transaction.commit();
+
     res.json(inspection);
-    logger.info(`Function called with params: ${JSON.stringify(req.params)}`);
+    logger.info(`Inspection updated: ${inspection.id}`, { updates: filteredUpdates });
   } catch (error) {
-    logger.error('Error in registerUser:', error);
-    next(error);
+    await transaction.rollback();
+    logger.error('Error in updateInspection:', error);
+    next(new AppError('Error updating inspection', 500, 'UPDATE_ERROR').setRequestDetails(req));
   }
 };
 

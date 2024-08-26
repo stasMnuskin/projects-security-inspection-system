@@ -1,7 +1,9 @@
+const Redis = require('ioredis');
+const logger = require('./logger');
+
 let client;
 
 if (process.env.NODE_ENV !== 'test') {
-  const Redis = require('ioredis');
   client = new Redis({
     host: process.env.DB_HOST,
     port: process.env.REDIS_PORT
@@ -15,7 +17,7 @@ module.exports = {
       const value = await client.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error('Redis get error:', error);
+      logger.error('Redis get error:', { error: error.message, stack: error.stack });
       return null;
     }
   },
@@ -24,7 +26,7 @@ module.exports = {
     try {
       await client.set(key, JSON.stringify(value), 'EX', expireIn);
     } catch (error) {
-      console.error('Redis set error:', error);
+      logger.error('Redis set error:', { error: error.message, stack: error.stack });
     }
   },
   client

@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const AppError = require('../utils/appError');
+const logger = require('../utils/logger');
+const { getActiveSecrets } = require('../utils/secretManager');
 
 module.exports = async (req, res, next) => {
   try {
@@ -10,7 +12,26 @@ module.exports = async (req, res, next) => {
       return next(new AppError('No token, authorization denied', 401, 'NO_TOKEN'));
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const activeSecrets = await getActiveSecrets();
+    let decoded;
+    let isValid = false;
+
+    for (const secret of activeSecrets) {
+      try {
+        decoded = jwt.verify(token, secret);
+        isValid = true;
+        break;
+      } catch (err) {
+        if (err.name !== 'JsonWebTokenError') {
+          logger.error('JWT verification error:', err);
+        }
+      }
+    }
+
+    if (!isValid) {
+      return next(new AppError('Token is not valid', 401, 'INVALID_TOKEN'));
+    }
+
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
@@ -20,7 +41,7 @@ module.exports = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.error('Auth middleware error:', err);
+    logger.error('Auth middleware error:', err);
     next(new AppError('Token is not valid', 401, 'INVALID_TOKEN'));
   }
 };

@@ -1,0 +1,41 @@
+components:
+  schemas:
+    Fault:
+      type: object
+      required:
+        - siteId
+        - inspectionTypeId
+        - parameter
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        siteId:
+          type: integer
+        inspectionTypeId:
+          type: integer
+        parameter:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        status:
+          type: string
+          enum: [open, closed]
+        openedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        closedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true

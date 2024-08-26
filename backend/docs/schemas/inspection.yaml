@@ -1,0 +1,32 @@
+components:
+  schemas:
+    Inspection:
+      type: object
+      required:
+        - entrepreneurId
+        - siteId
+        - inspectionTypeId
+        - details
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        entrepreneurId:
+          type: integer
+        siteId:
+          type: integer
+        inspectionTypeId:
+          type: integer
+        details:
+          type: object
+        status:
+          type: string
+          enum: [pending, completed, requires_action]
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true

@@ -7,11 +7,13 @@ const http = require('http');
 const socketIo = require('socket.io');
 const i18n = require('i18n');
 const path = require('path');
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const swaggerConfig = require('./config/swaggerConfig');
 
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
 const faultRoutes = require('./routes/faultRoutes');
-
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -27,15 +29,20 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+const swaggerDocs = swaggerJsDoc(swaggerConfig);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(loggerMiddleware);
+app.use(cookieParser());
 
 // WebSocket setup
 notificationController.setIo(io);
 
-app.use(cookieParser());
+// CSRF protection
 if (process.env.NODE_ENV === 'production') {
   app.use(csrf({ cookie: true }));
 } else {
@@ -45,6 +52,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Internationalization setup
 i18n.configure({
   locales: ['en', 'he'],
   directory: path.join(__dirname, 'locales'),
@@ -61,10 +69,27 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/faults', faultRoutes);
 
+// Language middleware
+app.use((req, res, next) => {
+  const lang = req.query.lang || req.cookies.lang || 'en';
+  res.cookie('lang', lang, { maxAge: 900000, httpOnly: true });
+  req.setLocale(lang);
+  next();
+});
 
+// Error handling middleware
 app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    logger.error('CSRF error:', err);
+    return res.status(403).json({
+      status: 'error',
+      message: 'Session has expired or form tampered with',
+      errorCode: 'CSRF_ERROR'
+    });
+  }
+
   if (!(err instanceof AppError)) {
-    console.error('Global error handler:', err);
+    logger.error('Unhandled error:', err);
     err = new AppError('An unexpected error occurred', 500, 'INTERNAL_SERVER_ERROR')
       .setRequestDetails(req);
   }
@@ -73,67 +98,26 @@ app.use((err, req, res, next) => {
     err.setRequestDetails(req);
   }
 
-  res.status(err.statusCode).json(err.toJSON());
-
   const statusCode = err.statusCode || 500;
-  const status = err.status || 'error';
-  const message = err.message || 'Something went wrong';
+  const errorResponse = {
+    status: err.status || 'error',
+    message: err.message,
+    errorCode: err.errorCode,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  };
 
-  res.status(statusCode).json({
-    status,
-    message,
+  logger.error(`Error ${statusCode}: ${err.message}`, {
+    errorCode: err.errorCode,
+    path: err.path,
+    method: err.method,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 
+  res.status(statusCode).json(errorResponse);
 });
 
-
-app.use((err, req, res, next) => {
-  if (err.code !== 'EBADCSRFTOKEN') return next(err);
-  
-  res.status(403);
-  res.send('Session has expired or form tampered with');
-});
-
-app.use((req, res, next) => {
-  const lang = req.query.lang || req.cookies.lang || 'en';
-  res.cookie('lang', lang, { maxAge: 900000, httpOnly: true });
-  req.setLocale(lang);
-  next();
-});
-
+// Server startup
 const PORT = process.env.PORT || 5000;
-
-async function seedDatabase() {
-  try {
-    const [entrepreneur] = await db.Entrepreneur.findOrCreate({
-      where: { name: 'Test Entrepreneur' },
-      defaults: { 
-        name: 'Test Entrepreneur',
-        contactPerson: 'John Doe',
-        email: 'john@example.com',
-        phone: '1234567890'
-      }
-    });
-    
-    const [site] = await db.Site.findOrCreate({
-      where: { name: 'Test Site', entrepreneurId: entrepreneur.id },
-      defaults: { name: 'Test Site', entrepreneurId: entrepreneur.id }
-    });
-    
-    await db.InspectionType.findOrCreate({
-      where: { name: 'Test Inspection Type', siteId: site.id },
-      defaults: { 
-        name: 'Test Inspection Type', 
-        siteId: site.id,
-        formStructure: JSON.stringify({ field1: 'text', field2: 'checkbox' })
-      }
-    });
-    logger.info('Database seeded successfully');
-  } catch (err) {
-    logger.error('Error seeding database', { error: err });
-  }
-}
 
 function setupWebSocket() {
   io.on('connection', (socket) => {
@@ -144,6 +128,7 @@ function setupWebSocket() {
   });
 }
 
+// Error handlers
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });
 });
@@ -167,11 +152,8 @@ async function startServer() {
     await db.sequelize.authenticate();
     logger.info('Database connection has been established successfully.');
 
-    if (process.env.NODE_ENV !== 'test') {
-      await db.sequelize.sync({ alter: true });
-      logger.info('Database synced successfully.');
-      await seedDatabase();
-    }
+    await db.sequelize.sync();
+    logger.info('Database synced successfully.');
 
     setupWebSocket();
 
@@ -179,19 +161,15 @@ async function startServer() {
       logger.info('Redis connected');
     });
 
-    return server;
-  } catch (error) {
-    logger.error('Unable to start server:', { error: error });
-    throw error;
-  }
-}
-
-if (process.env.NODE_ENV !== 'test') {
-  startServer().then(server => {
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
-  });
+  } catch (error) {
+    logger.error('Unable to start server:', { error: error });
+    process.exit(1);
+  }
 }
 
-module.exports = { app, startServer };
+startServer();
+
+module.exports = { app, server };

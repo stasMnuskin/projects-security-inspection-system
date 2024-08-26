@@ -1,0 +1,193 @@
+/api/inspection-types:
+  post:
+    summary: Create a new inspection type
+    tags: [Inspection Types]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - name
+              - siteId
+              - formStructure
+              - frequency
+            properties:
+              name:
+                type: string
+              siteId:
+                type: integer
+              formStructure:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum: [text, number, boolean, select, multiselect, date]
+                    options:
+                      type: array
+                      items:
+                        type: string
+              frequency:
+                type: string
+                enum: [daily, weekly, monthly, quarterly, annually]
+    responses:
+      201:
+        description: Inspection type created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionType'
+      400:
+        description: Bad request
+      401:
+        description: Unauthorized
+      403:
+        description: Forbidden
+
+  get:
+    summary: Get all inspection types
+    tags: [Inspection Types]
+    security:
+      - bearerAuth: []
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/InspectionType'
+      401:
+        description: Unauthorized
+
+/api/inspection-types/{id}:
+  get:
+    summary: Get a specific inspection type
+    tags: [Inspection Types]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionType'
+      401:
+        description: Unauthorized
+      404:
+        description: Inspection type not found
+
+  put:
+    summary: Update an inspection type
+    tags: [Inspection Types]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              formStructure:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum: [text, number, boolean, select, multiselect, date]
+                    options:
+                      type: array
+                      items:
+                        type: string
+              frequency:
+                type: string
+                enum: [daily, weekly, monthly, quarterly, annually]
+    responses:
+      200:
+        description: Inspection type updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionType'
+      400:
+        description: Bad request
+      401:
+        description: Unauthorized
+      403:
+        description: Forbidden
+      404:
+        description: Inspection type not found
+
+  delete:
+    summary: Delete an inspection type
+    tags: [Inspection Types]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Inspection type deleted successfully
+      401:
+        description: Unauthorized
+      403:
+        description: Forbidden
+      404:
+        description: Inspection type not found
+
+/api/inspection-types/site/{siteId}:
+  get:
+    summary: Get all inspection types for a specific site
+    tags: [Inspection Types]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: siteId
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/InspectionType'
+      401:
+        description: Unauthorized
+      404:
+        description: Site not found

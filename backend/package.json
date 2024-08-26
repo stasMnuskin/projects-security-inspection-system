@@ -19,6 +19,7 @@
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "csurf": "^1.11.0",
     "csv-writer": "^1.6.0",
     "dotenv": "^16.4.5",
@@ -33,6 +34,9 @@
     "redis": "^4.7.0",
     "sequelize": "^6.37.3",
     "socket.io": "^4.7.5",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "util": "^0.12.5",
     "winston": "^3.14.2"
   },
   "devDependencies": {

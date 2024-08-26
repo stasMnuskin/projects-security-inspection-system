@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 module.exports = {
+  jwtSecretLifetime: 24 * 60 * 60 * 1000, 
   development: {
     username: process.env.DB_USER,
     password: process.env.DB_PASS,

@@ -1,0 +1,120 @@
+/api/inspections:
+  post:
+    summary: Create a new inspection
+    tags: [Inspections]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Inspection'
+    responses:
+      201:
+        description: Created
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inspection'
+      400:
+        description: Bad request
+      401:
+        description: Unauthorized
+      403:
+        description: Forbidden
+
+  get:
+    summary: Get all inspections
+    tags: [Inspections]
+    security:
+      - bearerAuth: []
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Inspection'
+      401:
+        description: Unauthorized
+
+/api/inspections/{id}:
+  get:
+    summary: Get a specific inspection
+    tags: [Inspections]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inspection'
+      401:
+        description: Unauthorized
+      404:
+        description: Inspection not found
+
+  put:
+    summary: Update an inspection
+    tags: [Inspections]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Inspection'
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inspection'
+      400:
+        description: Bad request
+      401:
+        description: Unauthorized
+      403:
+        description: Forbidden
+      404:
+        description: Inspection not found
+
+  delete:
+    summary: Delete an inspection
+    tags: [Inspections]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Inspection deleted successfully
+      401:
+        description: Unauthorized
+      403:
+        description: Forbidden
+      404:
+        description: Inspection not found

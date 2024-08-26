@@ -1,0 +1,29 @@
+components:
+  schemas:
+    Notification:
+      type: object
+      required:
+        - userId
+        - message
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        userId:
+          type: integer
+        message:
+          type: string
+        type:
+          type: string
+          enum: [info, warning, error]
+        isRead:
+          type: boolean
+          default: false
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true

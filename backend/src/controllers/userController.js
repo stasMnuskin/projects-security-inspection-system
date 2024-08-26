@@ -1,9 +1,9 @@
-const { User } = require('../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { validationResult } = require('express-validator');
+const { User } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
+const { getActiveSecrets } = require('../utils/secretManager')
 
 exports.registerUser = async (req, res, next) => {
   try {
@@ -23,18 +23,17 @@ exports.registerUser = async (req, res, next) => {
       password: hashedPassword,
       role
     });
-
+    const activeSecrets = getActiveSecrets();
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
+      activeSecrets[0],
       { expiresIn: '1d' }
     );
 
     logger.info(`New user registered: ${email}`);
     res.status(201).json({ token });
   } catch (error) {
-    console.error('Registration error:', error);
-    logger.error(`Registration error: ${error.message}`);
+    logger.error(`Registration error: ${error.message}`, { stack: error.stack });
     next(new AppError('Error registering user', 500, 'REGISTRATION_ERROR'));
   }
 };
@@ -52,10 +51,10 @@ exports.loginUser = async (req, res, next) => {
     if (!isMatch) {
       return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
-
+    const activeSecrets = getActiveSecrets();
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
+      activeSecrets[0],
       { expiresIn: '1d' }
     );
 
