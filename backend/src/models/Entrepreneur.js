@@ -5,25 +5,19 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true
     },
-    contactPerson: {
-      type: DataTypes.STRING,
-      allowNull: true  
-    },
+    contactPerson: DataTypes.STRING,
+    phone: DataTypes.STRING,
     email: {
       type: DataTypes.STRING,
-      allowNull: true,  
-      validate: {
-        isEmail: true
-      }
-    },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: true  
+      validate: { isEmail: true }
     }
   });
 
   Entrepreneur.associate = (models) => {
-    Entrepreneur.hasMany(models.Site, { foreignKey: 'entrepreneurId' });
+    Entrepreneur.hasMany(models.Site, { 
+      foreignKey: 'entrepreneurId', 
+      onDelete: 'CASCADE' 
+    });
   };
 
   return Entrepreneur;

@@ -1,25 +1,14 @@
-const { Sequelize } = require('sequelize');
-require('dotenv').config({ path: '.env.test' });
-
-const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
-  host: process.env.DB_HOST,
-  dialect: 'postgres',
-  logging: false
-});
+const db = require('./src/models');
+const { clearDatabase } = require('./__tests__/fixtures/db');
 
 beforeAll(async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Connection to the test database has been established successfully.');
-    await sequelize.sync({ force: true });
-  } catch (error) {
-    console.error('Unable to connect to the test database:', error);
-    throw error;
-  }
+  await db.sequelize.sync({ force: true });
+});
+
+beforeEach(async () => {
+  await clearDatabase();
 });
 
 afterAll(async () => {
-  await sequelize.close();
+  await db.sequelize.close();
 });
-
-global.sequelize = sequelize;

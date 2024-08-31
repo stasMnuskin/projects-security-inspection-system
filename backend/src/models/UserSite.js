@@ -17,6 +17,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     }
   });
-
+  UserSite.associate = function(models) {
+    UserSite.belongsTo(models.Site);
+  };
   return UserSite;
 };

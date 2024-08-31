@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const { validationResult } = require('express-validator');
 const { User } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
@@ -72,45 +73,23 @@ exports.getCurrentUser = async (req, res, next) => {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
-    if (!user) {
-      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
-    }
-    logger.info(`User details fetched: ${user.email}`);
-    res.json(user);
+    if (!user) return next(new AppError('User not found', 404));
+    res.status(200).json(user);
   } catch (error) {
-    logger.error(`Error fetching user: ${error.message}`);
-    next(new AppError('Error fetching user details', 500, 'USER_FETCH_ERROR'));
+    next(error);
   }
 };
 
 exports.updateUser = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return next(new AppError('Validation error', 400, 'VALIDATION_ERROR', true, errors.array()));
-  }
-
-  const { username, email, password } = req.body;
-
   try {
-    let user = await User.findByPk(req.user.id);
-    if (!user) {
-      return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
-    }
-
-    if (username) user.username = username;
-    if (email) user.email = email;
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
-    }
-
-    await user.save();
-
-    logger.info(`User updated: ${user.email}`);
-    res.json({ message: 'User updated successfully' });
-  } catch (err) {
-    logger.error(`Update user error: ${err.message}`);
-    next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
+    const [updatedRows] = await User.update(req.body, {
+      where: { id: req.user.id },
+      returning: true
+    });
+    if (updatedRows === 0) return next(new AppError('User not found', 404));
+    res.status(200).json({ message: 'User updated successfully' });
+  } catch (error) {
+    next(error);
   }
 };
 

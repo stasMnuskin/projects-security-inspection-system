@@ -1,18 +1,18 @@
 const request = require('supertest');
-const { app } = require('../src/server');
-const { Entrepreneur } = require('../src/models');
+const { app } = require('../../src/server');
+const db = require('../../src/models');
 const {
-  clearDatabase,
+
   createUser,
   createEntrepreneur
-} = require('./fixtures/db');
-const { generateTestToken } = require('../src/utils/authHelpers');
+} = require('../fixtures/db');
+const { generateTestToken } = require('../../src/utils/authHelpers');
 
 describe('Entrepreneur Controller', () => {
   let adminToken;
 
   beforeEach(async () => {
-    await clearDatabase();
+    
     const adminUser = await createUser({ role: 'admin' });
     adminToken = generateTestToken(adminUser.id, 'admin');
   });
@@ -109,7 +109,7 @@ describe('Entrepreneur Controller', () => {
 
       expect(response.statusCode).toBe(200);
 
-      const deletedEntrepreneur = await Entrepreneur.findByPk(entrepreneur.id);
+      const deletedEntrepreneur = await db.Entrepreneur.findByPk(entrepreneur.id);
       expect(deletedEntrepreneur).toBeNull();
     });
   });

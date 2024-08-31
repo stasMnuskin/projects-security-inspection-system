@@ -3,7 +3,8 @@ const { promisify } = require('util');
 const randomBytes = promisify(crypto.randomBytes);
 
 let activeSecrets = [process.env.JWT_SECRET];
-const secretLifetime = 24 * 60 * 60 * 1000; 
+const secretLifetime = 24 * 60 * 60 * 1000; // 24 hours
+let intervalId;
 
 async function rotateSecrets() {
   const newSecret = (await randomBytes(32)).toString('hex');
@@ -14,13 +15,20 @@ async function rotateSecrets() {
   }
 }
 
-// Initialize secret rotation
-setInterval(rotateSecrets, secretLifetime);
+function startRotation() {
+  intervalId = setInterval(rotateSecrets, secretLifetime);
+}
+
+function stopRotation() {
+  clearInterval(intervalId);
+}
 
 function getActiveSecrets() {
   return activeSecrets;
 }
 
 module.exports = {
-  getActiveSecrets
+  getActiveSecrets,
+  startRotation,
+  stopRotation
 };

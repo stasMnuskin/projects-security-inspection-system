@@ -1,28 +1,34 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-    class Fault extends Model {
-      /**
-       * Helper method for defining associations.
-       * This method is not a part of Sequelize lifecycle.
-       * The `models/index` file will call this method automatically.
-       */
-      static associate(models) {
-        // define association here
-      }
+  const Fault = sequelize.define('Fault', {
+    siteId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    inspectionTypeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    parameter: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    status: {
+      type: DataTypes.ENUM('open', 'closed'),
+      defaultValue: 'open'
+    },
+    openedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    closedAt: {
+      type: DataTypes.DATE
     }
-    Fault.init({
-        siteId: DataTypes.INTEGER,
-        inspectionTypeId: DataTypes.INTEGER,
-        parameter: DataTypes.STRING,
-        status: DataTypes.ENUM('open', 
-          'closed'), openedAt: DataTypes.DATE, closedAt: DataTypes.DATE
-        },
-        {
-          sequelize,
-          modelName: 'Fault',
-        });
-      return Fault;
-    };
+  });
+
+  Fault.associate = function(models) {
+    Fault.belongsTo(models.Site, { foreignKey: 'siteId' });
+    Fault.belongsTo(models.InspectionType, { foreignKey: 'inspectionTypeId' });
+  };
+
+  return Fault;
+};

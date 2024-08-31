@@ -3,7 +3,7 @@ process.env.JWT_SECRET = 'test'
 const request = require('supertest');
 const { app } = require('../../src/server');
 const {
-  clearDatabase,
+  
   createUser,
   createEntrepreneur,
   createSite,
@@ -13,9 +13,6 @@ const {
 const { generateTestToken } = require('../../src/utils/authHelpers');
 
 describe('Inspection Controller', () => {
-  beforeEach(async () => {
-    await clearDatabase();
-  });
 
   it('should get inspections by date range', async () => {
     const user = await createUser({ role: 'admin' });

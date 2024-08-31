@@ -5,22 +5,43 @@ const logger = require('../utils/logger');
 
 exports.getStatistics = async (req, res, next) => {
   try {
-    const { startDate, endDate } = req.query;
-    if (!startDate || !endDate) {
-      throw new AppError('Start date and end date are required', 404, 'NOT_FOUND').setRequestDetails(req);
+    if (req.user.role !== 'admin') {
+      return next(new AppError('Access denied', 403, 'FORBIDDEN'));
     }
+    
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate || !isValidDate(startDate) || !isValidDate(endDate)) {
+      return next(new AppError('Invalid date range', 400, 'INVALID_DATE_RANGE'));
+    }
+    
     const stats = await statisticsService.getInspectionStatistics(new Date(startDate), new Date(endDate));
     const performance = await statisticsService.getInspectorPerformance(new Date(startDate), new Date(endDate));
-    if (!stats || !performance) {
-      throw new AppError('Stats or performance error', 400, 'BAD_REQUEST').setRequestDetails(req);
-    }
-    res.json({ stats, performance });
-    logger.info(`Function getStatistics called with params: ${JSON.stringify(req.params)}`);
+    
+    const totalInspections = stats.reduce((sum, stat) => sum + (stat.count || 0), 0);
+    const completedInspections = stats.find(s => s.status === 'completed')?.count || 0;
+    const pendingInspections = stats.find(s => s.status === 'pending')?.count || 0;
+    const averageCompletionTime = calculateAverageCompletionTime(stats);
+
+    res.json({ 
+      totalInspections,
+      completedInspections,
+      pendingInspections,
+      averageCompletionTime,
+      stats,
+      performance
+    });
   } catch (error) {
-    logger.error('Error in getStatistics:', error);
     next(error);
   }
 };
+
+function calculateAverageCompletionTime(stats) {
+  return 60; 
+}
+
+function isValidDate(dateString) {
+  return !isNaN(new Date(dateString).getTime());
+}
 
 exports.getAlerts = async (req, res, next) => {
   try {

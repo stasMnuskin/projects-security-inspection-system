@@ -14,9 +14,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     details: {
       type: DataTypes.JSON,
-      allowNull: false,
-      validate: {
-      }
+      allowNull: false
     },
     status: {
       type: DataTypes.ENUM('pending', 'completed', 'requires_action'),
@@ -27,34 +25,25 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     }
-  }, {
-    indexes: [
-      {
-        fields: ['entrepreneurId']
-      },
-      {
-        fields: ['siteId']
-      },
-      {
-        fields: ['inspectionTypeId']
-      },
-      {
-        fields: ['status']
-      },
-      {
-        fields: ['createdAt']
-      },
-      {
-        fields: ['userId']
-      }
-    ]
   });
 
-  Inspection.associate = function(models) {
-    Inspection.belongsTo(models.Entrepreneur, { foreignKey: 'entrepreneurId' });
-    Inspection.belongsTo(models.Site, { foreignKey: 'siteId' });
-    Inspection.belongsTo(models.InspectionType, { foreignKey: 'inspectionTypeId' });
-    Inspection.belongsTo(models.User, { foreignKey: 'userId' });
+  Inspection.associate = (models) => {
+    Inspection.belongsTo(models.Entrepreneur, { 
+      foreignKey: 'entrepreneurId', 
+      onDelete: 'CASCADE' 
+    });
+    Inspection.belongsTo(models.Site, { 
+      foreignKey: 'siteId', 
+      onDelete: 'CASCADE' 
+    });
+    Inspection.belongsTo(models.InspectionType, { 
+      foreignKey: 'inspectionTypeId', 
+      onDelete: 'CASCADE' 
+    });
+    Inspection.belongsTo(models.User, { 
+      foreignKey: 'userId', 
+      onDelete: 'SET NULL' 
+    });
   };
 
   return Inspection;

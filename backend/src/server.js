@@ -10,6 +10,7 @@ const path = require('path');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const swaggerConfig = require('./config/swaggerConfig');
+const { startRotation } = require('./utils/secretManager');
 
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
@@ -17,6 +18,9 @@ const faultRoutes = require('./routes/faultRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const userRoutes = require('./routes/userRoutes');
+const inspectionTypeRoutes = require('./routes/inspectionTypeRoutes');
+const siteRoutes = require('./routes/siteRoutes');
+const entrepreneurRoutes = require('./routes/entrepreneurRoutes');
 
 const db = require('./models');
 const cache = require('./utils/cache');
@@ -31,6 +35,10 @@ const io = socketIo(server);
 
 const swaggerDocs = swaggerJsDoc(swaggerConfig);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+if (process.env.NODE_ENV !== 'test') {
+  startRotation();
+}
 
 // Middlewares
 app.use(cors());
@@ -68,6 +76,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/faults', faultRoutes);
+app.use('/api/inspection-Types', inspectionTypeRoutes);
+app.use('/api/sites', siteRoutes);
+app.use('/api/entrepreneurs', entrepreneurRoutes);
 
 // Language middleware
 app.use((req, res, next) => {
@@ -149,27 +160,34 @@ process.on('SIGTERM', () => {
 
 async function startServer() {
   try {
-    await db.sequelize.authenticate();
-    logger.info('Database connection has been established successfully.');
+    if (process.env.NODE_ENV !== 'test') {
+      await db.sequelize.authenticate();
+      logger.info('Database connection has been established successfully.');
 
-    await db.sequelize.sync();
-    logger.info('Database synced successfully.');
+      await db.sequelize.sync({ alter: true });
+      logger.info('Database synced successfully.');
 
-    setupWebSocket();
+      setupWebSocket();
 
-    cache.client.on('connect', () => {
-      logger.info('Redis connected');
-    });
+      cache.client.on('connect', () => {
+        logger.info('Redis connected');
+      });
+    }
 
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
   } catch (error) {
     logger.error('Unable to start server:', { error: error });
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
   }
 }
 
-startServer();
+// רק אם זו לא סביבת בדיקות, נריץ את השרת
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
-module.exports = { app, server };
+module.exports = { app, startServer };

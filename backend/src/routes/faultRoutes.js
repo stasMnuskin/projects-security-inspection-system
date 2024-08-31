@@ -3,6 +3,10 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
 
+jest.mock('../../src/utils/emailService', () => ({
+  sendEmail: jest.fn().mockResolvedValue(true)
+}));
+
 const router = express.Router();
 
 router.post('/', auth, roleAuth('admin', 'inspector'), faultController.createFault);

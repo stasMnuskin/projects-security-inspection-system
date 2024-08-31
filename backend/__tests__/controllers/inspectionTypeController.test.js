@@ -1,8 +1,8 @@
 const request = require('supertest');
 const { app } = require('../../src/server');
-const { InspectionType } = require('../../src/models');
+const db = require('../../src/models');
 const {
-  clearDatabase,
+  
   createUser,
   createEntrepreneur,
   createSite,
@@ -15,7 +15,7 @@ describe('Inspection Type Controller', () => {
   let site;
 
   beforeEach(async () => {
-    await clearDatabase();
+    
     const adminUser = await createUser({ role: 'admin' });
     adminToken = generateTestToken(adminUser.id, 'admin');
     const entrepreneur = await createEntrepreneur();
@@ -121,7 +121,7 @@ describe('Inspection Type Controller', () => {
 
       expect(response.statusCode).toBe(200);
 
-      const deletedInspectionType = await InspectionType.findByPk(inspectionType.id);
+      const deletedInspectionType = await db.InspectionType.findByPk(inspectionType.id);
       expect(deletedInspectionType).toBeNull();
     });
   });

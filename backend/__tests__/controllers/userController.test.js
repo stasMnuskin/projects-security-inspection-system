@@ -3,17 +3,15 @@ process.env.JWT_SECRET = 'test'
 const bcrypt = require('bcrypt');
 const request = require('supertest');
 const { app } = require('../../src/server');
-const { User } = require('../../src/models');
-const { clearDatabase, createUser } = require('../fixtures/db');
+const db = require('../../src/models');
+const { createUser } = require('../fixtures/db');
 const { generateTestToken } = require('../../src/utils/authHelpers');
 const logger = require('../../src/utils/logger');
 
 jest.mock('../../src/utils/logger');
 
 describe('User Controller', () => {
-  beforeEach(async () => {
-    await clearDatabase();
-  });
+  
 
   it('should register a new user successfully', async () => {
     const response = await request(app)
@@ -80,7 +78,7 @@ describe('User Controller', () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toHaveProperty('message', 'User updated successfully');
     
-    const updatedUser = await User.findByPk(user.id);
+    const updatedUser = await db.User.findByPk(user.id);
     expect(updatedUser.username).toBe('newusername');
     expect(updatedUser.email).toBe('newemail@example.com');
   });
@@ -140,7 +138,7 @@ describe('User Controller', () => {
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty('message', 'User deleted successfully');
   
-      const deletedUser = await User.findByPk(userToDelete.id);
+      const deletedUser = await db.User.findByPk(userToDelete.id);
       expect(deletedUser).toBeNull();
     });
   });
@@ -169,7 +167,7 @@ describe('User Controller', () => {
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty('message', 'User role updated successfully');
   
-      const changedUser = await User.findByPk(userToChange.id);
+      const changedUser = await db.User.findByPk(userToChange.id);
       expect(changedUser.role).toBe('admin');
     });
   });

@@ -1,8 +1,8 @@
 const request = require('supertest');
 const { app } = require('../../src/server');
-const { Site } = require('../../src/models');
+const db = require('../../src/models');
 const {
-  clearDatabase,
+  
   createUser,
   createEntrepreneur,
   createSite
@@ -14,7 +14,7 @@ describe('Site Controller', () => {
   let entrepreneur;
 
   beforeEach(async () => {
-    await clearDatabase();
+    
     const adminUser = await createUser({ role: 'admin' });
     adminToken = generateTestToken(adminUser.id, 'admin');
     entrepreneur = await createEntrepreneur();
@@ -22,6 +22,7 @@ describe('Site Controller', () => {
 
   describe('POST /api/sites', () => {
     it('should create a new site', async () => {
+      const entrepreneur = await createEntrepreneur();
       const response = await request(app)
         .post('/api/sites')
         .set('x-auth-token', adminToken)
@@ -30,21 +31,22 @@ describe('Site Controller', () => {
           address: '123 Test St',
           entrepreneurId: entrepreneur.id
         });
-
+    
       expect(response.statusCode).toBe(201);
       expect(response.body).toHaveProperty('id');
       expect(response.body.name).toBe('Test Site');
       expect(response.body.entrepreneurId).toBe(entrepreneur.id);
+      expect(response.body.address).toBe('123 Test St');
     });
-
+  
     it('should return 400 if required fields are missing', async () => {
       const response = await request(app)
         .post('/api/sites')
         .set('x-auth-token', adminToken)
         .send({
-          name: 'Test Site'
+          address: '123 Test St'
         });
-
+  
       expect(response.statusCode).toBe(400);
     });
   });
@@ -112,7 +114,7 @@ describe('Site Controller', () => {
 
       expect(response.statusCode).toBe(200);
 
-      const deletedSite = await Site.findByPk(site.id);
+      const deletedSite = await db.Site.findByPk(site.id);
       expect(deletedSite).toBeNull();
     });
   });

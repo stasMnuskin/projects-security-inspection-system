@@ -1,11 +1,8 @@
 const db = require('../../src/models');
-const { clearDatabase, createUser, createEntrepreneur, createSite, createInspectionType } = require('../fixtures/db');
+const { createUser, createEntrepreneur, createSite, createInspectionType } = require('../fixtures/db');
 
 describe('Inspection Model', () => {
-  beforeEach(async () => {
-    await clearDatabase();
-  });
-
+  
   it('should create an inspection', async () => {
     const user = await createUser();
     const entrepreneur = await createEntrepreneur();

@@ -1,15 +1,22 @@
+const csv = require('fast-csv');
+const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const { Op } = require('sequelize');
+
 const { Inspection, Entrepreneur, Site, InspectionType } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const cache = require('../utils/cache');
+
+const isValidDate = (dateString) => {
+  return !isNaN(new Date(dateString).getTime());
+};
 
 exports.getInspectionsByDateRange = async (req, res, next) => {
   const startTime = process.hrtime();
   
   try {
     const { startDate, endDate } = req.query;
-
     if (!startDate || !endDate) {
       return next(new AppError('Start date and end date are required', 400, 'MISSING_DATES'));
     }
@@ -17,7 +24,7 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    if (!startDate || !endDate || !isValidDate(startDate) || !isValidDate(endDate)) {
       return next(new AppError('Invalid date format', 400, 'INVALID_DATE_FORMAT'));
     }
 
@@ -60,12 +67,8 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
 
     // Combine data
     const result = inspections.map(inspection => ({
-      id: inspection.id,
-      createdAt: inspection.createdAt,
-      status: inspection.status,
-      entrepreneur: entrepreneurLookup[inspection.entrepreneurId],
-      site: siteLookup[inspection.siteId],
-      inspectionType: inspectionTypeLookup[inspection.inspectionTypeId]
+      ...inspection.toJSON(),
+      createdAt: new Date(inspection.createdAt).toISOString()
     }));
 
     // Cache the result
@@ -83,17 +86,17 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
 
 exports.getInspectionStatsByEntrepreneur = async (req, res, next) => {
   try {
-      const stats = await Inspection.findAll({
-          attributes: [
-              'entrepreneurId',
-              [Inspection.sequelize.fn('COUNT', Inspection.sequelize.col('id')), 'totalInspections'],
-              [Inspection.sequelize.fn('SUM', Inspection.sequelize.literal("CASE WHEN status = 'completed' THEN 1 ELSE 0 END")), 'completedInspections']
-          ],
-          include: [{ model: Entrepreneur, attributes: ['name'] }],
-          group: ['entrepreneurId', 'Entrepreneur.id'],
-          raw: true,
-          nest: true
-      });
+    const stats = await Inspection.findAll({
+      attributes: [
+        'entrepreneurId',
+        [Inspection.sequelize.fn('COUNT', Inspection.sequelize.col('Inspection.id')), 'totalInspections'],
+        [Inspection.sequelize.fn('SUM', Inspection.sequelize.literal("CASE WHEN status = 'completed' THEN 1 ELSE 0 END")), 'completedInspections']
+      ],
+      include: [{ model: Entrepreneur, attributes: ['name'] }],
+      group: ['entrepreneurId', 'Entrepreneur.id'],
+      raw: true,
+      nest: true
+    });
 
 
       if (!stats) {
@@ -135,40 +138,40 @@ exports.getInspectionStatusSummary = async (req, res, next) => {
 
 exports.exportInspectionsToCsv = async (req, res, next) => {
   try {
-      const inspections = await Inspection.findAll({
-          include: [
-              { model: Entrepreneur, attributes: ['name'] },
-              { model: Site, attributes: ['name'] },
-              { model: InspectionType, attributes: ['name'] }
-          ],
-          raw: true,
-          nest: true
+    const inspections = await Inspection.findAll({
+      include: [
+        { model: Entrepreneur, attributes: ['name'] },
+        { model: Site, attributes: ['name'] },
+        { model: InspectionType, attributes: ['name'] }
+      ],
+      raw: true,
+      nest: true
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    const csvStream = csv.format({ headers: true });
+    const writableStream = fs.createWriteStream('inspections.csv');
+
+    csvStream.pipe(writableStream);
+
+    inspections.forEach((inspection) => {
+      csvStream.write({
+        ID: inspection.id,
+        Entrepreneur: inspection.Entrepreneur.name,
+        Site: inspection.Site.name,
+        'Inspection Type': inspection.InspectionType.name,
+        Status: inspection.status,
+        Date: inspection.createdAt
       });
+    });
 
+    csvStream.end();
 
-      if (!inspections) {
-        throw new AppError('Inspections not found', 404, 'Inspections_NOT_FOUND').setRequestDetails(req);
-      }
-
-      const csvWriter = csv({
-          path: 'inspections.csv',
-          header: [
-              { id: 'id', title: 'ID' },
-              { id: 'Entrepreneur.name', title: 'Entrepreneur' },
-              { id: 'Site.name', title: 'Site' },
-              { id: 'InspectionType.name', title: 'Inspection Type' },
-              { id: 'status', title: 'Status' },
-              { id: 'createdAt', title: 'Date' }
-          ]
-      });
-
-      await csvWriter.writeRecords(inspections);
-
+    writableStream.on('finish', function() {
       res.download('inspections.csv', () => {
-          fs.unlinkSync('inspections.csv');
+        fs.unlinkSync('inspections.csv');
       });
+    });
   } catch (error) {
-    logger.error('Error exporting inspections to CSV:', error);
     next(error);
   }
 };
@@ -193,6 +196,7 @@ exports.exportInspectionsToPdf = async (req, res, next) => {
       let filename = 'inspections.pdf';
       res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
       res.setHeader('Content-type', 'application/pdf');
+      res.status(200);
       doc.pipe(res);
 
       doc.fontSize(20).text('Inspections Report', { align: 'center' });

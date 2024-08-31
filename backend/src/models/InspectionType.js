@@ -6,8 +6,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     formStructure: {
       type: DataTypes.JSON,
-      allowNull: false,
-      defaultValue: {} 
+      allowNull: false
+    },
+    frequency: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     siteId: {
       type: DataTypes.INTEGER,
@@ -16,8 +19,16 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   InspectionType.associate = function(models) {
-    InspectionType.belongsTo(models.Site, { foreignKey: 'siteId' });
+    InspectionType.belongsTo(models.Site, { 
+      foreignKey: 'siteId', 
+      onDelete: 'CASCADE' 
+    });
+    InspectionType.hasMany(models.Inspection, { 
+      foreignKey: 'inspectionTypeId', 
+      onDelete: 'CASCADE' 
+    });
   };
+
 
   return InspectionType;
 };
