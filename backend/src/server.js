@@ -155,37 +155,35 @@ process.on('SIGTERM', () => {
     logger.info('Process terminated');
   });
   db.sequelize.close();
-  cache.client.quit();
+  cache.quit();
 });
 
 async function startServer() {
   try {
-    if (process.env.NODE_ENV !== 'test') {
-      await db.sequelize.authenticate();
-      logger.info('Database connection has been established successfully.');
+    await db.sequelize.authenticate();
+    logger.info('Database connection has been established successfully.');
 
-      await db.sequelize.sync({ alter: true });
-      logger.info('Database synced successfully.');
-
-      setupWebSocket();
-
-      cache.client.on('connect', () => {
-        logger.info('Redis connected');
-      });
-    }
+    await db.sequelize.sync({ alter: true });
+    logger.info('Database synced successfully.');
 
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
   } catch (error) {
-    logger.error('Unable to start server:', { error: error });
-    if (process.env.NODE_ENV !== 'test') {
-      process.exit(1);
-    }
+    logger.error('Unable to start server:', { error: error.message, stack: error.stack });
+    process.exit(1);
   }
 }
 
-// רק אם זו לא סביבת בדיקות, נריץ את השרת
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received. Shutting down gracefully');
+  server.close(() => {
+    logger.info('Process terminated');
+  });
+  await db.sequelize.close();
+});
+
+
 if (process.env.NODE_ENV !== 'test') {
   startServer();
 }

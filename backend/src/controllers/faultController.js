@@ -30,9 +30,9 @@ exports.closeFault = async (req, res, next) => {
     fault.closedAt = new Date();
     await fault.save();
     
-    await sendEmail('control@example.com', 'Fault Closed', `
-      Fault ID: ${fault.id} has been closed.
-    `);
+    if (process.env.NODE_ENV !== 'test') {
+      await sendEmail('control@example.com', 'Fault Closed', `Fault ID: ${fault.id} has been closed.`);
+    }
     
     logger.info(`Fault ${id} closed`);
     res.status(200).json(fault);

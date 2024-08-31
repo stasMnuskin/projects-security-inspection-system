@@ -1,33 +1,34 @@
-const Redis = require('ioredis');
+const cacheService = require('./cacheService');
 const logger = require('./logger');
 
-let client;
-
-if (process.env.NODE_ENV !== 'test') {
-  client = new Redis({
-    host: process.env.DB_HOST,
-    port: process.env.REDIS_PORT
-  });
-}
-
 module.exports = {
-  get: async (key) => {
-    if (process.env.NODE_ENV === 'test') return null;
+  async get(key) {
     try {
-      const value = await client.get(key);
-      return value ? JSON.parse(value) : null;
+      return await cacheService.get(key);
     } catch (error) {
-      logger.error('Redis get error:', { error: error.message, stack: error.stack });
+      logger.error('Cache get error:', { error: error.message, stack: error.stack });
       return null;
     }
   },
-  set: async (key, value, expireIn = 3600) => {
-    if (process.env.NODE_ENV === 'test') return;
+  async set(key, value, expireIn = 3600) {
     try {
-      await client.set(key, JSON.stringify(value), 'EX', expireIn);
+      await cacheService.set(key, value, expireIn);
     } catch (error) {
-      logger.error('Redis set error:', { error: error.message, stack: error.stack });
+      logger.error('Cache set error:', { error: error.message, stack: error.stack });
     }
   },
-  client
+  async del(key) {
+    try {
+      await cacheService.del(key);
+    } catch (error) {
+      logger.error('Cache delete error:', { error: error.message, stack: error.stack });
+    }
+  },
+  async reset() {
+    try {
+      await cacheService.reset();
+    } catch (error) {
+      logger.error('Cache reset error:', { error: error.message, stack: error.stack });
+    }
+  }
 };
