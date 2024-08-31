@@ -96,19 +96,11 @@ exports.deleteInspectionType = async (req, res, next) => {
 exports.getInspectionTypesBySite = async (req, res, next) => {
   try {
     const { siteId } = req.params;
-    const site = await db.Site.findByPk(siteId);
-    if (!site) {
-      return next(new AppError('Site not found', 404));
-    }
-
     const inspectionTypes = await db.InspectionType.findAll({
-      where: { siteId },
-      include: [{ model: db.Site, attributes: ['name'] }]
+      where: { siteId: siteId }
     });
-
     res.json(inspectionTypes);
   } catch (error) {
-    logger.error('Error in getInspectionTypesBySite:', error);
-    return next(new AppError('Error fetching inspection types for site', 500));
+    next(new AppError('Error fetching inspection types', 500));
   }
 };

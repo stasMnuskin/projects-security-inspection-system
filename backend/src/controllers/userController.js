@@ -22,19 +22,18 @@ exports.registerUser = async (req, res, next) => {
       username,
       email,
       password: hashedPassword,
-      role
+      role: role 
     });
-    const activeSecrets = getActiveSecrets();
+
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      activeSecrets[0],
+      process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    logger.info(`New user registered: ${email}`);
-    res.status(201).json({ token });
+    res.status(201).json({ token, role: user.role });
   } catch (error) {
-    logger.error(`Registration error: ${error.message}`, { stack: error.stack });
+    console.error('Registration error:', error);
     next(new AppError('Error registering user', 500, 'REGISTRATION_ERROR'));
   }
 };
@@ -95,14 +94,12 @@ exports.updateUser = async (req, res, next) => {
 
 exports.getAllUsers = async (req, res, next) => {
   try {
-    const users = await User.findAll({
+    const users = await db.User.findAll({
       attributes: { exclude: ['password'] }
     });
-    logger.info('All users fetched');
     res.json(users);
-  } catch (err) {
-    logger.error(`Error fetching all users: ${err.message}`);
-    next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
+  } catch (error) {
+    next(new AppError('Error fetching users', 500));
   }
 };
 

@@ -4,50 +4,18 @@ const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 
 exports.createInspection = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
-  }
-
   try {
-    const { entrepreneurId, siteId, inspectionTypeId, details } = req.body;
-    
-    const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId);
-    if (!entrepreneur) {
-      throw new AppError('Entrepreneur not found', 404, 'Entrepreneur_NOT_FOUND').setRequestDetails(req);
-    }
-
-    const site = await db.Site.findByPk(siteId);
-    if (!site) {
-      throw new AppError('Site not found', 404, 'Site_NOT_FOUND').setRequestDetails(req);
-    }
-
-    const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
-    if (!inspectionType) {
-      throw new AppError('Inspection Type not found', 404, 'Inspection Type_NOT_FOUND').setRequestDetails(req);
-    }
-
-    if (site.entrepreneurId !== entrepreneurId) {
-      throw new AppError('Site does not belong to the specified entrepreneur', 400, 'BAD_REQUEST').setRequestDetails(req);
-    }
-
+    const { entrepreneurId, siteId, inspectionTypeId } = req.body;
     const inspection = await db.Inspection.create({
       entrepreneurId,
       siteId,
       inspectionTypeId,
-      details,
-      userId: req.user.id,
+      status: 'pending',
+      userId: req.user.id 
     });
-
-    if (!inspection) {
-      throw new AppError('INTERNAL_ERROR', 500, 'INTERNAL_ERROR').setRequestDetails(req);
-    }
-
     res.status(201).json(inspection);
-    logger.info(`Function createInspection called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
-    logger.error('Error in createInspection:', error);
-    next(error);
+    next(new AppError('Error creating inspection', 500));
   }
 };
 

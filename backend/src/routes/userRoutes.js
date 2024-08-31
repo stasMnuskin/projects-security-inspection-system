@@ -19,14 +19,7 @@ router.post(
 );
 
 // Login user
-router.post(
-  '/login',
-  [
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password is required').exists()
-  ],
-  userController.loginUser
-);
+router.post('/login', userController.loginUser);
 
 // Get current user
 router.get('/me', auth, userController.getCurrentUser);
@@ -44,7 +37,7 @@ router.put(
 );
 
 // Get all users (admin only)
-router.get('/', auth, roleAuth('admin', 'inspector'), userController.getAllUsers);
+router.get('/', auth, roleAuth('admin'), userController.getAllUsers);
 
 // Delete user (admin only)
 router.delete('/:id', auth, roleAuth('admin', 'inspector'), userController.deleteUser);

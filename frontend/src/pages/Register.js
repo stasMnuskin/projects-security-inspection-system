@@ -1,36 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { TextField, Button, Typography, Container, Box, Link } from '@mui/material';
-import { login } from '../services/api';
+import { register } from '../services/api';
 
-function Login() {
+
+function Register() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [role, setRole] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      const response = await login(email, password);
-      const { role } = response;
-      switch(role) {
-        case 'admin':
-          navigate('/admin-dashboard');
-          break;
-        case 'security_officer':
-          navigate('/security-dashboard');
-          break;
-        case 'technician':
-        case 'inspector':
-          navigate('/user-dashboard');
-          break;
-        default:
-          navigate('/dashboard');
-      }
+      await register(username, email, password, role);
+      navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
     } catch (error) {
-      setError(error.response?.data?.message || 'An error occurred during login');
+      setError(error.response?.data?.message || 'An error occurred during registration');
     }
   };
 
@@ -45,9 +34,21 @@ function Login() {
         }}
       >
         <Typography component="h1" variant="h5">
-          Login
+          Register
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="username"
+            label="Username"
+            name="username"
+            autoComplete="username"
+            autoFocus
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
           <TextField
             margin="normal"
             required
@@ -56,7 +57,6 @@ function Login() {
             label="Email Address"
             name="email"
             autoComplete="email"
-            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -68,9 +68,21 @@ function Login() {
             label="Password"
             type="password"
             id="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="role"
+            label="role"
+            id="role"
+            autoComplete="new-role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
           />
           <Button
             type="submit"
@@ -78,11 +90,11 @@ function Login() {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            Sign In
+            Register
           </Button>
           <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/register" variant="body2">
-              {"Don't have an account? Sign Up"}
+            <Link component={RouterLink} to="/login" variant="body2">
+              {"Already have an account? Sign In"}
             </Link>
           </Box>
           {error && (
@@ -96,4 +108,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Register;

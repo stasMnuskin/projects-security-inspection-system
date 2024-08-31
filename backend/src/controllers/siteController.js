@@ -104,19 +104,11 @@ exports.deleteSite = async (req, res, next) => {
 exports.getSitesByEntrepreneur = async (req, res, next) => {
   try {
     const { entrepreneurId } = req.params;
-    const entrepreneur = await Entrepreneur.findByPk(entrepreneurId);
-    if (!entrepreneur) {
-      return next(new AppError('Entrepreneur not found', 404));
-    }
-
-    const sites = await Site.findAll({
-      where: { entrepreneurId },
-      include: [{ model: Entrepreneur, attributes: ['name'] }]
+    const sites = await db.Site.findAll({
+      where: { entrepreneurId: entrepreneurId }
     });
-
     res.json(sites);
   } catch (error) {
-    logger.error('Error in getSitesByEntrepreneur:', error);
-    next(new AppError('Error fetching sites for entrepreneur', 500));
+    next(new AppError('Error fetching sites', 500));
   }
 };

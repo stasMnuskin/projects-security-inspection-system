@@ -34,9 +34,20 @@ api.interceptors.response.use((response) => {
   return Promise.reject(error);
 });
 
-export const login = (email, password) => api.post('/users/login', { email, password });
+export const register = (username, email, password, role) => 
+  api.post('/users/register', { username, email, password, role });
+export const login = async (email, password) => {
+  const response = await api.post('/users/login', { email, password });
+  localStorage.setItem('token', response.data.token);
+  localStorage.setItem('userRole', response.data.role);
+  return response.data;
+};
 export const getInspections = () => api.get('/inspections');
-export const getSites = () => api.get('/sites');
+export const getSites = (entrepreneurId) => api.get(`/sites/entrepreneur/${entrepreneurId}`);
 export const getEntrepreneurs = () => api.get('/entrepreneurs');
+export const getCurrentUser = () => api.get('/users/me');
+export const getInspectionTypes = (siteId) => api.get(`/inspection-types/site/${siteId}`);
+export const createInspection = (data) => api.post('/inspections', data);
+export const getUsers = () => api.get('/users');
 
 export default api;
