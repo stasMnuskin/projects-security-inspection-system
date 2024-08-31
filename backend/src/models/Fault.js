@@ -2,7 +2,13 @@ module.exports = (sequelize, DataTypes) => {
   const Fault = sequelize.define('Fault', {
     siteId: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: true,
+      references: {
+        model: 'Sites',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
     },
     inspectionTypeId: {
       type: DataTypes.INTEGER,
