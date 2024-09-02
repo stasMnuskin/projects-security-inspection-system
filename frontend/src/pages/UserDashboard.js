@@ -2,18 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Paper, Button } from '@mui/material';
 import { getInspections } from '../services/api';
 import { dashboardStyles } from '../styles/dashboardStyles';
+import { AppError } from '../utils/errorHandler';
 
 function UserDashboard() {
   const [upcomingInspection, setUpcomingInspection] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUpcomingInspection = async () => {
-      const response = await getInspections();
-      const pendingInspections = response.data.filter(i => i.status === 'pending');
-      setUpcomingInspection(pendingInspections[0]); // Get the first pending inspection
+      try {
+        const response = await getInspections();
+        const pendingInspections = response.data.filter(i => i.status === 'pending');
+        setUpcomingInspection(pendingInspections[0]); // Get the first pending inspection
+      } catch (error) {
+        if (error instanceof AppError) {
+          setError(`${error.errorCode}: ${error.message}`);
+        } else {
+          setError('An unexpected error occurred');
+        }
+      }
     };
     fetchUpcomingInspection();
   }, []);
+  
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
 
   return (
     <Container sx={dashboardStyles.container}>

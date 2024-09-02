@@ -6,14 +6,14 @@ const { Op } = require('sequelize');
 
 exports.createFault = async (req, res, next) => {
   try {
-    const { siteId, inspectionTypeId, parameter } = req.body;
-    if (!siteId || !inspectionTypeId || !parameter) {
-      return next(new AppError('Missing required fields', 400, 'MISSING_FIELDS'));
-    }
     const fault = await db.Fault.create(req.body);
+    
+    await sendFaultNotification(fault);
+    
     res.status(201).json(fault);
   } catch (error) {
-    next(error);
+    logger.error('Error creating fault:', error);
+    next(new AppError('Error creating fault', 500));
   }
 };
 
@@ -61,6 +61,51 @@ exports.getFaultsByDateRange = async (req, res, next) => {
     res.status(200).json(faults);
   } catch (error) {
     next(error);
+  }
+};
+
+exports.getFaultsBySite = async (req, res, next) => {
+  try {
+    const { siteId } = req.params;
+    const faults = await db.Fault.findAll({
+      where: { siteId },
+      include: [{ model: db.Site, where: { entrepreneurId: req.user.id } }],
+    });
+    res.json(faults);
+  } catch (error) {
+    logger.error('Error fetching faults by site:', error);
+    next(new AppError('Error fetching faults', 500));
+  }
+};
+
+exports.updateFault = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const [updated] = await db.Fault.update(req.body, {
+      where: { id: id }
+    });
+    if (updated) {
+      const updatedFault = await db.Fault.findByPk(id);
+      return res.json(updatedFault);
+    }
+    throw new AppError('Fault not found', 404);
+  } catch (error) {
+    logger.error('Error updating fault:', error);
+    next(new AppError('Error updating fault', 500));
+  }
+};
+
+exports.deleteFault = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await faultService.deleteFault(id, req.user.id);
+    if (!result) {
+      return next(new AppError('Fault not found', 404));
+    }
+    res.json({ message: 'Fault deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting fault:', error);
+    next(new AppError('Error deleting fault', 500));
   }
 };
 

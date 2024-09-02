@@ -1,32 +1,30 @@
-/* eslint-disable no-undef */
-/* eslint-disable no-unused-vars */
 'use strict';
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('InspectionTypes', {
+    await queryInterface.createTable('Users', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      name: {
+      username: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
+      },
+      email: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
+      },
+      password: {
         type: Sequelize.STRING,
         allowNull: false
       },
-      siteId: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Sites',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
-      formStructure: {
-        type: Sequelize.JSON,
+      role: {
+        type: Sequelize.ENUM('admin', 'security_officer', 'entrepreneur', 'inspector'),
         allowNull: false
       },
       createdAt: {
@@ -40,6 +38,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('InspectionTypes');
+    await queryInterface.dropTable('Users');
   }
 };

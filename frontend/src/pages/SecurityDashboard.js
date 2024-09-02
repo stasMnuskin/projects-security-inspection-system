@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
-import { getEntrepreneurs, getSites, getInspectionTypes, createInspection } from '../services/api';
+import { TextField, Container, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
+import { getEntrepreneurs, getSites, getInspectionTypes, createInspection, createFault } from '../services/api';
 import { dashboardStyles } from '../styles/dashboardStyles';
+import { AppError } from '../utils/errorHandler';
 
 function SecurityDashboard() {
   const [entrepreneurs, setEntrepreneurs] = useState([]);
@@ -10,38 +11,68 @@ function SecurityDashboard() {
   const [selectedEntrepreneur, setSelectedEntrepreneur] = useState('');
   const [selectedSite, setSelectedSite] = useState('');
   const [selectedInspectionType, setSelectedInspectionType] = useState('');
+  const [faultDescription, setFaultDescription] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const entrepreneursData = await getEntrepreneurs();
-      setEntrepreneurs(entrepreneursData.data);
+      try{const entrepreneursData = await getEntrepreneurs();
+        setEntrepreneurs(entrepreneursData.data);
+      } catch (error) {
+        if (error instanceof AppError) {
+          setError(`${error.errorCode}: ${error.message}`);
+        } else {
+          setError('An unexpected error occurred');
+        }
+      }
+        
     };
     fetchData();
   }, []);
-
+  
   useEffect(() => {
+
     const fetchSites = async () => {
-      if (selectedEntrepreneur) {
-        const sitesData = await getSites(selectedEntrepreneur);
-        setSites(sitesData.data);
-      } else {
-        setSites([]);
+      try{
+        if (selectedEntrepreneur) {
+          const sitesData = await getSites(selectedEntrepreneur);
+          setSites(sitesData.data);
+        } else {
+          setSites([]);
+        }
+        setSelectedSite('');
+      } catch (error) {
+        if (error instanceof AppError) {
+          setError(`${error.errorCode}: ${error.message}`);
+        } else {
+          setError('An unexpected error occurred');
+        }
       }
-      setSelectedSite('');
     };
+
     fetchSites();
   }, [selectedEntrepreneur]);
 
   useEffect(() => {
     const fetchInspectionTypes = async () => {
-      if (selectedSite) {
+      try {
+        if (selectedSite) {
         const inspectionTypesData = await getInspectionTypes(selectedSite);
         setInspectionTypes(inspectionTypesData.data);
       } else {
         setInspectionTypes([]);
       }
       setSelectedInspectionType('');
+    } catch (error) {
+      if (error instanceof AppError) {
+        setError(`${error.errorCode}: ${error.message}`);
+      } else {
+        setError('An unexpected error occurred');
+      }
+    }
+      
     };
+    
     fetchInspectionTypes();
   }, [selectedSite]);
 
@@ -64,11 +95,54 @@ function SecurityDashboard() {
     } else {
       alert('Please select all fields');
     }
+    if (error instanceof AppError) {
+      setError(`${error.errorCode}: ${error.message}`);
+    } else {
+      setError('An unexpected error occurred');
+    }
   };
+
+  const handleCreateFault = async () => {
+    if (selectedSite && faultDescription) {
+      try {
+        await createFault({
+          siteId: selectedSite,
+          description: faultDescription,
+          status: 'open'
+        });
+        alert('Fault reported successfully');
+        setFaultDescription('');
+      } catch (error) {
+        if (error instanceof AppError) {
+          setError(`${error.errorCode}: ${error.message}`);
+        } else {
+          setError('An unexpected error occurred while reporting the fault');
+        }
+      }
+    } else {
+      alert('Please select a site and provide a fault description');
+    }
+  };
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
 
   return (
     <Container sx={dashboardStyles.container}>
       <Typography variant="h4" gutterBottom>Security Officer Dashboard</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+        <TextField
+          label="Fault Description"
+          multiline
+          rows={4}
+          value={faultDescription}
+          onChange={(e) => setFaultDescription(e.target.value)}
+        />
+        <Button variant="contained" color="secondary" onClick={handleCreateFault}>
+          Report Fault
+        </Button>
+      </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <FormControl fullWidth>
           <InputLabel>Entrepreneur</InputLabel>

@@ -103,12 +103,32 @@ exports.deleteSite = async (req, res, next) => {
 
 exports.getSitesByEntrepreneur = async (req, res, next) => {
   try {
-    const { entrepreneurId } = req.params;
     const sites = await db.Site.findAll({
-      where: { entrepreneurId: entrepreneurId }
+      where: { entrepreneurId: req.user.id },
     });
     res.json(sites);
   } catch (error) {
     next(new AppError('Error fetching sites', 500));
+  }
+};
+
+exports.getFaultsBySite = async (req, res, next) => {
+  try {
+    const { siteId } = req.params;
+    const site = await db.Site.findOne({
+      where: { id: siteId, entrepreneurId: req.user.id }
+    });
+
+    if (!site) {
+      return next(new AppError('Site not found or access denied', 404));
+    }
+
+    const faults = await db.Fault.findAll({
+      where: { siteId: siteId },
+      order: [['reportedTime', 'DESC']]
+    });
+    res.json(faults);
+  } catch (error) {
+    next(new AppError('Error fetching faults', 500));
   }
 };

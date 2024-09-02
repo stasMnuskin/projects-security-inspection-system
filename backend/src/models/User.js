@@ -18,14 +18,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM('admin', 'security_officer', 'technician', 'inspector'),
+      type: DataTypes.ENUM('admin', 'security_officer', 'entrepreneur', 'inspector'),
       allowNull: false,
     },
   });
-
-  User.associate = function(models) {
-    User.belongsToMany(models.Site, { through: 'UserSites' });
-  };
 
   return User;
 };

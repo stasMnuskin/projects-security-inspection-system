@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { app } = require('../../src/server');
-const { Fault } = require('../../src/models');
+const db = require('../src/models');
 const {
   
   createUser,

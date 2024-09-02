@@ -1,16 +1,12 @@
-const faultController = require('../controllers/faultController');
 const express = require('express');
+const faultController = require('../controllers/faultController');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
 
-// jest.mock('../../src/utils/emailService', () => ({
-//   sendEmail: jest.fn().mockResolvedValue(true)
-// }));
-
 const router = express.Router();
 
-router.post('/', auth, roleAuth('admin', 'inspector'), faultController.createFault);
-router.put('/:id/close', auth, roleAuth('admin', 'inspector'), faultController.closeFault);
-router.get('/', auth, roleAuth('admin', 'inspector'), faultController.getFaultsByDateRange);
+router.post('/', auth, roleAuth(['admin', 'security_officer']), faultController.createFault);
+router.get('/site/:siteId', auth, faultController.getFaultsBySite);
+router.put('/:id', auth, roleAuth(['admin', 'security_officer']), faultController.updateFault);
 
 module.exports = router;

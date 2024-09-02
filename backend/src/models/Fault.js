@@ -2,19 +2,17 @@ module.exports = (sequelize, DataTypes) => {
   const Fault = sequelize.define('Fault', {
     siteId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Sites',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    },
-    inspectionTypeId: {
-      type: DataTypes.INTEGER,
       allowNull: false
     },
-    parameter: {
+    description: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    severity: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    location: {
       type: DataTypes.STRING,
       allowNull: false
     },
@@ -22,18 +20,37 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('open', 'closed'),
       defaultValue: 'open'
     },
-    openedAt: {
+    reportedBy: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    reportedTime: {
       type: DataTypes.DATE,
+      allowNull: false,
       defaultValue: DataTypes.NOW
     },
-    closedAt: {
-      type: DataTypes.DATE
+    entrepreneurName: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    siteName: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    reporterName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Email System'
+    },
+    contactNumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'N/A'
     }
   });
 
   Fault.associate = function(models) {
     Fault.belongsTo(models.Site, { foreignKey: 'siteId' });
-    Fault.belongsTo(models.InspectionType, { foreignKey: 'inspectionTypeId' });
   };
 
   return Fault;

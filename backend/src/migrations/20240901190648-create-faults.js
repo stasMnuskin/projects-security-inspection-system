@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Faults', {
       id: {
         allowNull: false,
@@ -27,19 +27,13 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      parameter: {
-        type: Sequelize.STRING
+      description: {
+        type: Sequelize.STRING,
+        allowNull: false
       },
       status: {
         type: Sequelize.ENUM('open', 'closed'),
         defaultValue: 'open'
-      },
-      openedAt: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
-      },
-      closedAt: {
-        type: Sequelize.DATE
       },
       createdAt: {
         allowNull: false,
@@ -51,7 +45,7 @@ module.exports = {
       }
     });
   },
-  async down(queryInterface, Sequelize) {
+  down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable('Faults');
   }
 };

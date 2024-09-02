@@ -6,9 +6,15 @@ const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { getActiveSecrets } = require('../utils/secretManager')
 
+const activeSecrets = getActiveSecrets();
+
 exports.registerUser = async (req, res, next) => {
   try {
     const { username, email, password, role } = req.body;
+
+    if (!['security_officer', 'admin'].includes(role)) {
+      return next(new AppError('Invalid role', 400, 'INVALID_ROLE'));
+    }
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -22,15 +28,15 @@ exports.registerUser = async (req, res, next) => {
       username,
       email,
       password: hashedPassword,
-      role: role 
+      role
     });
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
+      activeSecrets[0],
       { expiresIn: '1d' }
     );
-
+    
     res.status(201).json({ token, role: user.role });
   } catch (error) {
     console.error('Registration error:', error);
@@ -51,18 +57,22 @@ exports.loginUser = async (req, res, next) => {
     if (!isMatch) {
       return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
-    const activeSecrets = getActiveSecrets();
+
     const token = jwt.sign(
       { id: user.id, role: user.role },
       activeSecrets[0],
       { expiresIn: '1d' }
     );
 
-    logger.info(`User logged in: ${email}`);
-    res.json({ token });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
+    res.json({ token, role: user.role });
   } catch (error) {
     console.error('Login error:', error);
-    logger.error(`Login error: ${error.message}`);
     next(new AppError('Error logging in', 500, 'LOGIN_ERROR'));
   }
 };
@@ -94,7 +104,7 @@ exports.updateUser = async (req, res, next) => {
 
 exports.getAllUsers = async (req, res, next) => {
   try {
-    const users = await db.User.findAll({
+    const users = await User.findAll({
       attributes: { exclude: ['password'] }
     });
     res.json(users);

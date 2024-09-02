@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { TextField, Button, Typography, Container, Box, Link } from '@mui/material';
 import { login } from '../services/api';
+import { AppError } from '../utils/errorHandler';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -14,25 +15,43 @@ function Login() {
     setError('');
     try {
       const response = await login(email, password);
-      const { role } = response;
-      switch(role) {
-        case 'admin':
-          navigate('/admin-dashboard');
-          break;
-        case 'security_officer':
-          navigate('/security-dashboard');
-          break;
-        case 'technician':
-        case 'inspector':
-          navigate('/user-dashboard');
-          break;
-        default:
-          navigate('/dashboard');
+      console.log('Login response:', response);
+      
+      if (response && response.data && response.data.role) {
+        localStorage.setItem('userRole', response.data.role);
+        localStorage.setItem('token', response.data.token);
+        
+        switch(response.data.role) {
+          case 'admin':
+            navigate('/admin');
+            break;
+          case 'security_officer':
+            navigate('/security');
+            break;
+          case 'entrepreneur':
+            navigate('/entrepreneur');
+            break;
+          case 'inspector':
+            navigate('/inspector');
+            break;
+          default:
+            navigate('/');
+        }
+      } else {
+        throw new Error('Invalid response from server');
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'An error occurred during login');
+      console.error('Login error:', error);
+      if (error instanceof AppError) {
+        setError(`${error.errorCode}: ${error.message}`);
+      } else {
+        setError('An unexpected error occurred during login');
+      }
     }
   };
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
 
   return (
     <Container component="main" maxWidth="xs">
@@ -45,7 +64,7 @@ function Login() {
         }}
       >
         <Typography component="h1" variant="h5">
-          Login
+          כניסה
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -53,7 +72,7 @@ function Login() {
             required
             fullWidth
             id="email"
-            label="Email Address"
+            label="אימייל"
             name="email"
             autoComplete="email"
             autoFocus
@@ -65,7 +84,7 @@ function Login() {
             required
             fullWidth
             name="password"
-            label="Password"
+            label="סיסמה"
             type="password"
             id="password"
             autoComplete="current-password"
@@ -78,11 +97,11 @@ function Login() {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            Sign In
+            כניסה
           </Button>
           <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/register" variant="body2">
-              {"Don't have an account? Sign Up"}
+              {"רישום משתמש (מנהל בלבד)"}
             </Link>
           </Box>
           {error && (

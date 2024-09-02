@@ -1,11 +1,22 @@
+'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Faults', {
+    await queryInterface.createTable('Inspections', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
+      },
+      entrepreneurId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Entrepreneurs',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       siteId: {
         type: Sequelize.INTEGER,
@@ -27,20 +38,24 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      parameter: {
-        type: Sequelize.STRING,
+      status: {
+        type: Sequelize.ENUM('pending', 'completed', 'requires_action'),
+        allowNull: false,
+        defaultValue: 'pending'
+      },
+      details: {
+        type: Sequelize.JSON,
         allowNull: false
       },
-      status: {
-        type: Sequelize.ENUM('open', 'closed'),
-        defaultValue: 'open'
-      },
-      openedAt: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
-      },
-      closedAt: {
-        type: Sequelize.DATE
+      userId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       createdAt: {
         allowNull: false,
@@ -53,6 +68,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Faults');
+    await queryInterface.dropTable('Inspections');
   }
 };

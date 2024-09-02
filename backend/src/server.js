@@ -1,5 +1,7 @@
 require('dotenv').config();
+require('./jobs/emailProcessor');
 const express = require('express');
+const { google } = require('googleapis');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -22,6 +24,8 @@ const inspectionTypeRoutes = require('./routes/inspectionTypeRoutes');
 const siteRoutes = require('./routes/siteRoutes');
 const entrepreneurRoutes = require('./routes/entrepreneurRoutes');
 
+const { processEmails } = require('./utils/emailFaultProcessor');
+
 const db = require('./models');
 const cache = require('./utils/cache');
 const AppError = require('./utils/appError');
@@ -39,9 +43,12 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 if (process.env.NODE_ENV !== 'test') {
   startRotation();
 }
-
 // Middlewares
-app.use(cors());
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(loggerMiddleware);
@@ -68,6 +75,43 @@ i18n.configure({
   objectNotation: true
 });
 app.use(i18n.init);
+
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  'http://localhost:5000'  
+);
+
+app.get('/auth/google', (req, res) => {
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.modify']
+  });
+  res.redirect(url);
+});
+
+app.get('/', async (req, res) => {
+  const { code } = req.query;
+  if (code) {
+    try {
+      const { tokens } = await oauth2Client.getToken(code);
+      oauth2Client.setCredentials(tokens);
+      
+      console.log('Refresh Token:', tokens.refresh_token);
+      res.send('Authentication successful! Check your console for the refresh token.');
+      
+    } catch (error) {
+      console.error('Error getting tokens:', error);
+      res.status(500).send('Authentication failed');
+    }
+  } else {
+    res.send('No authentication code provided');
+  }
+});
+
+setInterval(processEmails, 1 * 60 * 1000);
 
 // Routes
 app.use('/api/analytics', analyticsRoutes);

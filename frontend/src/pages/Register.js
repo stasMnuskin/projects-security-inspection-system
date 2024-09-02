@@ -1,25 +1,49 @@
 import React, { useState } from 'react';
+// import { useNavigate } from 'react-router-dom';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { TextField, Button, Typography, Container, Box, Link } from '@mui/material';
+import { TextField, Button, Typography, Container, Box, Select, MenuItem, FormControl, InputLabel, Link } from '@mui/material';
 import { register } from '../services/api';
-
+import { AppError } from '../utils/errorHandler';
 
 function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [role, setRole] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      await register(username, email, password, role);
-      navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
+      const response = await register(username, email, password, role);
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userRole', response.data.role);
+      
+      switch(response.data.role) {
+        case 'admin':
+          navigate('/admin');
+          break;
+        case 'security_officer':
+          navigate('/security');
+          break;
+        case 'entrepreneur':
+          navigate('/entrepreneur');
+          break;
+        case 'inspector':
+          navigate('/inspector');
+          break;
+        default:
+          navigate('/');
+      }
     } catch (error) {
-      setError(error.response?.data?.message || 'An error occurred during registration');
+      if (error instanceof AppError) {
+        setError(`${error.errorCode}: ${error.message}`);
+      } else {
+        setError('An unexpected error occurred');
+      }
+      console.error('Registration error:', error);
     }
   };
 
@@ -34,7 +58,7 @@ function Register() {
         }}
       >
         <Typography component="h1" variant="h5">
-          Register
+          הרשמה
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -42,7 +66,7 @@ function Register() {
             required
             fullWidth
             id="username"
-            label="Username"
+            label="שם משתמש"
             name="username"
             autoComplete="username"
             autoFocus
@@ -54,7 +78,7 @@ function Register() {
             required
             fullWidth
             id="email"
-            label="Email Address"
+            label="אימייל"
             name="email"
             autoComplete="email"
             value={email}
@@ -65,36 +89,38 @@ function Register() {
             required
             fullWidth
             name="password"
-            label="Password"
+            label="סיסמה"
             type="password"
             id="password"
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="role"
-            label="role"
-            id="role"
-            autoComplete="new-role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="role-label">תפקיד</InputLabel>
+            <Select
+              labelId="role-label"
+              id="role"
+              value={role}
+              label="Role"
+              onChange={(e) => setRole(e.target.value)}
+            >
+              <MenuItem value="security_officer">קב
+              "ט</MenuItem>
+              <MenuItem value="admin">מנהל</MenuItem>
+            </Select>
+          </FormControl>
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            Register
+            הרשמה
           </Button>
           <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/login" variant="body2">
-              {"Already have an account? Sign In"}
+              {"כניסה"}
             </Link>
           </Box>
           {error && (

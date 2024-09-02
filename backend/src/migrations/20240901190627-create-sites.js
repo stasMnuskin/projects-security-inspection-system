@@ -2,43 +2,29 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Inspections', {
+    await queryInterface.createTable('Sites', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      site: {
+      name: {
         type: Sequelize.STRING,
         allowNull: false
-      },
-      date: {
-        type: Sequelize.DATE,
-        allowNull: false,
-        defaultValue: Sequelize.NOW
       },
       type: {
         type: Sequelize.STRING,
         allowNull: false
       },
-      details: {
-        type: Sequelize.JSON,
-        allowNull: false
-      },
-      status: {
-        type: Sequelize.ENUM('pending', 'completed', 'requires_action'),
-        allowNull: false,
-        defaultValue: 'pending'
-      },
-      UserId: {
+      entrepreneurId: {
         type: Sequelize.INTEGER,
         references: {
-          model: 'Users',
+          model: 'Entrepreneurs',
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'CASCADE'
       },
       createdAt: {
         allowNull: false,
@@ -51,6 +37,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Inspections');
+    await queryInterface.dropTable('Sites');
   }
 };

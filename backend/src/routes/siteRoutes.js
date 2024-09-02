@@ -11,5 +11,6 @@ router.get('/:id', auth, siteController.getSite);
 router.put('/:id', auth, roleAuth('admin'), siteController.updateSite);
 router.delete('/:id', auth, roleAuth('admin'), siteController.deleteSite);
 router.get('/entrepreneur/:entrepreneurId', auth, siteController.getSitesByEntrepreneur);
+router.get('/entrepreneur', auth, siteController.getSitesByEntrepreneur);
 
 module.exports = router;

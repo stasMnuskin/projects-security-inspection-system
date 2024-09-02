@@ -1,24 +1,34 @@
+'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const Entrepreneur = sequelize.define('Entrepreneur', {
+  class Entrepreneur extends Model {
+    static associate(models) {
+      Entrepreneur.hasMany(models.Site, {
+        foreignKey: 'entrepreneurId',
+        as: 'sites'
+      });
+    }
+  }
+  
+  Entrepreneur.init({
     name: {
       type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
+      allowNull: false
     },
-    contactPerson: DataTypes.STRING,
-    phone: DataTypes.STRING,
     email: {
       type: DataTypes.STRING,
-      validate: { isEmail: true }
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true
+      }
     }
+  }, {
+    sequelize,
+    modelName: 'Entrepreneur',
+    tableName: 'Entrepreneurs'
   });
-
-  Entrepreneur.associate = (models) => {
-    Entrepreneur.hasMany(models.Site, { 
-      foreignKey: 'entrepreneurId', 
-      onDelete: 'CASCADE' 
-    });
-  };
-
+  
   return Entrepreneur;
 };
