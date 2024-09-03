@@ -2,25 +2,10 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    const sites = await queryInterface.sequelize.query(
-      `SELECT id, name FROM "Sites";`,
-      { type: queryInterface.sequelize.QueryTypes.SELECT }
-    );
-
-    if (sites.length === 0) {
-      console.log('No sites found. Make sure the sites seed has run.');
-      return;
-    }
-
-    const siteMap = sites.reduce((acc, site) => {
-      acc[site.name] = site.id;
-      return acc;
-    }, {});
-
-    const inspectionTypes = [
+    return queryInterface.bulkInsert('InspectionTypes', [
       {
         name: 'ביקורת חשמל',
-        siteId: siteMap['זמורות'],
+        siteId: 1,
         formStructure: JSON.stringify({
           sections: [
             {
@@ -31,11 +16,13 @@ module.exports = {
               ]
             }
           ]
-        })
+        }),
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         name: 'ביקורת בטיחות',
-        siteId: siteMap['משאבי שדה'],
+        siteId: 2,
         formStructure: JSON.stringify({
           sections: [
             {
@@ -46,19 +33,14 @@ module.exports = {
               ]
             }
           ]
-        })
+        }),
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
-      // הוסף עוד סוגי ביקורת כאן לפי הצורך
-    ];
-
-    await queryInterface.bulkInsert('InspectionTypes', inspectionTypes.map(type => ({
-      ...type,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    })));
+    ]);
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('InspectionTypes', null, {});
+    return queryInterface.bulkDelete('InspectionTypes', null, {});
   }
 };

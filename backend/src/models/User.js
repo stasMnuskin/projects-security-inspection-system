@@ -21,7 +21,18 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('admin', 'security_officer', 'entrepreneur', 'inspector'),
       allowNull: false,
     },
+    passwordChangeRequired: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   });
+
+  User.associate = function(models) {
+    User.hasMany(models.Site, {
+       foreignKey: 'entrepreneurId',
+       as: 'sites' 
+      });
+  };
 
   return User;
 };

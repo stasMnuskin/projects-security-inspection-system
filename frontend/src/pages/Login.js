@@ -15,12 +15,12 @@ function Login() {
     setError('');
     try {
       const response = await login(email, password);
-      console.log('Login response:', response);
+      localStorage.setItem('userRole', response.data.role);
+      localStorage.setItem('token', response.data.token);
       
-      if (response && response.data && response.data.role) {
-        localStorage.setItem('userRole', response.data.role);
-        localStorage.setItem('token', response.data.token);
-        
+      if (response.data.passwordChangeRequired) {
+        navigate('/change-password');
+      } else {
         switch(response.data.role) {
           case 'admin':
             navigate('/admin');
@@ -37,11 +37,8 @@ function Login() {
           default:
             navigate('/');
         }
-      } else {
-        throw new Error('Invalid response from server');
       }
     } catch (error) {
-      console.error('Login error:', error);
       if (error instanceof AppError) {
         setError(`${error.errorCode}: ${error.message}`);
       } else {
@@ -49,9 +46,6 @@ function Login() {
       }
     }
   };
-  if (error) {
-    return <Typography color="error">{error}</Typography>;
-  }
 
   return (
     <Container component="main" maxWidth="xs">
@@ -64,7 +58,7 @@ function Login() {
         }}
       >
         <Typography component="h1" variant="h5">
-          כניסה
+          Login
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -72,7 +66,7 @@ function Login() {
             required
             fullWidth
             id="email"
-            label="אימייל"
+            label="Email Address"
             name="email"
             autoComplete="email"
             autoFocus
@@ -84,7 +78,7 @@ function Login() {
             required
             fullWidth
             name="password"
-            label="סיסמה"
+            label="Password"
             type="password"
             id="password"
             autoComplete="current-password"
@@ -97,11 +91,11 @@ function Login() {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            כניסה
+            Sign In
           </Button>
           <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/register" variant="body2">
-              {"רישום משתמש (מנהל בלבד)"}
+              {"Don't have an account? Sign Up"}
             </Link>
           </Box>
           {error && (

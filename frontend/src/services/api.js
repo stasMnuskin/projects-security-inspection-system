@@ -59,8 +59,16 @@ export const getInspectionTypes = () => api.get('/inspection-types');
 export const createInspectionType = (data) => api.post('/inspection-types', data);
 export const updateInspectionType = (id, data) => api.put(`/inspection-types/${id}`, data);
 
+export const getOpenFaultsByEntrepreneur = () => api.get('/faults/open/entrepreneur');
 export const getSitesByEntrepreneur = () => api.get('/sites/entrepreneur');
 export const getFaultsBySite = (siteId) => api.get(`/faults/site/${siteId}`);
-
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await api.post('/users/change-password', { currentPassword, newPassword });
+  if (response.data.role) {
+    localStorage.setItem('userRole', response.data.role);
+  }
+  
+  return response;
+};
 
 export default api;

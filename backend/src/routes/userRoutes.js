@@ -48,4 +48,6 @@ router.put(
   auth, roleAuth('admin', 'inspector'), userController.changeUserRole
 );
 
+router.post('/change-password', auth, userController.changePassword);
+
 module.exports = router;

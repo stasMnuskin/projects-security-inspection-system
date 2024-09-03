@@ -43,8 +43,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 if (process.env.NODE_ENV !== 'test') {
   startRotation();
 }
-// Middlewares
 
+// Middlewares
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
@@ -75,7 +75,6 @@ i18n.configure({
   objectNotation: true
 });
 app.use(i18n.init);
-
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -120,7 +119,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/faults', faultRoutes);
-app.use('/api/inspection-Types', inspectionTypeRoutes);
+app.use('/api/inspection-types', inspectionTypeRoutes);
 app.use('/api/sites', siteRoutes);
 app.use('/api/entrepreneurs', entrepreneurRoutes);
 
@@ -226,7 +225,6 @@ process.on('SIGTERM', async () => {
   });
   await db.sequelize.close();
 });
-
 
 if (process.env.NODE_ENV !== 'test') {
   startServer();

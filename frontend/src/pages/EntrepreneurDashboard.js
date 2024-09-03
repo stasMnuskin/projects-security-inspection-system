@@ -1,24 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Select, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { getSitesByEntrepreneur, getFaultsBySite } from '../services/api';
+import { getSitesByEntrepreneur, getFaultsBySite, getOpenFaultsByEntrepreneur } from '../services/api';
 
 function EntrepreneurDashboard() {
   const [sites, setSites] = useState([]);
   const [selectedSite, setSelectedSite] = useState('');
   const [faults, setFaults] = useState([]);
+  const [openFaults, setOpenFaults] = useState([]);
+  const [error, setError] = useState(null);
+
+  
 
   useEffect(() => {
-    fetchSites();
+    const fetchData = async () => {
+      try {
+        const [sitesResponse, faultsResponse] = await Promise.all([
+          getSitesByEntrepreneur(),
+          getOpenFaultsByEntrepreneur()
+        ]);
+        setSites(sitesResponse.data);
+        setOpenFaults(faultsResponse.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError(error.message || 'Failed to fetch data');
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const fetchSites = async () => {
-    try {
-      const response = await getSitesByEntrepreneur();
-      setSites(response.data);
-    } catch (error) {
-      console.error('Error fetching sites:', error);
-    }
-  };
+  if (error) return <div>Error: {error}</div>;
 
   const handleSiteChange = async (event) => {
     const siteId = event.target.value;
@@ -38,6 +49,7 @@ function EntrepreneurDashboard() {
   return (
     <Container>
       <Typography variant="h4" gutterBottom>Entrepreneur Dashboard</Typography>
+      {error && <Typography color="error">{error}</Typography>}
       <Box mb={2}>
         <Select
           value={selectedSite}
@@ -76,8 +88,12 @@ function EntrepreneurDashboard() {
                 </TableRow>
               ))}
             </TableBody>
+            <TableBody>
+              {openFaults}
+            </TableBody>
           </Table>
         </TableContainer>
+        
       )}
     </Container>
   );

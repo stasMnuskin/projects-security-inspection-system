@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import SecurityDashboard from './pages/SecurityDashboard';
+import ChangePassword from './pages/ChangePassword';
 import EntrepreneurDashboard from './pages/EntrepreneurDashboard';
 import InspectorDashboard from './pages/InspectorDashboard';
 import PrivateRoute from './components/PrivateRoute';
@@ -38,6 +39,7 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/change-password" element={<ChangePassword />} />
         </Routes>
       </Router>
     </ThemeProvider>

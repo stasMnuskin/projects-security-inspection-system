@@ -1,8 +1,7 @@
 'use strict';
-
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('InspectionTypes', {
+    await queryInterface.createTable('Sites', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -13,18 +12,19 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
-      siteId: {
+      type: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      entrepreneurId: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         references: {
-          model: 'Sites',
+          model: 'Users',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
-      },
-      formStructure: {
-        type: Sequelize.JSON,
-        allowNull: false
       },
       createdAt: {
         allowNull: false,
@@ -37,6 +37,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('InspectionTypes');
+    await queryInterface.dropTable('Sites');
   }
 };

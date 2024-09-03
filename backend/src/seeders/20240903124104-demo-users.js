@@ -22,14 +22,6 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        username: 'entrepreneur',
-        email: 'entrepreneur@example.com',
-        password: hashedPassword,
-        role: 'entrepreneur',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
         username: 'security_officer',
         email: 'security@example.com',
         password: hashedPassword,

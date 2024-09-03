@@ -1,11 +1,32 @@
 'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const Inspection = sequelize.define('Inspection', {
+  class Inspection extends Model {
+    static associate(models) {
+      Inspection.belongsTo(models.User, {
+        foreignKey: 'entrepreneurId',
+        as: 'entrepreneur'
+      });
+      Inspection.belongsTo(models.Site, {
+        foreignKey: 'siteId'
+      });
+      Inspection.belongsTo(models.InspectionType, {
+        foreignKey: 'inspectionTypeId'
+      });
+      Inspection.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'inspector'
+      });
+    }
+  }
+  
+  Inspection.init({
     entrepreneurId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'Entrepreneurs',
+        model: 'Users',
         key: 'id'
       }
     },
@@ -42,26 +63,10 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     }
-  }, {});
-
-  Inspection.associate = function(models) {
-    Inspection.belongsTo(models.Entrepreneur, { 
-      foreignKey: 'entrepreneurId', 
-      onDelete: 'CASCADE' 
-    });
-    Inspection.belongsTo(models.Site, { 
-      foreignKey: 'siteId', 
-      onDelete: 'CASCADE' 
-    });
-    Inspection.belongsTo(models.InspectionType, { 
-      foreignKey: 'inspectionTypeId', 
-      onDelete: 'CASCADE' 
-    });
-    Inspection.belongsTo(models.User, { 
-      foreignKey: 'userId', 
-      onDelete: 'SET NULL' 
-    });
-  };
-
+  }, {
+    sequelize,
+    modelName: 'Inspection',
+  });
+  
   return Inspection;
 };

@@ -53,11 +53,15 @@ exports.loginUser = async (req, res, next) => {
       return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
 
+    console.log('Stored password:', user.password);
+    console.log('Provided password:', password);
+
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
-
+    console.log('Password match:', isMatch);
     const token = jwt.sign(
       { id: user.id, role: user.role },
       activeSecrets[0],
@@ -70,7 +74,11 @@ exports.loginUser = async (req, res, next) => {
       maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
 
-    res.json({ token, role: user.role });
+    res.json({ 
+      token, 
+      role: user.role, 
+      passwordChangeRequired: user.passwordChangeRequired 
+    });
   } catch (error) {
     console.error('Login error:', error);
     next(new AppError('Error logging in', 500, 'LOGIN_ERROR'));
@@ -151,5 +159,29 @@ exports.changeUserRole = async (req, res, next) => {
   } catch (err) {
     logger.error(`Change user role error: ${err.message}`);
     next(new AppError('Server error', 500, 'SERVER_ERROR', true, err));
+  }
+};
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findByPk(req.user.id);
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return next(new AppError('Current password is incorrect', 400, 'INVALID_PASSWORD'));
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.passwordChangeRequired = false;
+    await user.save();
+
+    res.json({ 
+      message: 'Password changed successfully',
+      role: user.role
+    });
+  } catch (error) {
+    next(new AppError('Error changing password', 500, 'CHANGE_PASSWORD_ERROR'));
   }
 };

@@ -109,6 +109,25 @@ exports.deleteFault = async (req, res, next) => {
   }
 };
 
+exports.getOpenFaultsByEntrepreneur = async (req, res, next) => {
+  try {
+    const faults = await db.Fault.findAll({
+      where: {
+        status: 'open',
+        '$site.entrepreneurId$': req.user.id
+      },
+      include: [{
+        model: db.Site,
+        as: 'site'
+      }],
+      order: [['reportedTime', 'DESC']]
+    });
+    res.json(faults);
+  } catch (error) {
+    next(new AppError('Error fetching open faults', 500, 'FETCH_FAULTS_ERROR'));
+  }
+};
+
 function isValidDate(dateString) {
   return !isNaN(new Date(dateString).getTime());
 }
