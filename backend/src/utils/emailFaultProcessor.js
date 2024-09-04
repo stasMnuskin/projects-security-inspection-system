@@ -96,28 +96,50 @@ const parseFaultFromEmail = (email) => {
   const subject = email.subject || '';
   const body = email.text || '';
 
-  logger.info(`Parsing email: Subject: ${subject}, Body: ${body.substring(0, 100)}...`);
+  logger.info(`Parsing email: Subject: ${subject}, Body: ${body}`);
 
-  const siteMatch = subject.match(/Site:\s*(.+)/i) || body.match(/Site:\s*(.+)/i);
-  const descriptionMatch = body.match(/Description:\s*(.+)/i);
-  const severityMatch = body.match(/Severity:\s*(.+)/i);
-  const locationMatch = body.match(/Location:\s*(.+)/i);
-
-  if (!siteMatch) logger.warn('Site not found in email');
-  if (!descriptionMatch) logger.warn('Description not found in email');
-  if (!severityMatch) logger.warn('Severity not found in email');
-  if (!locationMatch) logger.warn('Location not found in email');
-
-  if (!siteMatch || !descriptionMatch || !severityMatch || !locationMatch) {
-    throw new Error(`Invalid email format. Subject: ${subject}, Body: ${body.substring(0, 100)}...`);
-  }
-
-  return {
-    siteName: siteMatch[1].trim(),
-    description: descriptionMatch[1].trim(),
-    severity: severityMatch[1].trim().toLowerCase(),
-    location: locationMatch[1].trim(),
+  const faultData = {
+    siteName: '',
+    description: '',
+    severity: 'Low',
+    location: '',
+    reporterName: 'Unknown',
+    contactNumber: 'N/A'
   };
+
+  const lines = body.split('\n');
+  let currentField = '';
+
+  lines.forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine.endsWith(':')) {
+      currentField = trimmedLine.slice(0, -1).toLowerCase();
+    } else if (currentField && trimmedLine) {
+      switch (currentField) {
+        case 'site':
+          faultData.siteName = trimmedLine;
+          break;
+        case 'description':
+          faultData.description += (faultData.description ? ' ' : '') + trimmedLine;
+          break;
+        case 'severity':
+          faultData.severity = trimmedLine;
+          break;
+        case 'location':
+          faultData.location += (faultData.location ? ' ' : '') + trimmedLine;
+          break;
+        case 'reported by':
+          faultData.reporterName = trimmedLine;
+          break;
+        case 'contact number':
+          faultData.contactNumber = trimmedLine;
+          break;
+      }
+    }
+  });
+
+  logger.info(`Parsed fault data: ${JSON.stringify(faultData)}`);
+  return faultData;
 };
 
 const createFault = async (faultData) => {
@@ -126,9 +148,9 @@ const createFault = async (faultData) => {
   const site = await db.Site.findOne({ 
     where: { name: faultData.siteName },
     include: [{ 
-      model: db.Entrepreneur, 
-      as: 'entrepreneur',  // שימוש ב-alias
-      attributes: ['name'] 
+      model: db.User, 
+      as: 'entrepreneur',
+      attributes: ['id', 'username'] 
     }]
   });
 
@@ -145,14 +167,14 @@ const createFault = async (faultData) => {
     status: 'open',
     reportedBy: 'email',
     reportedTime: new Date(),
-    entrepreneurName: site.entrepreneur.name,  // שימוש ב-alias
+    entrepreneurName: site.entrepreneur ? site.entrepreneur.username : 'Unknown',
     siteName: site.name,
-    reporterName: 'Email System',
-    contactNumber: 'N/A'
+    reporterName: faultData.reporterName,
+    contactNumber: faultData.contactNumber
   });
 
   logger.info(`Fault created: ${fault.id}`);
   return fault;
 };
 
-module.exports = { processEmails };
+module.exports = { processEmails, createFault, parseFaultFromEmail, getGmailTransporter };
