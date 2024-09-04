@@ -48,7 +48,7 @@ const processEmails = async () => {
           format: 'full'
         });
 
-        logger.info(`Processing email: ${message.id}`);
+        logger.info(`מעבד אימייל: ${message.id}`);
 
         const headers = email.data.payload.headers;
         const subject = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
@@ -64,16 +64,16 @@ const processEmails = async () => {
         }
 
         if (!body) {
-          logger.warn(`Email ${message.id} has no readable body`);
+          logger.warn(`אימייל ${message.id} אין גוף קריא`);
           continue;
         }
 
-        logger.info(`Email subject: ${subject}`);
-        logger.info(`Email body (first 100 chars): ${body.substring(0, 100)}...`);
+        logger.info(`נושא האימייל: ${subject}`);
+        logger.info(`גוף האימייל (100 תווים ראשונים): ${body.substring(0, 100)}...`);
 
         const faultData = parseFaultFromEmail({ subject, text: body });
         await createFault(faultData);
-        logger.info(`Fault created from email: ${message.id}`);
+        logger.info(`נוצרה תקלה מאימייל: ${message.id}`);
         
         // Mark the email as read
         await gmail.users.messages.modify({
@@ -84,11 +84,11 @@ const processEmails = async () => {
           }
         });
       } catch (error) {
-        logger.error(`Error processing email ${message.id}:`, error);
+        logger.error(`שגיאה בעיבוד אימייל ${message.id}:`, error);
       }
     }
   } catch (error) {
-    logger.error('Error processing emails:', error);
+    logger.error('שגיאה בעיבוד אימיילים:', error);
   }
 };
 
@@ -96,16 +96,22 @@ const parseFaultFromEmail = (email) => {
   const subject = email.subject || '';
   const body = email.text || '';
 
-  logger.info(`Parsing email: Subject: ${subject}, Body: ${body}`);
+  logger.info(`מפרסר אימייל: נושא: ${subject}, גוף: ${body}`);
 
   const faultData = {
     siteName: '',
     description: '',
-    severity: 'Low',
+    severity: 'רגילה',
     location: '',
-    reporterName: 'Unknown',
-    contactNumber: 'N/A'
+    reporterName: 'לא ידוע',
+    contactNumber: 'לא זמין'
   };
+
+  // Extract site name from subject
+  const siteNameMatch = subject.match(/תקלה באתר:\s*(.+)/);
+  if (siteNameMatch) {
+    faultData.siteName = siteNameMatch[1].trim();
+  }
 
   const lines = body.split('\n');
   let currentField = '';
@@ -116,34 +122,56 @@ const parseFaultFromEmail = (email) => {
       currentField = trimmedLine.slice(0, -1).toLowerCase();
     } else if (currentField && trimmedLine) {
       switch (currentField) {
-        case 'site':
-          faultData.siteName = trimmedLine;
+        case 'אתר':
+          if (!faultData.siteName) {
+            faultData.siteName = trimmedLine;
+          }
           break;
-        case 'description':
+        case 'תיאור':
           faultData.description += (faultData.description ? ' ' : '') + trimmedLine;
           break;
-        case 'severity':
+        case 'חומרה':
           faultData.severity = trimmedLine;
           break;
-        case 'location':
+        case 'מיקום':
           faultData.location += (faultData.location ? ' ' : '') + trimmedLine;
           break;
-        case 'reported by':
+        case 'דווח על ידי':
           faultData.reporterName = trimmedLine;
           break;
-        case 'contact number':
+        case 'מספר ליצירת קשר':
           faultData.contactNumber = trimmedLine;
           break;
+        default:
+          // If the field is not recognized, add it to the description
+          faultData.description += (faultData.description ? ' ' : '') + `${currentField}: ${trimmedLine}`;
       }
+    } else if (trimmedLine) {
+      // If there's no current field but the line is not empty, add it to the description
+      faultData.description += (faultData.description ? ' ' : '') + trimmedLine;
     }
   });
 
-  logger.info(`Parsed fault data: ${JSON.stringify(faultData)}`);
+  // If site name is still empty, try to extract it from the first line of the body
+  if (!faultData.siteName) {
+    const firstLine = lines[0].trim();
+    const siteMatch = firstLine.match(/אתר:\s*(.+)/i);
+    if (siteMatch) {
+      faultData.siteName = siteMatch[1].trim();
+    }
+  }
+
+  logger.info(`נתוני תקלה שפורסרו: ${JSON.stringify(faultData)}`);
   return faultData;
 };
 
 const createFault = async (faultData) => {
-  logger.info(`Creating fault: ${JSON.stringify(faultData)}`);
+  logger.info(`יוצר תקלה: ${JSON.stringify(faultData)}`);
+
+  if (!faultData.siteName) {
+    logger.error('שם האתר חסר בנתוני התקלה');
+    throw new Error('שם האתר חסר בנתוני התקלה');
+  }
 
   const site = await db.Site.findOne({ 
     where: { name: faultData.siteName },
@@ -155,25 +183,25 @@ const createFault = async (faultData) => {
   });
 
   if (!site) {
-    logger.error(`Site not found: ${faultData.siteName}`);
-    throw new Error(`Site not found: ${faultData.siteName}`);
+    logger.error(`האתר לא נמצא: ${faultData.siteName}`);
+    throw new Error(`האתר לא נמצא: ${faultData.siteName}`);
   }
 
   const fault = await db.Fault.create({
     siteId: site.id,
-    description: faultData.description,
-    severity: faultData.severity,
-    location: faultData.location,
-    status: 'open',
-    reportedBy: 'email',
+    description: faultData.description || 'לא סופק תיאור',
+    severity: faultData.severity || 'רגילה',
+    location: faultData.location || 'לא צוין',
+    status: 'פתוח',
+    reportedBy: 'אימייל',
     reportedTime: new Date(),
-    entrepreneurName: site.entrepreneur ? site.entrepreneur.username : 'Unknown',
+    entrepreneurName: site.entrepreneur ? site.entrepreneur.username : 'לא ידוע',
     siteName: site.name,
-    reporterName: faultData.reporterName,
-    contactNumber: faultData.contactNumber
+    reporterName: faultData.reporterName || 'לא ידוע',
+    contactNumber: faultData.contactNumber || 'לא זמין'
   });
 
-  logger.info(`Fault created: ${fault.id}`);
+  logger.info(`נוצרה תקלה: ${fault.id}`);
   return fault;
 };
 

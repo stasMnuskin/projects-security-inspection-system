@@ -111,20 +111,75 @@ exports.deleteFault = async (req, res, next) => {
 
 exports.getOpenFaultsByEntrepreneur = async (req, res, next) => {
   try {
+    logger.info(`Fetching open faults for entrepreneur ID: ${req.user.id}`);
+    
+    const sites = await db.Site.findAll({
+      where: { entrepreneurId: req.user.id },
+      attributes: ['id']
+    });
+    
+    const siteIds = sites.map(site => site.id);
+    
+    logger.info(`Found ${siteIds.length} sites for entrepreneur ID: ${req.user.id}`);
+
     const faults = await db.Fault.findAll({
+      attributes: ['id', 'description', 'severity', 'location', 'status', 'reportedTime', 'siteName'],
       where: {
         status: 'open',
-        '$site.entrepreneurId$': req.user.id
+        siteId: {
+          [Op.in]: siteIds
+        }
       },
       include: [{
         model: db.Site,
-        as: 'site'
+        attributes: ['name']
       }],
       order: [['reportedTime', 'DESC']]
     });
+
+    logger.info(`Found ${faults.length} open faults for entrepreneur ID: ${req.user.id}`);
+    
     res.json(faults);
   } catch (error) {
+    logger.error('Error fetching open faults:', error);
     next(new AppError('Error fetching open faults', 500, 'FETCH_FAULTS_ERROR'));
+  }
+};
+
+exports.getRecentFaultsByEntrepreneur = async (req, res, next) => {
+  try {
+    logger.info(`Fetching recent faults for entrepreneur ID: ${req.user.id}`);
+    
+    const sites = await db.Site.findAll({
+      where: { entrepreneurId: req.user.id },
+      attributes: ['id']
+    });
+    
+    const siteIds = sites.map(site => site.id);
+    
+    logger.info(`Found ${siteIds.length} sites for entrepreneur ID: ${req.user.id}`);
+
+    const faults = await db.Fault.findAll({
+      attributes: ['id', 'description', 'severity', 'location', 'status', 'reportedTime', 'siteName'],
+      where: {
+        siteId: {
+          [Op.in]: siteIds
+        }
+      },
+      include: [{
+        model: db.Site,
+        attributes: ['name']
+      }],
+      order: [['reportedTime', 'DESC']],
+      limit: 10
+    });
+
+    logger.info(`Found ${faults.length} recent faults for entrepreneur ID: ${req.user.id}`);
+    
+    res.json(faults);
+  } catch (error) {
+    logger.error('Error fetching recent faults:', error);
+    next(new AppError('Error fetching recent faults', 500, 'FETCH_RECENT_FAULTS_ERROR'));
   }
 };
 

@@ -9,5 +9,6 @@ router.post('/', auth, roleAuth(['admin', 'security_officer']), faultController.
 router.get('/site/:siteId', auth, faultController.getFaultsBySite);
 router.put('/:id', auth, roleAuth(['admin', 'security_officer']), faultController.updateFault);
 router.get('/open/entrepreneur', auth, roleAuth('entrepreneur'), faultController.getOpenFaultsByEntrepreneur);
+router.get('/recent/entrepreneur', auth, roleAuth('entrepreneur'), faultController.getRecentFaultsByEntrepreneur);
 
 module.exports = router;
