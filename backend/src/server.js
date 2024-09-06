@@ -24,7 +24,7 @@ const inspectionTypeRoutes = require('./routes/inspectionTypeRoutes');
 const siteRoutes = require('./routes/siteRoutes');
 const entrepreneurRoutes = require('./routes/entrepreneurRoutes');
 
-const { processEmails } = require('./utils/emailFaultProcessor');
+const { processEmails, cleanupExistingFaults } = require('./utils/emailFaultProcessor');
 
 const db = require('./models');
 const cache = require('./utils/cache');
@@ -208,6 +208,10 @@ async function startServer() {
 
     await db.sequelize.sync({ alter: true });
     logger.info('Database synced successfully.');
+
+    // Clean up existing faults before starting the server
+    await cleanupExistingFaults();
+    logger.info('Existing faults cleaned up successfully.');
 
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);

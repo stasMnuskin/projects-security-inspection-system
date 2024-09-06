@@ -63,6 +63,8 @@ export const getOpenFaultsByEntrepreneur = () => api.get('/faults/open/entrepren
 export const getSitesByEntrepreneur = () => api.get('/sites/entrepreneur');
 export const getFaultsBySite = (siteId) => api.get(`/faults/site/${siteId}`);
 export const getRecentFaultsByEntrepreneur = () => api.get('/faults/recent/entrepreneur');
+export const getRecurringFaultsByEntrepreneur = () => api.get('/faults/recurring/entrepreneur');
+export const getAllFaultsBySite = (siteId) => api.get(`/faults/all/site/${siteId}`);
 export const changePassword = async (currentPassword, newPassword) => {
   const response = await api.post('/users/change-password', { currentPassword, newPassword });
   if (response.data.role) {

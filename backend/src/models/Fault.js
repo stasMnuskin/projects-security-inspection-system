@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     description: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false
     },
     severity: {
@@ -17,8 +17,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('open', 'closed'),
-      defaultValue: 'open'
+      type: DataTypes.ENUM('פתוח', 'סגור'),
+      defaultValue: 'פתוח'
     },
     reportedBy: {
       type: DataTypes.STRING,
@@ -44,8 +44,27 @@ module.exports = (sequelize, DataTypes) => {
     },
     contactNumber: {
       type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'N/A'
+      allowNull: true
+    },
+    emailSubject: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    emailSender: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    closedTime: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    closedBy: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    closureNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   });
 
