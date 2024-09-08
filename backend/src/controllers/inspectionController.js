@@ -62,6 +62,31 @@ exports.getInspection = async (req, res, next) => {
   }
 };
 
+exports.getLatestInspection = async (req, res, next) => {
+  try {
+    const siteId = req.params.siteId;
+    const latestInspection = await db.Inspection.findOne({
+      where: { siteId: siteId },
+      include: [
+        { model: db.Entrepreneur, attributes: ['name'] },
+        { model: db.Site, attributes: ['name'] },
+        { model: db.InspectionType, attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (!latestInspection) {
+      throw new AppError('No inspection found for this site', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
+    }
+
+    res.json(latestInspection);
+    logger.info(`Function getLatestInspection called with params: ${JSON.stringify(req.params)}`);
+  } catch (error) {
+    logger.error('Error in getLatestInspection:', error);
+    next(error);
+  }
+};
+
 exports.updateInspection = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

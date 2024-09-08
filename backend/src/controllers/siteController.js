@@ -31,9 +31,7 @@ exports.createSite = async (req, res, next) => {
 
 exports.getAllSites = async (req, res, next) => {
   try {
-    const sites = await Site.findAll({
-      include: [{ model: Entrepreneur, attributes: ['name'] }]
-    });
+    const sites = await Site.findAll();
     res.json(sites);
   } catch (error) {
     logger.error('Error in getAllSites:', error);
@@ -120,7 +118,7 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
   } catch (error) {
     logger.error('Error in getSitesByEntrepreneur:', error);
     next(new AppError('Error fetching sites', 500, 'FETCH_SITES_ERROR'));
-  }
+    }
 };
 
 exports.getFaultsBySite = async (req, res, next) => {

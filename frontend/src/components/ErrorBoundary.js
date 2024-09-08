@@ -18,9 +18,9 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <Container>
-          <Typography variant="h4" color="error">Something went wrong.</Typography>
-          <Typography variant="body1">{this.state.error && this.state.error.toString()}</Typography>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+          <Typography variant="h4" color="error" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>Something went wrong.</Typography>
+          <Typography variant="body1" sx={{ mb: 4, color: 'primary.main' }}>{this.state.error && this.state.error.toString()}</Typography>
         </Container>
       );
     }

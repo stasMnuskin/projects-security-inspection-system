@@ -69,7 +69,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Fault.associate = function(models) {
-    Fault.belongsTo(models.Site, { foreignKey: 'siteId' });
+    Fault.belongsTo(models.Site, { foreignKey: 'siteId', as: 'site' });
   };
 
   return Fault;

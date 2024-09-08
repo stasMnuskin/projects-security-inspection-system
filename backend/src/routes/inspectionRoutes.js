@@ -25,6 +25,8 @@ router.get('/', auth, inspectionController.getAllInspections);
 
 router.get('/:id', auth, inspectionController.getInspection);
 
+router.get('/latest/:siteId', auth, inspectionController.getLatestInspection);
+
 router.put(
   '/:id',
   [

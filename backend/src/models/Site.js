@@ -26,8 +26,7 @@ module.exports = (sequelize, DataTypes) => {
       as: 'entrepreneur'
     });
     Site.hasMany(models.Fault, {
-      foreignKey: 'siteId',
-      as: 'faults'
+      foreignKey: 'siteId'
     });
   };
 

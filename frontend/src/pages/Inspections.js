@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, Box } from '@mui/material';
 import { getInspections } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 
 function Inspections() {
   const [inspections, setInspections] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchInspections = async () => {
       try {
+        setLoading(true);
         const response = await getInspections();
         setInspections(response.data);
       } catch (error) {
@@ -18,30 +20,40 @@ function Inspections() {
         } else {
           setError('An unexpected error occurred');
         }
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchInspections();
   }, []);
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   if (error) {
     return <Typography color="error">{error}</Typography>;
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Inspections
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+      <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
+        ביקורות
       </Typography>
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} elevation={3}>
+        <Table dir="rtl">
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Site</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Date</TableCell>
+              <TableCell>מזהה</TableCell>
+              <TableCell>אתר</TableCell>
+              <TableCell>סוג</TableCell>
+              <TableCell>סטטוס</TableCell>
+              <TableCell>תאריך</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

@@ -13,14 +13,13 @@ function ChangePassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
+      setError('הסיסמאות החדשות אינן תואמות');
       return;
     }
     try {
       await changePassword(currentPassword, newPassword);
       const userRole = localStorage.getItem('userRole');
       
-
       switch(userRole) {
         case 'admin':
           navigate('/admin');
@@ -37,74 +36,74 @@ function ChangePassword() {
         default:
           navigate('/');
       }
-      
     } catch (error) {
       setError(error.message);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5">
-          Change Password
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="currentPassword"
-            label="Current Password"
-            type="password"
-            id="currentPassword"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="newPassword"
-            label="New Password"
-            type="password"
-            id="newPassword"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="confirmPassword"
-            label="Confirm New Password"
-            type="password"
-            id="confirmPassword"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+      
+        <Box
+            sx={{
+              marginTop: 8,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
           >
-            Change Password
-          </Button>
-          {error && (
-            <Typography color="error" align="center">
-              {error}
+            <Typography component="h1" variant="h5" color="primary" sx={{ mb: 4, color: 'primary.main' }}>
+              שינוי סיסמה
             </Typography>
-          )}
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="currentPassword"
+                label="סיסמה נוכחית"
+                type="password"
+                id="currentPassword"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="newPassword"
+                label="סיסמה חדשה"
+                type="password"
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="confirmPassword"
+                label="אימות סיסמה חדשה"
+                type="password"
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+              >
+                שנה סיסמה
+              </Button>
+              {error && (
+                <Typography color="error" align="center">
+                  {error}
+                </Typography>
+              )}
+            </Box>
         </Box>
-      </Box>
     </Container>
   );
 }

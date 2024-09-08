@@ -40,6 +40,7 @@ export const getUsers = () => api.get('/users');
 export const getInspections = () => api.get('/inspections');
 export const createInspection = (data) => api.post('/inspections', data);
 export const updateInspection = (id, data) => api.put(`/inspections/${id}`, data);
+export const getLatestInspection = (siteId) => api.get(`/inspections/latest/${siteId}`);
 
 export const getSites = () => api.get('/sites');
 
@@ -73,5 +74,14 @@ export const changePassword = async (currentPassword, newPassword) => {
   
   return response;
 };
+
+// New functions for site-specific data
+export const getOpenFaultsBySite = (siteId) => api.get(`/faults/open/site/${siteId}`);
+export const getRecentFaultsBySite = (siteId) => api.get(`/faults/recent/site/${siteId}`);
+export const getRecurringFaultsBySite = (siteId) => api.get(`/faults/recurring/site/${siteId}`);
+
+// New functions for statistics
+export const getStatisticsBySite = (siteId) => api.get(siteId ? `/faults/statistics/site/${siteId}` : '/faults/statistics/site');
+export const getStatisticsByLocation = (siteId) => api.get(siteId ? `/faults/statistics/location/${siteId}` : '/faults/statistics/location');
 
 export default api;

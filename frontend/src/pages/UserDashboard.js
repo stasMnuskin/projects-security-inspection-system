@@ -30,21 +30,21 @@ function UserDashboard() {
   }
 
   return (
-    <Container sx={dashboardStyles.container}>
-      <Typography variant="h4" gutterBottom>User Dashboard</Typography>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+      <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>User Dashboard</Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         <Paper sx={dashboardStyles.paper}>
-          <Typography variant="h6" color="primary">Upcoming Inspection</Typography>
+          <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>Upcoming Inspection</Typography>
           {upcomingInspection ? (
             <>
-              <Typography>{`Site: ${upcomingInspection.Site?.name}`}</Typography>
-              <Typography>{`Date: ${new Date(upcomingInspection.scheduledDate).toLocaleDateString()}`}</Typography>
+              <Typography gutterBottom sx={{ mb: 4, color: 'primary.main' }}>{`Site: ${upcomingInspection.Site?.name}`}</Typography>
+              <Typography gutterBottom sx={{ mb: 4, color: 'primary.main' }}>{`Date: ${new Date(upcomingInspection.scheduledDate).toLocaleDateString()}`}</Typography>
               <Button variant="contained" color="primary" sx={{ mt: 2 }}>
                 Start Inspection
               </Button>
             </>
           ) : (
-            <Typography>No upcoming inspections</Typography>
+            <Typography gutterBottom sx={{ mb: 4, color: 'primary.main' }}>No upcoming inspections</Typography>
           )}
         </Paper>
       </Box>

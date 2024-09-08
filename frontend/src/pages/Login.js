@@ -48,7 +48,8 @@ function Login() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+
       <Box
         sx={{
           marginTop: 8,
@@ -57,8 +58,8 @@ function Login() {
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h5">
-          Login
+        <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
+          התחברות
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -66,7 +67,7 @@ function Login() {
             required
             fullWidth
             id="email"
-            label="Email Address"
+            label="כתובת אימייל"
             name="email"
             autoComplete="email"
             autoFocus
@@ -78,7 +79,7 @@ function Login() {
             required
             fullWidth
             name="password"
-            label="Password"
+            label="סיסמה"
             type="password"
             id="password"
             autoComplete="current-password"
@@ -91,11 +92,11 @@ function Login() {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            Sign In
+            התחבר
           </Button>
           <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/register" variant="body2">
-              {"Don't have an account? Sign Up"}
+              {"אין לך חשבון? הירשם"}
             </Link>
           </Box>
           {error && (

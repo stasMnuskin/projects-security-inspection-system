@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { TextField, Button, Typography, Container, Box, Select, MenuItem, FormControl, InputLabel, Link } from '@mui/material';
 import { register } from '../services/api';
@@ -48,7 +47,7 @@ function Register() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
       <Box
         sx={{
           marginTop: 8,
@@ -57,10 +56,10 @@ function Register() {
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h5">
+        <Typography component="h1" variant="h5" color="primary" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
           הרשמה
         </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
           <TextField
             margin="normal"
             required
@@ -102,11 +101,10 @@ function Register() {
               labelId="role-label"
               id="role"
               value={role}
-              label="Role"
+              label="תפקיד"
               onChange={(e) => setRole(e.target.value)}
             >
-              <MenuItem value="security_officer">קב
-              "ט</MenuItem>
+              <MenuItem value="security_officer">קב"ט</MenuItem>
               <MenuItem value="admin">מנהל</MenuItem>
             </Select>
           </FormControl>
@@ -120,11 +118,11 @@ function Register() {
           </Button>
           <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/login" variant="body2">
-              {"כניסה"}
+              {"יש לך כבר חשבון? התחבר"}
             </Link>
           </Box>
           {error && (
-            <Typography color="error" align="center">
+            <Typography color="error" align="center" sx={{ mt: 2 }}>
               {error}
             </Typography>
           )}

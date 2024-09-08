@@ -1,6 +1,6 @@
 import React from 'react';
-import { 
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button 
+import { Container,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Typography, Box 
 } from '@mui/material';
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
@@ -14,11 +14,11 @@ function FaultReport({ faults }) {
     const doc = new jsPDF(orientation, unit, size);
 
     doc.setFontSize(15);
-    doc.text("Fault Report", 40, 40);
+    doc.text("דו״ח תקלות", 40, 40);
 
-    const headers = [["ID", "Site", "Description", "Status", "Severity", "Reported Time"]];
+    const headers = [["מזהה", "אתר", "תיאור", "סטטוס", "חומרה", "זמן דיווח"]];
 
-    const data = faults.map(fault=> [
+    const data = faults.map(fault => [
       fault.id, 
       fault.siteName,
       fault.description,
@@ -38,20 +38,24 @@ function FaultReport({ faults }) {
   }
 
   return (
-    <div>
-      <Button onClick={exportPDF} variant="contained" color="primary">
-        Export to PDF
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+      <Box>
+      <Typography variant="h5" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
+        דו״ח תקלות
+      </Typography>
+      <Button onClick={exportPDF} variant="contained" color="primary" sx={{ mb: 2 }}>
+        ייצא ל-PDF
       </Button>
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} elevation={3}>
+        <Table dir="rtl">
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Site</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Severity</TableCell>
-              <TableCell>Reported Time</TableCell>
+              <TableCell>מזהה</TableCell>
+              <TableCell>אתר</TableCell>
+              <TableCell>תיאור</TableCell>
+              <TableCell>סטטוס</TableCell>
+              <TableCell>חומרה</TableCell>
+              <TableCell>זמן דיווח</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -68,7 +72,9 @@ function FaultReport({ faults }) {
           </TableBody>
         </Table>
       </TableContainer>
-    </div>
+    </Box>
+    </Container>
+    
   );
 }
 
