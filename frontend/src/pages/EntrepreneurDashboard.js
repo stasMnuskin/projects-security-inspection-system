@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Select, MenuItem, Table, TableBody, 
   TableCell, TableContainer, TableHead, TableRow, Paper, Tabs, Tab,
-  useTheme, useMediaQuery
+  useTheme, useMediaQuery, Grid, Card, CardContent
 } from '@mui/material';
 import { getSitesByEntrepreneur, getOpenFaultsBySite, getRecurringFaultsBySite, getOpenFaultsByEntrepreneur, getRecentFaultsByEntrepreneur, getRecurringFaultsByEntrepreneur, getStatisticsBySite, getStatisticsByLocation } from '../services/api';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function EntrepreneurDashboard() {
   const [sites, setSites] = useState([]);
@@ -93,7 +97,7 @@ function EntrepreneurDashboard() {
               <TableCell>מיקום</TableCell>
               <TableCell>סטטוס</TableCell>
               <TableCell>זמן דיווח</TableCell>
-              {/* <TableCell>תיאור</TableCell> */}
+              <TableCell>תיאור</TableCell>
               {!selectedSite && <TableCell>שם האתר</TableCell>}
             </TableRow>
           </TableHead>
@@ -104,7 +108,7 @@ function EntrepreneurDashboard() {
                 <TableCell>{fault.location}</TableCell>
                 <TableCell>{fault.status}</TableCell>
                 <TableCell>{new Date(fault.reportedTime).toLocaleString()}</TableCell>
-                {/* <TableCell>{fault.description}</TableCell> */}
+                <TableCell>{fault.description}</TableCell>
                 {!selectedSite && <TableCell>{fault.siteName}</TableCell>}
               </TableRow>
             ))}
@@ -144,33 +148,77 @@ function EntrepreneurDashboard() {
     </Box>
   );
 
-  const renderStatisticsTable = (stats, title) => (
-    <Box mb={4}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>{title}</Typography>
-      <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-        <Table dir="rtl">
-          <TableHead>
-            <TableRow>
-              <TableCell>{selectedSite ? 'מיקום' : 'שם האתר'}</TableCell>
-              <TableCell>מספר תקלות</TableCell>
-              <TableCell>זמן תיקון ממוצע (שעות)</TableCell>
-              <TableCell>חומרה ממוצעת</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {stats.map((stat, index) => (
-              <TableRow key={index}>
-                <TableCell>{stat.name}</TableCell>
-                <TableCell>{stat.faultCount}</TableCell>
-                <TableCell>{stat.averageRepairTime.toFixed(2)}</TableCell>
-                <TableCell>{stat.averageSeverity.toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+  const renderStatisticsCards = (stats) => (
+    <Grid container spacing={3}>
+      {stats.map((stat, index) => (
+        <Grid item xs={12} sm={6} md={4} key={index}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" component="div">
+                {stat.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                מספר תקלות: {stat.faultCount}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                תקלות פתוחות: {stat.openFaultCount}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                זמן תיקון ממוצע: {stat.averageRepairTime.toFixed(2)} שעות
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                חומרה ממוצעת: {stat.averageSeverity.toFixed(2)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                תקלות חוזרות: {stat.recurringFaultCount}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                זמן תגובה ממוצע: {stat.averageResponseTime.toFixed(2)} שעות
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
   );
+
+  const renderStatisticsCharts = (stats) => {
+    const chartData = {
+      labels: stats.map(stat => stat.name),
+      datasets: [
+        {
+          label: 'מספר תקלות',
+          data: stats.map(stat => stat.faultCount),
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        },
+        {
+          label: 'תקלות פתוחות',
+          data: stats.map(stat => stat.openFaultCount),
+          backgroundColor: 'rgba(53, 162, 235, 0.5)',
+        },
+        {
+          label: 'תקלות חוזרות',
+          data: stats.map(stat => stat.recurringFaultCount),
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        },
+      ],
+    };
+
+    const options = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: 'סטטיסטיקות תקלות',
+        },
+      },
+    };
+
+    return <Bar data={chartData} options={options} />;
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
@@ -186,7 +234,6 @@ function EntrepreneurDashboard() {
         >
           <MenuItem value="">
             <em>כל האתרים</em>
-
           </MenuItem>
           {sites.map((site) => (
             <MenuItem key={site.id} value={site.id}>{site.name}</MenuItem>
@@ -211,8 +258,16 @@ function EntrepreneurDashboard() {
         {tabValue === 2 && renderRecurringFaultsTable()}
         {tabValue === 3 && (
           <>
-            {renderStatisticsTable(siteStatistics, 'סטטיסטיקות לפי אתר')}
-            {renderStatisticsTable(locationStatistics, 'סטטיסטיקות לפי מיקום')}
+            <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>סטטיסטיקות לפי אתר</Typography>
+            {renderStatisticsCards(siteStatistics)}
+            <Box mt={4}>
+              {renderStatisticsCharts(siteStatistics)}
+            </Box>
+            <Typography variant="h6" gutterBottom sx={{ mt: 6, mb: 4, color: 'primary.main' }}>סטטיסטיקות לפי מיקום</Typography>
+            {renderStatisticsCards(locationStatistics)}
+            <Box mt={4}>
+              {renderStatisticsCharts(locationStatistics)}
+            </Box>
           </>
         )}
       </Box>

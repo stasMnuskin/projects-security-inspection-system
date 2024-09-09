@@ -23,7 +23,7 @@ exports.getAllInspections = async (req, res, next) => {
   try {
     const inspections = await db.Inspection.findAll({
       include: [
-        { model: db.Entrepreneur, attributes: ['name'] },
+        { model: db.User, as: 'entrepreneur', attributes: ['name'] },
         { model: db.Site, attributes: ['name'] },
         { model: db.InspectionType, attributes: ['name'] }
       ],
@@ -46,7 +46,7 @@ exports.getInspection = async (req, res, next) => {
   try {
     const inspection = await db.Inspection.findByPk(req.params.id, {
       include: [
-        { model: db.Entrepreneur, attributes: ['name'] },
+        { model: db.User, as: 'entrepreneur', attributes: ['name'] },
         { model: db.Site, attributes: ['name'] },
         { model: db.InspectionType, attributes: ['name'] }
       ]
@@ -68,7 +68,7 @@ exports.getLatestInspection = async (req, res, next) => {
     const latestInspection = await db.Inspection.findOne({
       where: { siteId: siteId },
       include: [
-        { model: db.Entrepreneur, attributes: ['name'] },
+        { model: db.User, as: 'entrepreneur', attributes: ['name'] },
         { model: db.Site, attributes: ['name'] },
         { model: db.InspectionType, attributes: ['name'] }
       ],
@@ -106,7 +106,7 @@ exports.updateInspection = async (req, res, next) => {
 
     // Validate relationships if they are being updated
     if (entrepreneurId && entrepreneurId !== inspection.entrepreneurId) {
-      const entrepreneur = await db.Entrepreneur.findByPk(entrepreneurId, { transaction });
+      const entrepreneur = await db.User.findByPk(entrepreneurId, { transaction });
       if (!entrepreneur) {
         await transaction.rollback();
         return next(new AppError('Entrepreneur not found', 404, 'ENTREPRENEUR_NOT_FOUND').setRequestDetails(req));

@@ -5,6 +5,35 @@ const { sendEmail } = require('../utils/emailService');
 const { Op, fn, col, literal, cast } = require('sequelize');
 const { createFault: createEmailFault, closeFault: closeEmailFault } = require('../utils/emailFaultProcessor');
 
+exports.getAllFaults = async (req, res, next) => {
+  try {
+    const faults = await db.Fault.findAll({
+      include: [{
+        model: db.Site,
+        as: 'site',
+        attributes: ['name']
+      }],
+      order: [['reportedTime', 'DESC']]
+    });
+
+    const formattedFaults = faults.map(fault => ({
+      id: fault.id,
+      description: fault.description,
+      severity: fault.severity,
+      location: fault.location,
+      status: fault.status,
+      reportedTime: fault.reportedTime,
+      siteName: fault.site ? fault.site.name : null
+    }));
+
+    logger.info('Fetched all faults');
+    res.json(formattedFaults);
+  } catch (error) {
+    logger.error('Error fetching all faults:', error);
+    next(new AppError('Error fetching all faults', 500, 'FETCH_ALL_FAULTS_ERROR'));
+  }
+};
+
 exports.createFault = async (req, res, next) => {
   try {
     logger.info('Creating fault with data:', req.body);
@@ -349,7 +378,6 @@ const severityToNumber = (severity) => {
     default: return 0;
   }
 };
-
 exports.getStatisticsBySite = async (req, res, next) => {
   try {
     const { id: userId, role } = req.user;
@@ -368,6 +396,9 @@ exports.getStatisticsBySite = async (req, res, next) => {
       whereClause.id = siteId;
     }
 
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
     const sites = await db.Site.findAll({
       where: whereClause,
       attributes: [
@@ -382,24 +413,43 @@ exports.getStatisticsBySite = async (req, res, next) => {
           WHEN "Faults"."severity" = 'Critical' THEN 4
           WHEN "Faults"."severity" = 'רגילה' THEN 5
           ELSE 0
-        END`)), 'averageSeverity']
+        END`)), 'averageSeverity'],
+        [fn('COUNT', literal('CASE WHEN "Faults"."status" = \'פתוח\' THEN 1 ELSE NULL END')), 'openFaultCount'],
+        [fn('AVG', literal('CASE WHEN "Faults"."acknowledgedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Faults"."acknowledgedTime" - "Faults"."reportedTime")) / 3600 ELSE NULL END')), 'averageResponseTime']
       ],
       include: [{
         model: db.Fault,
         as: 'Faults',
         attributes: [],
-        required: false
+        required: false,
+        where: {
+          reportedTime: { [Op.gte]: oneMonthAgo }
+        }
       }],
       group: ['Site.id', 'Site.name'],
       raw: true
     });
 
-    const formattedStats = sites.map(site => ({
-      id: site.id,
-      name: site.name,
-      faultCount: parseInt(site.faultCount) || 0,
-      averageRepairTime: parseFloat(site.averageRepairTime) || 0,
-      averageSeverity: parseFloat(site.averageSeverity) || 0
+    const formattedStats = await Promise.all(sites.map(async site => {
+      const recurringFaults = await db.Fault.count({
+        where: {
+          siteId: site.id,
+          reportedTime: { [Op.gte]: oneMonthAgo }
+        },
+        group: ['description'],
+        having: literal('COUNT(*) > 1')
+      });
+
+      return {
+        id: site.id,
+        name: site.name,
+        faultCount: parseInt(site.faultCount) || 0,
+        averageRepairTime: parseFloat(site.averageRepairTime) || 0,
+        averageSeverity: parseFloat(site.averageSeverity) || 0,
+        openFaultCount: parseInt(site.openFaultCount) || 0,
+        recurringFaultCount: recurringFaults.length,
+        averageResponseTime: parseFloat(site.averageResponseTime) || 0
+      };
     }));
 
     res.json(formattedStats);
@@ -427,6 +477,11 @@ exports.getStatisticsByLocation = async (req, res, next) => {
       whereClause.siteId = siteId;
     }
 
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    whereClause.reportedTime = { [Op.gte]: oneMonthAgo };
+
     const locationStats = await db.Fault.findAll({
       attributes: [
         'location',
@@ -439,7 +494,9 @@ exports.getStatisticsByLocation = async (req, res, next) => {
           WHEN "Fault"."severity" = 'Critical' THEN 4
           WHEN "Fault"."severity" = 'רגילה' THEN 5
           ELSE 0
-        END`)), 'averageSeverity']
+        END`)), 'averageSeverity'],
+        [fn('COUNT', literal('CASE WHEN "Fault"."status" = \'פתוח\' THEN 1 ELSE NULL END')), 'openFaultCount'],
+        [fn('AVG', literal('CASE WHEN "Fault"."acknowledgedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Fault"."acknowledgedTime" - "Fault"."reportedTime")) / 3600 ELSE NULL END')), 'averageResponseTime']
       ],
       include: [{
         model: db.Site,
@@ -452,11 +509,26 @@ exports.getStatisticsByLocation = async (req, res, next) => {
       raw: true
     });
 
-    const formattedStats = locationStats.map(stat => ({
-      name: stat.location,
-      faultCount: parseInt(stat.faultCount) || 0,
-      averageRepairTime: parseFloat(stat.averageRepairTime) || 0,
-      averageSeverity: parseFloat(stat.averageSeverity) || 0
+    const formattedStats = await Promise.all(locationStats.map(async stat => {
+      const recurringFaults = await db.Fault.count({
+        where: {
+          location: stat.location,
+          reportedTime: { [Op.gte]: oneMonthAgo },
+          ...whereClause
+        },
+        group: ['description'],
+        having: literal('COUNT(*) > 1')
+      });
+
+      return {
+        name: stat.location,
+        faultCount: parseInt(stat.faultCount) || 0,
+        averageRepairTime: parseFloat(stat.averageRepairTime) || 0,
+        averageSeverity: parseFloat(stat.averageSeverity) || 0,
+        openFaultCount: parseInt(stat.openFaultCount) || 0,
+        recurringFaultCount: recurringFaults.length,
+        averageResponseTime: parseFloat(stat.averageResponseTime) || 0
+      };
     }));
 
     res.json(formattedStats);

@@ -13,6 +13,9 @@ import SecurityDashboard from './pages/SecurityDashboard';
 import ChangePassword from './pages/ChangePassword';
 import EntrepreneurDashboard from './pages/EntrepreneurDashboard';
 import InspectorDashboard from './pages/InspectorDashboard';
+import LatestInspection from './pages/LatestInspection';
+import Faults from './pages/Faults';
+import NewInspection from './pages/NewInspection';
 import PrivateRoute from './components/PrivateRoute';
 import LotanLogo from './assets/lotan-logo.svg';
 import './styles/rtl.css';
@@ -59,6 +62,21 @@ function App() {
                 <Route path="/inspector" element={
                   <PrivateRoute allowedRoles={['inspector']}>
                     <InspectorDashboard />
+                  </PrivateRoute>
+                } />
+                <Route path="/inspection/:siteId/:inspectionTypeId" element={
+                  <PrivateRoute allowedRoles={['security_officer']}>
+                    <LatestInspection />
+                  </PrivateRoute>
+                } />
+                <Route path="/faults/:siteId" element={
+                  <PrivateRoute allowedRoles={['security_officer']}>
+                    <Faults />
+                  </PrivateRoute>
+                } />
+                <Route path="/new-inspection/:siteId/:inspectionTypeId" element={
+                  <PrivateRoute allowedRoles={['security_officer']}>
+                    <NewInspection />
                   </PrivateRoute>
                 } />
                 <Route path="/" element={<Navigate to="/login" replace />} />
