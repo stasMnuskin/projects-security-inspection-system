@@ -31,18 +31,7 @@ exports.createSite = async (req, res, next) => {
 
 exports.getAllSites = async (req, res, next) => {
   try {
-    const sites = await Site.findAll();
-    res.json(sites);
-  } catch (error) {
-    logger.error('Error in getAllSites:', error);
-    next(new AppError('Error fetching sites', 500));
-  }
-};
-
-exports.getSite = async (req, res, next) => {
-  try {
     const sites = await Site.findAll({
-      where: { entrepreneurId: req.user.id },
       include: [{
         model: User,
         as: 'entrepreneur',
@@ -51,6 +40,26 @@ exports.getSite = async (req, res, next) => {
     });
     res.json(sites);
   } catch (error) {
+    logger.error('Error in getAllSites:', error);
+    next(new AppError('Error fetching sites', 500));
+  }
+};
+
+exports.getSitesByEntrepreneur = async (req, res, next) => {
+  try {
+    logger.info(`Fetching sites for entrepreneur: ${req.user.id}`);
+    const sites = await Site.findAll({
+      where: { entrepreneurId: req.user.id },
+      include: [{
+        model: User,
+        as: 'entrepreneur',
+        attributes: ['id', 'username', 'email']
+      }]
+    });
+    logger.info(`Found ${sites.length} sites`);
+    res.json(sites);
+  } catch (error) {
+    logger.error('Error in getSitesByEntrepreneur:', error);
     next(new AppError('Error fetching sites', 500, 'FETCH_SITES_ERROR'));
   }
 };
@@ -98,27 +107,6 @@ exports.deleteSite = async (req, res, next) => {
     logger.error('Error in deleteSite:', error);
     next(new AppError('Error deleting site', 500));
   }
-};
-
-exports.getSitesByEntrepreneur = async (req, res, next) => {
-  logger.info('Entering getSitesByEntrepreneur');
-  console.log('Entering getSitesByEntrepreneur');
-  try {
-    logger.info(`Fetching sites for entrepreneur: ${req.user.id}`);
-    const sites = await Site.findAll({
-      where: { entrepreneurId: req.user.id },
-      include: [{
-        model: User,
-        as: 'entrepreneur',
-        attributes: ['id', 'username', 'email']
-      }]
-    });
-    logger.info(`Found ${sites.length} sites`);
-    res.json(sites);
-  } catch (error) {
-    logger.error('Error in getSitesByEntrepreneur:', error);
-    next(new AppError('Error fetching sites', 500, 'FETCH_SITES_ERROR'));
-    }
 };
 
 exports.getFaultsBySite = async (req, res, next) => {

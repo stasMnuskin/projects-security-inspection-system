@@ -6,15 +6,18 @@ module.exports = (sequelize, DataTypes) => {
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false
-    },
-    severity: {
-      type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      set(value) {
+        this.setDataValue('description', value.trim());
+      }
     },
     location: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      defaultValue: 'לא צוין',
+      set(value) {
+        this.setDataValue('location', value.trim());
+      }
     },
     status: {
       type: DataTypes.ENUM('פתוח', 'סגור'),
@@ -22,7 +25,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     reportedBy: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      defaultValue: 'אימייל',
+      set(value) {
+        this.setDataValue('reportedBy', value.trim());
+      }
     },
     reportedTime: {
       type: DataTypes.DATE,
@@ -31,28 +38,47 @@ module.exports = (sequelize, DataTypes) => {
     },
     entrepreneurName: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      set(value) {
+        this.setDataValue('entrepreneurName', value.trim());
+      }
     },
     siteName: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      set(value) {
+        this.setDataValue('siteName', value.trim());
+      }
     },
     reporterName: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'Email System'
+      defaultValue: 'לא ידוע',
+      set(value) {
+        this.setDataValue('reporterName', value.trim());
+      }
     },
     contactNumber: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      defaultValue: 'לא זמין',
+      set(value) {
+        this.setDataValue('contactNumber', value ? value.trim() : 'לא זמין');
+      }
     },
     emailSubject: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      set(value) {
+        this.setDataValue('emailSubject', value ? value.trim() : null);
+      }
     },
     emailSender: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      set(value) {
+        this.setDataValue('emailSender', value ? value.trim() : null);
+      }
     },
     closedTime: {
       type: DataTypes.DATE,
@@ -60,11 +86,26 @@ module.exports = (sequelize, DataTypes) => {
     },
     closedBy: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      set(value) {
+        this.setDataValue('closedBy', value ? value.trim() : null);
+      }
     },
     closureNotes: {
       type: DataTypes.TEXT,
+      allowNull: true,
+      set(value) {
+        this.setDataValue('closureNotes', value ? value.trim() : null);
+      }
+    },
+    acknowledgedTime: {
+      type: DataTypes.DATE,
       allowNull: true
+    },
+    disabling: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   });
 

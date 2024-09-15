@@ -3,8 +3,11 @@ const bcrypt = require('bcrypt');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Truncate the Users table and restart the id sequence
+    await queryInterface.sequelize.query('TRUNCATE TABLE "Users" RESTART IDENTITY CASCADE');
+
     const hashedPassword = await bcrypt.hash('password123', 10);
-    return queryInterface.bulkInsert('Users', [
+    const users = [
       {
         username: 'admin',
         email: 'admin@example.com',
@@ -29,10 +32,12 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date()
       }
-    ], {});
+    ];
+
+    return queryInterface.bulkInsert('Users', users, {});
   },
 
   down: async (queryInterface, Sequelize) => {
-    return queryInterface.bulkDelete('Users', null, {});
+    await queryInterface.bulkDelete('Users', null, {});
   }
 };

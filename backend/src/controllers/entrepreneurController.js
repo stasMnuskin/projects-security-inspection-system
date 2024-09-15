@@ -18,10 +18,19 @@ exports.createEntrepreneur = async (req, res, next) => {
 
 exports.getAllEntrepreneurs = async (req, res, next) => {
   try {
-    const entrepreneurs = await db.Entrepreneur.findAll();
-    if (!entrepreneurs) {
-      throw new AppError('entrepreneurs not found', 404, 'NOT_FOUND').setRequestDetails(req);
+    logger.info('Fetching all entrepreneurs');
+    const entrepreneurs = await db.Entrepreneur.findAll({
+      include: [{
+        model: db.Site,
+        as: 'sites'
+      }]
+    });
+    logger.info(`Found ${entrepreneurs.length} entrepreneurs`);
+    if (!entrepreneurs || entrepreneurs.length === 0) {
+      logger.warn('No entrepreneurs found');
+      return res.json([]);
     }
+    logger.info('Entrepreneurs:', entrepreneurs);
     res.json(entrepreneurs);
     logger.info(`Function getAllEntrepreneurs called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
@@ -32,9 +41,14 @@ exports.getAllEntrepreneurs = async (req, res, next) => {
 
 exports.getEntrepreneur = async (req, res, next) => {
   try {
-    const entrepreneur = await db.Entrepreneur.findByPk(req.params.id);
+    const entrepreneur = await db.Entrepreneur.findByPk(req.params.id, {
+      include: [{
+        model: db.Site,
+        as: 'sites'
+      }]
+    });
     if (!entrepreneur) {
-      throw new AppError('entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
     }
     res.json(entrepreneur);
     logger.info(`Function getEntrepreneur called with params: ${JSON.stringify(req.params)}`);
@@ -53,7 +67,7 @@ exports.updateEntrepreneur = async (req, res, next) => {
   try {
     const entrepreneur = await db.Entrepreneur.findByPk(req.params.id);
     if (!entrepreneur) {
-      throw new AppError('entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
     }
     await entrepreneur.update(req.body);
     res.json(entrepreneur);
@@ -68,7 +82,7 @@ exports.deleteEntrepreneur = async (req, res, next) => {
   try {
     const entrepreneur = await db.Entrepreneur.findByPk(req.params.id);
     if (!entrepreneur) {
-      throw new AppError('entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
     }
     await entrepreneur.destroy();
     res.json({ message: 'Entrepreneur deleted successfully' });

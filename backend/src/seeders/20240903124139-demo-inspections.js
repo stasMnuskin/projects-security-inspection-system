@@ -16,7 +16,7 @@ module.exports = {
 
     return queryInterface.bulkInsert('Inspections', [
       {
-        entrepreneurId: 70,
+        entrepreneurId: 10,
         siteId: 1,
         inspectionTypeId: 1,
         status: 'pending',
@@ -26,7 +26,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        entrepreneurId: 71,
+        entrepreneurId: 11,
         siteId: 38,
         inspectionTypeId: 2,
         status: 'completed',

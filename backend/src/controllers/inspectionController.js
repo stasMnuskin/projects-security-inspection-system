@@ -23,7 +23,7 @@ exports.getAllInspections = async (req, res, next) => {
   try {
     const inspections = await db.Inspection.findAll({
       include: [
-        { model: db.User, as: 'entrepreneur', attributes: ['name'] },
+        { model: db.User, as: 'entrepreneur', attributes: ['username'] },
         { model: db.Site, attributes: ['name'] },
         { model: db.InspectionType, attributes: ['name'] }
       ],
@@ -46,7 +46,7 @@ exports.getInspection = async (req, res, next) => {
   try {
     const inspection = await db.Inspection.findByPk(req.params.id, {
       include: [
-        { model: db.User, as: 'entrepreneur', attributes: ['name'] },
+        { model: db.User, as: 'entrepreneur', attributes: ['username'] },
         { model: db.Site, attributes: ['name'] },
         { model: db.InspectionType, attributes: ['name'] }
       ]
@@ -68,7 +68,7 @@ exports.getLatestInspection = async (req, res, next) => {
     const latestInspection = await db.Inspection.findOne({
       where: { siteId: siteId },
       include: [
-        { model: db.User, as: 'entrepreneur', attributes: ['name'] },
+        { model: db.User, as: 'entrepreneur', attributes: ['username'] },
         { model: db.Site, attributes: ['name'] },
         { model: db.InspectionType, attributes: ['name'] }
       ],

@@ -40,7 +40,7 @@ const Faults = () => {
           <TableHead>
             <TableRow>
               <TableCell>תיאור</TableCell>
-              <TableCell>חומרה</TableCell>
+              {/* <TableCell>חומרה</TableCell> */}
               <TableCell>סטטוס</TableCell>
               <TableCell>תאריך דיווח</TableCell>
             </TableRow>
@@ -49,7 +49,7 @@ const Faults = () => {
             {faults.map((fault) => (
               <TableRow key={fault.id}>
                 <TableCell>{fault.description}</TableCell>
-                <TableCell>{fault.severity}</TableCell>
+                {/* <TableCell>{fault.severity}</TableCell> */}
                 <TableCell>{fault.status}</TableCell>
                 <TableCell>{new Date(fault.createdAt).toLocaleDateString()}</TableCell>
               </TableRow>

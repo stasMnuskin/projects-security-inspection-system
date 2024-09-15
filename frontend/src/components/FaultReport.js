@@ -1,11 +1,13 @@
 import React from 'react';
-import { Container,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Typography, Box 
-} from '@mui/material';
+import { Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Typography, Box } from '@mui/material';
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
 function FaultReport({ faults }) {
+  const translateDisabling = (disabling) => {
+    return disabling ? 'כן' : 'לא';
+  };
+
   const exportPDF = () => {
     const unit = "pt";
     const size = "A4";
@@ -16,14 +18,15 @@ function FaultReport({ faults }) {
     doc.setFontSize(15);
     doc.text("דו״ח תקלות", 40, 40);
 
-    const headers = [["מזהה", "אתר", "תיאור", "סטטוס", "חומרה", "זמן דיווח"]];
+    const headers = [["מזהה", "אתר", "תיאור", "סטטוס", "משבית", "מיקום", "זמן דיווח"]];
 
     const data = faults.map(fault => [
       fault.id, 
       fault.siteName,
       fault.description,
       fault.status,
-      fault.severity,
+      translateDisabling(fault.disabling),
+      fault.location,
       new Date(fault.reportedTime).toLocaleString()
     ]);
 
@@ -54,7 +57,8 @@ function FaultReport({ faults }) {
               <TableCell>אתר</TableCell>
               <TableCell>תיאור</TableCell>
               <TableCell>סטטוס</TableCell>
-              <TableCell>חומרה</TableCell>
+              <TableCell>משבית</TableCell>
+              <TableCell>מיקום</TableCell>
               <TableCell>זמן דיווח</TableCell>
             </TableRow>
           </TableHead>
@@ -65,7 +69,8 @@ function FaultReport({ faults }) {
                 <TableCell>{fault.siteName}</TableCell>
                 <TableCell>{fault.description}</TableCell>
                 <TableCell>{fault.status}</TableCell>
-                <TableCell>{fault.severity}</TableCell>
+                <TableCell>{translateDisabling(fault.disabling)}</TableCell>
+                <TableCell>{fault.location}</TableCell>
                 <TableCell>{new Date(fault.reportedTime).toLocaleString()}</TableCell>
               </TableRow>
             ))}
@@ -74,7 +79,6 @@ function FaultReport({ faults }) {
       </TableContainer>
     </Box>
     </Container>
-    
   );
 }
 

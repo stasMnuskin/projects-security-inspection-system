@@ -36,8 +36,8 @@ router.put(
   userController.updateUser
 );
 
-// Get all users (admin only)
-router.get('/', auth, roleAuth('admin'), userController.getAllUsers);
+// Get all users (admin and security_officer)
+router.get('/', auth, roleAuth('admin', 'security_officer'), userController.getAllUsers);
 
 // Delete user (admin only)
 router.delete('/:id', auth, roleAuth('admin', 'inspector'), userController.deleteUser);

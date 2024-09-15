@@ -19,11 +19,11 @@ exports.getAllFaults = async (req, res, next) => {
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
       status: fault.status,
       reportedTime: fault.reportedTime,
-      siteName: fault.site ? fault.site.name : null
+      siteName: fault.site ? fault.site.name : null,
+      disabling: fault.disabling
     }));
 
     logger.info('Fetched all faults');
@@ -130,11 +130,11 @@ exports.getOpenFaultsByEntrepreneur = async (req, res, next) => {
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
       status: fault.status,
       reportedTime: fault.reportedTime,
-      siteName: fault.site ? fault.site.name : null
+      siteName: fault.site ? fault.site.name : null,
+      disabling: fault.disabling
     }));
 
     logger.info('Formatted open faults:', formattedFaults);
@@ -170,11 +170,11 @@ exports.getRecentFaultsByEntrepreneur = async (req, res, next) => {
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
       status: fault.status,
       reportedTime: fault.reportedTime,
-      siteName: fault.site ? fault.site.name : null
+      siteName: fault.site ? fault.site.name : null,
+      disabling: fault.disabling
     }));
 
     logger.info('Formatted recent faults:', formattedFaults);
@@ -209,19 +209,19 @@ exports.getRecurringFaultsByEntrepreneur = async (req, res, next) => {
       }],
       attributes: [
         'Fault.description',
-        'Fault.severity',
         'Fault.location',
+        'Fault.disabling',
         [db.sequelize.fn('COUNT', db.sequelize.col('Fault.id')), 'occurrences']
       ],
-      group: ['Fault.description', 'Fault.severity', 'Fault.location', 'site.id', 'site.name'],
+      group: ['Fault.description', 'Fault.location', 'Fault.disabling', 'site.id', 'site.name'],
       having: db.sequelize.literal('COUNT("Fault"."id") > 1'),
       order: [[db.sequelize.literal('occurrences'), 'DESC']]
     });
 
     const formattedFaults = faults.map(fault => ({
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
+      disabling: fault.disabling,
       occurrences: parseInt(fault.get('occurrences')),
       siteId: fault.site.id,
       siteName: fault.site.name
@@ -273,10 +273,10 @@ exports.getOpenFaultsBySite = async (req, res, next) => {
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
       status: fault.status,
-      reportedTime: fault.reportedTime
+      reportedTime: fault.reportedTime,
+      disabling: fault.disabling
     }));
 
     logger.info('Formatted open faults for site:', formattedFaults);
@@ -300,7 +300,6 @@ exports.getRecentFaultsBySite = async (req, res, next) => {
 
     const faults = await db.Fault.findAll({
       where: {
-        status: 'פתוח',
         siteId: siteId
       },
       order: [['reportedTime', 'DESC']],
@@ -310,10 +309,10 @@ exports.getRecentFaultsBySite = async (req, res, next) => {
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
       status: fault.status,
-      reportedTime: fault.reportedTime
+      reportedTime: fault.reportedTime,
+      disabling: fault.disabling
     }));
 
     logger.info('Formatted recent faults for site:', formattedFaults);
@@ -345,19 +344,19 @@ exports.getRecurringFaultsBySite = async (req, res, next) => {
       },
       attributes: [
         'description',
-        'severity',
         'location',
+        'disabling',
         [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'occurrences']
       ],
-      group: ['description', 'severity', 'location'],
+      group: ['description', 'location', 'disabling'],
       having: db.sequelize.literal('COUNT("id") > 1'),
       order: [[db.sequelize.literal('occurrences'), 'DESC']]
     });
 
     const formattedFaults = faults.map(fault => ({
       description: fault.description,
-      severity: fault.severity,
       location: fault.location,
+      disabling: fault.disabling,
       occurrences: parseInt(fault.get('occurrences'))
     }));
 
@@ -369,15 +368,6 @@ exports.getRecurringFaultsBySite = async (req, res, next) => {
   }
 };
 
-const severityToNumber = (severity) => {
-  switch(severity) {
-    case 'Low': return 1;
-    case 'Medium': return 2;
-    case 'High': return 3;
-    case 'Critical': return 4;
-    default: return 0;
-  }
-};
 exports.getStatisticsBySite = async (req, res, next) => {
   try {
     const { id: userId, role } = req.user;
@@ -406,14 +396,6 @@ exports.getStatisticsBySite = async (req, res, next) => {
         'name',
         [fn('COUNT', col('Faults.id')), 'faultCount'],
         [fn('AVG', literal('CASE WHEN "Faults"."closedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Faults"."closedTime" - "Faults"."reportedTime")) / 3600 ELSE NULL END')), 'averageRepairTime'],
-        [fn('AVG', literal(`CASE 
-          WHEN "Faults"."severity" = 'Low' THEN 1
-          WHEN "Faults"."severity" = 'Medium' THEN 2
-          WHEN "Faults"."severity" = 'High' THEN 3
-          WHEN "Faults"."severity" = 'Critical' THEN 4
-          WHEN "Faults"."severity" = 'רגילה' THEN 5
-          ELSE 0
-        END`)), 'averageSeverity'],
         [fn('COUNT', literal('CASE WHEN "Faults"."status" = \'פתוח\' THEN 1 ELSE NULL END')), 'openFaultCount'],
         [fn('AVG', literal('CASE WHEN "Faults"."acknowledgedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Faults"."acknowledgedTime" - "Faults"."reportedTime")) / 3600 ELSE NULL END')), 'averageResponseTime']
       ],
@@ -445,7 +427,6 @@ exports.getStatisticsBySite = async (req, res, next) => {
         name: site.name,
         faultCount: parseInt(site.faultCount) || 0,
         averageRepairTime: parseFloat(site.averageRepairTime) || 0,
-        averageSeverity: parseFloat(site.averageSeverity) || 0,
         openFaultCount: parseInt(site.openFaultCount) || 0,
         recurringFaultCount: recurringFaults.length,
         averageResponseTime: parseFloat(site.averageResponseTime) || 0
@@ -487,14 +468,6 @@ exports.getStatisticsByLocation = async (req, res, next) => {
         'location',
         [fn('COUNT', col('Fault.id')), 'faultCount'],
         [fn('AVG', literal('CASE WHEN "Fault"."closedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Fault"."closedTime" - "Fault"."reportedTime")) / 3600 ELSE NULL END')), 'averageRepairTime'],
-        [fn('AVG', literal(`CASE 
-          WHEN "Fault"."severity" = 'Low' THEN 1
-          WHEN "Fault"."severity" = 'Medium' THEN 2
-          WHEN "Fault"."severity" = 'High' THEN 3
-          WHEN "Fault"."severity" = 'Critical' THEN 4
-          WHEN "Fault"."severity" = 'רגילה' THEN 5
-          ELSE 0
-        END`)), 'averageSeverity'],
         [fn('COUNT', literal('CASE WHEN "Fault"."status" = \'פתוח\' THEN 1 ELSE NULL END')), 'openFaultCount'],
         [fn('AVG', literal('CASE WHEN "Fault"."acknowledgedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Fault"."acknowledgedTime" - "Fault"."reportedTime")) / 3600 ELSE NULL END')), 'averageResponseTime']
       ],
@@ -505,7 +478,7 @@ exports.getStatisticsByLocation = async (req, res, next) => {
         required: true
       }],
       where: whereClause,
-      group: ['Fault.location'],
+      group: ['Fault.location', 'site.id'],
       raw: true
     });
 
@@ -516,6 +489,12 @@ exports.getStatisticsByLocation = async (req, res, next) => {
           reportedTime: { [Op.gte]: oneMonthAgo },
           ...whereClause
         },
+        include: [{
+          model: db.Site,
+          as: 'site',
+          attributes: [],
+          required: true
+        }],
         group: ['description'],
         having: literal('COUNT(*) > 1')
       });
@@ -524,7 +503,6 @@ exports.getStatisticsByLocation = async (req, res, next) => {
         name: stat.location,
         faultCount: parseInt(stat.faultCount) || 0,
         averageRepairTime: parseFloat(stat.averageRepairTime) || 0,
-        averageSeverity: parseFloat(stat.averageSeverity) || 0,
         openFaultCount: parseInt(stat.openFaultCount) || 0,
         recurringFaultCount: recurringFaults.length,
         averageResponseTime: parseFloat(stat.averageResponseTime) || 0

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Paper, Button, TextField, Select, MenuItem, FormControl, InputLabel,
-  Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Grid, Card, CardContent
+  Tabs, Tab, Card, CardContent
 } from '@mui/material';
-import { getInspections, getSites, getEntrepreneurs, getUsers, createEntrepreneur, createSite, getAllFaults, getStatisticsBySite, getStatisticsByLocation } from '../services/api';
+import { getInspections, getSites, getEntrepreneurs, getUsers, createEntrepreneur, createSite, getStatisticsBySite, getStatisticsByLocation } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -22,7 +22,6 @@ function AdminDashboard() {
   const [newEntrepreneur, setNewEntrepreneur] = useState('');
   const [newSite, setNewSite] = useState({ name: '', entrepreneurId: '' });
   const [tabValue, setTabValue] = useState(0);
-  const [faults, setFaults] = useState([]);
   const [siteStatistics, setSiteStatistics] = useState([]);
   const [locationStatistics, setLocationStatistics] = useState([]);
 
@@ -32,12 +31,11 @@ function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [inspections, sites, entrepreneurs, users, allFaults, siteStats, locationStats] = await Promise.all([
+      const [inspections, sites, entrepreneurs, users, siteStats, locationStats] = await Promise.all([
         getInspections(),
         getSites(),
         getEntrepreneurs(),
         getUsers(),
-        getAllFaults(),
         getStatisticsBySite(),
         getStatisticsByLocation()
       ]);
@@ -48,7 +46,6 @@ function AdminDashboard() {
         users: users.data.length
       });
       setEntrepreneurs(entrepreneurs.data);
-      setFaults(allFaults.data);
       setSiteStatistics(siteStats.data);
       setLocationStatistics(locationStats.data);
     } catch (error) {
@@ -84,67 +81,36 @@ function AdminDashboard() {
     setTabValue(newValue);
   };
 
-  const renderFaultTable = () => (
-    <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-      <Table dir="rtl">
-        <TableHead>
-          <TableRow>
-            <TableCell>חומרה</TableCell>
-            <TableCell>מיקום</TableCell>
-            <TableCell>סטטוס</TableCell>
-            <TableCell>זמן דיווח</TableCell>
-            <TableCell>תיאור</TableCell>
-            <TableCell>שם האתר</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {faults.map((fault) => (
-            <TableRow key={fault.id}>
-              <TableCell>{fault.severity}</TableCell>
-              <TableCell>{fault.location}</TableCell>
-              <TableCell>{fault.status}</TableCell>
-              <TableCell>{new Date(fault.reportedTime).toLocaleString()}</TableCell>
-              <TableCell>{fault.description}</TableCell>
-              <TableCell>{fault.siteName}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-
   const renderStatisticsCards = (stats) => (
-    <Grid container spacing={3}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
       {stats.map((stat, index) => (
-        <Grid item xs={12} sm={6} md={4} key={index}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" component="div">
-                {stat.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                מספר תקלות: {stat.faultCount}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                תקלות פתוחות: {stat.openFaultCount}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                זמן תיקון ממוצע: {stat.averageRepairTime.toFixed(2)} שעות
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                חומרה ממוצעת: {stat.averageSeverity.toFixed(2)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                תקלות חוזרות: {stat.recurringFaultCount}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                זמן תגובה ממוצע: {stat.averageResponseTime.toFixed(2)} שעות
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        <Card key={index} sx={{ minWidth: 275, flexGrow: 1 }}>
+          <CardContent>
+            <Typography variant="h6" component="div">
+              {stat.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              מספר תקלות: {stat.faultCount}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              תקלות פתוחות: {stat.openFaultCount}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              זמן תיקון ממוצע: {stat.averageRepairTime.toFixed(2)} שעות
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              חומרה ממוצעת: {stat.averageSeverity.toFixed(2)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              תקלות חוזרות: {stat.recurringFaultCount}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              זמן תגובה ממוצע: {stat.averageResponseTime.toFixed(2)} שעות
+            </Typography>
+          </CardContent>
+        </Card>
       ))}
-    </Grid>
+    </Box>
   );
 
   const renderStatisticsCharts = (stats) => {
@@ -205,17 +171,10 @@ function AdminDashboard() {
         centered
         sx={{ mb: 4 }}
       >
-        <Tab label="תקלות" />
         <Tab label="סטטיסטיקות" />
         <Tab label="ניהול" />
       </Tabs>
       {tabValue === 0 && (
-        <Box>
-          <Typography variant="h5" sx={{ mb: 2 }}>כל התקלות</Typography>
-          {renderFaultTable()}
-        </Box>
-      )}
-      {tabValue === 1 && (
         <Box>
           <Typography variant="h5" sx={{ mb: 2 }}>סטטיסטיקות לפי אתר</Typography>
           {renderStatisticsCards(siteStatistics)}
@@ -229,7 +188,7 @@ function AdminDashboard() {
           </Box>
         </Box>
       )}
-      {tabValue === 2 && (
+      {tabValue === 1 && (
         <>
           <Box sx={{ mb: 4 }}>
             <Typography variant="h5" sx={{ mb: 2 }}>הוסף יזם חדש</Typography>
