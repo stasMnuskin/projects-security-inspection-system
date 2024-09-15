@@ -40,8 +40,9 @@ const Faults = () => {
           <TableHead>
             <TableRow>
               <TableCell>תיאור</TableCell>
-              {/* <TableCell>חומרה</TableCell> */}
+              <TableCell>משבית</TableCell>
               <TableCell>סטטוס</TableCell>
+              <TableCell>מיקום</TableCell>
               <TableCell>תאריך דיווח</TableCell>
             </TableRow>
           </TableHead>
@@ -49,9 +50,10 @@ const Faults = () => {
             {faults.map((fault) => (
               <TableRow key={fault.id}>
                 <TableCell>{fault.description}</TableCell>
-                {/* <TableCell>{fault.severity}</TableCell> */}
+                <TableCell>{fault.disabling ? 'כן' : 'לא'}</TableCell>
                 <TableCell>{fault.status}</TableCell>
-                <TableCell>{new Date(fault.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>{fault.location}</TableCell>
+                <TableCell>{new Date(fault.reportedTime).toLocaleDateString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>
