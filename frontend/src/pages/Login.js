@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { TextField, Button, Typography, Container, Box, Link } from '@mui/material';
-import { login } from '../services/api';
+import { login as apiLogin } from '../services/api';
 import { AppError } from '../utils/errorHandler';
+import { useAuth } from '../context/AuthContext';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      const response = await login(email, password);
-      localStorage.setItem('userRole', response.data.role);
-      localStorage.setItem('token', response.data.token);
+      const response = await apiLogin(email, password);
+      login(response.data);
       
       if (response.data.passwordChangeRequired) {
         navigate('/change-password');
@@ -49,7 +50,6 @@ function Login() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
-
       <Box
         sx={{
           marginTop: 8,

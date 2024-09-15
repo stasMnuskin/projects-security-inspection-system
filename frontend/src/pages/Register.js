@@ -3,6 +3,7 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { TextField, Button, Typography, Container, Box, Select, MenuItem, FormControl, InputLabel, Link } from '@mui/material';
 import { register } from '../services/api';
 import { AppError } from '../utils/errorHandler';
+import { useAuth } from '../context/AuthContext';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -11,14 +12,14 @@ function Register() {
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
       const response = await register(username, email, password, role);
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userRole', response.data.role);
+      login(response.data);
       
       switch(response.data.role) {
         case 'admin':
