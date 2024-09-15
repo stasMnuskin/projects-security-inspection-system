@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button } from '@mui/material';
 import { getFaultsBySite } from '../services/api';
+import { exportToPdf, exportToExcel } from '../utils/exportUtils';
 
 const Faults = () => {
   const { siteId } = useParams();
@@ -22,6 +23,14 @@ const Faults = () => {
     fetchFaults();
   }, [fetchFaults]);
 
+  const handleExportPdf = () => {
+    exportToPdf(faults, 'Site Name');
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel(faults, 'Site Name');
+  };
+
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
@@ -35,6 +44,14 @@ const Faults = () => {
       <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
         תקלות באתר
       </Typography>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+        <Button variant="contained" color="primary" onClick={handleExportPdf} sx={{ mr: 2 }}>
+          Export to PDF
+        </Button>
+        <Button variant="contained" color="primary" onClick={handleExportExcel}>
+          Export to Excel
+        </Button>
+      </div>
       <TableContainer component={Paper} sx={{ mb: 4, boxShadow: 3 }}>
         <Table dir="rtl">
           <TableHead>

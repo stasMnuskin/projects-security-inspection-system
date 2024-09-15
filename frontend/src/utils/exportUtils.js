@@ -11,11 +11,10 @@ export const exportToPdf = (faults, siteName) => {
     fault.description,
     fault.status,
     new Date(fault.createdAt).toLocaleDateString(),
-    fault.severity
   ]);
 
   doc.autoTable({
-    head: [['ID', 'Description', 'Status', 'Created At', 'Severity']],
+    head: [['ID', 'Description', 'Status', 'Created At']],
     body: rows,
     startY: 20
   });

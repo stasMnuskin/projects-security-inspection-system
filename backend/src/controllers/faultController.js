@@ -187,15 +187,21 @@ exports.getRecentFaultsByEntrepreneur = async (req, res, next) => {
 
 exports.getRecurringFaultsByEntrepreneur = async (req, res, next) => {
   try {
+    logger.info('getRecurringFaultsByEntrepreneur function called');
+    
     const sites = await db.Site.findAll({
       where: { entrepreneurId: req.user.id },
       attributes: ['id']
     });
     
     const siteIds = sites.map(site => site.id);
+    logger.info('Site IDs:', siteIds);
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    logger.info('Fetching recurring faults for sites:', siteIds);
+    logger.info('Date range:', oneMonthAgo, 'to', new Date());
 
     const faults = await db.Fault.findAll({
       where: {
@@ -218,6 +224,9 @@ exports.getRecurringFaultsByEntrepreneur = async (req, res, next) => {
       order: [[db.sequelize.literal('occurrences'), 'DESC']]
     });
 
+    logger.info('Number of recurring faults found:', faults.length);
+    logger.info('Raw faults data:', JSON.stringify(faults.map(f => f.toJSON()), null, 2));
+
     const formattedFaults = faults.map(fault => ({
       description: fault.description,
       location: fault.location,
@@ -227,10 +236,12 @@ exports.getRecurringFaultsByEntrepreneur = async (req, res, next) => {
       siteName: fault.site.name
     }));
 
-    logger.info('Formatted recurring faults:', formattedFaults);
+    logger.info('Number of formatted recurring faults:', formattedFaults.length);
+    logger.info('Formatted recurring faults:', JSON.stringify(formattedFaults, null, 2));
+
     res.json(formattedFaults);
   } catch (error) {
-    logger.error('Error fetching recurring faults:', error);
+    logger.error('Error in getRecurringFaultsByEntrepreneur:', error);
     next(new AppError('Error fetching recurring faults', 500, 'FETCH_RECURRING_FAULTS_ERROR'));
   }
 };

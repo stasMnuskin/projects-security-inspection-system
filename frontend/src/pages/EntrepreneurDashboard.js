@@ -42,6 +42,7 @@ function EntrepreneurDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('Fetching data...');
         if (selectedSite) {
           const [openFaultsResponse, recurringFaultsResponse, siteStatsResponse, locationStatsResponse] = await Promise.all([
             getOpenFaultsBySite(selectedSite),
@@ -49,16 +50,14 @@ function EntrepreneurDashboard() {
             getStatisticsBySite(selectedSite),
             getStatisticsByLocation(selectedSite)
           ]);
-          console.log('Open faults for selected site:', openFaultsResponse.data);
-          console.log('Recurring faults for selected site:', recurringFaultsResponse.data);
-          console.log('Site statistics for selected site:', siteStatsResponse.data);
-          console.log('Location statistics for selected site:', locationStatsResponse.data);
+          console.log('API Response - Recurring faults for selected site:', recurringFaultsResponse.data);
           setOpenFaults(openFaultsResponse.data);
           setRecurringFaults(recurringFaultsResponse.data);
           setSiteStatistics(siteStatsResponse.data);
           setLocationStatistics(locationStatsResponse.data);
           setRecentFaults([]); 
         } else {
+          console.log('Fetching data for all sites...');
           const [openFaultsResponse, recentFaultsResponse, recurringFaultsResponse, allSiteStatsResponse, allLocationStatsResponse] = await Promise.all([
             getOpenFaultsByEntrepreneur(),
             getRecentFaultsByEntrepreneur(),
@@ -66,11 +65,12 @@ function EntrepreneurDashboard() {
             getStatisticsBySite(),
             getStatisticsByLocation()
           ]);
-          console.log('Open faults for all sites:', openFaultsResponse.data);
-          console.log('Recent faults for all sites:', recentFaultsResponse.data);
-          console.log('Recurring faults for all sites:', recurringFaultsResponse.data);
-          console.log('Site statistics for all sites:', allSiteStatsResponse.data);
-          console.log('Location statistics for all sites:', allLocationStatsResponse.data);
+          console.log('API Response - Open faults:', openFaultsResponse.data);
+          console.log('API Response - Recent faults:', recentFaultsResponse.data);
+          console.log('API Response - Recurring faults:', recurringFaultsResponse.data);
+          console.log('Number of recurring faults:', recurringFaultsResponse.data.length);
+          console.log('API Response - Site statistics:', allSiteStatsResponse.data);
+          console.log('API Response - Location statistics:', allLocationStatsResponse.data);
           setOpenFaults(openFaultsResponse.data);
           setRecentFaults(recentFaultsResponse.data);
           setRecurringFaults(recurringFaultsResponse.data);
@@ -79,10 +79,11 @@ function EntrepreneurDashboard() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        console.error('Error details:', error.response ? error.response.data : 'No response data');
         setError(error.message || 'Failed to fetch data');
       }
     };
-
+  
     fetchData();
   }, [selectedSite]);
 
@@ -105,7 +106,7 @@ function EntrepreneurDashboard() {
           <Table dir="rtl">
             <TableHead>
               <TableRow>
-                <TableCell>חומרה</TableCell>
+                {/* <TableCell>חומרה</TableCell> */}
                 <TableCell>מיקום</TableCell>
                 <TableCell>סטטוס</TableCell>
                 <TableCell>זמן דיווח</TableCell>
@@ -116,7 +117,7 @@ function EntrepreneurDashboard() {
             <TableBody>
               {faults.map((fault) => (
                 <TableRow key={fault.id}>
-                  <TableCell>{fault.severity}</TableCell>
+                  <TableCell>{fault.disabling}</TableCell>
                   <TableCell>{fault.location}</TableCell>
                   <TableCell>{fault.status}</TableCell>
                   <TableCell>{new Date(fault.reportedTime).toLocaleString()}</TableCell>
@@ -133,6 +134,7 @@ function EntrepreneurDashboard() {
 
   const renderRecurringFaultsTable = () => {
     console.log('Rendering recurring faults table:', recurringFaults);
+    console.log('Full component state:', { sites, selectedSite, openFaults, recentFaults, recurringFaults, siteStatistics, locationStatistics, tabValue });
     return (
       <Box mb={4}>
         <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>תקלות חוזרות בחודש האחרון</Typography>
@@ -140,7 +142,6 @@ function EntrepreneurDashboard() {
           <Table dir="rtl">
             <TableHead>
               <TableRow>
-                <TableCell>חומרה</TableCell>
                 <TableCell>מיקום</TableCell>
                 <TableCell>תיאור</TableCell>
                 <TableCell>מספר הופעות</TableCell>
@@ -150,7 +151,6 @@ function EntrepreneurDashboard() {
             <TableBody>
               {recurringFaults.map((fault, index) => (
                 <TableRow key={index}>
-                  <TableCell>{fault.severity}</TableCell>
                   <TableCell>{fault.location}</TableCell>
                   <TableCell>{fault.description}</TableCell>
                   <TableCell>{fault.occurrences}</TableCell>
@@ -187,9 +187,9 @@ function EntrepreneurDashboard() {
               <Typography variant="body2" color="text.secondary">
                 זמן תיקון ממוצע: {(stat.averageRepairTime || 0).toFixed(2)} שעות
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              {/* <Typography variant="body2" color="text.secondary">
                 חומרה ממוצעת: {(stat.averageSeverity || 0).toFixed(2)}
-              </Typography>
+              </Typography> */}
               <Typography variant="body2" color="text.secondary">
                 תקלות חוזרות: {stat.recurringFaultCount || 0}
               </Typography>
