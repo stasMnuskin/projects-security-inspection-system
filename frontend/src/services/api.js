@@ -72,4 +72,9 @@ export const getRecurringFaultsBySite = (siteId) => api.get(`/faults/recurring/s
 export const getStatisticsBySite = (siteId) => api.get(siteId ? `/faults/statistics/site/${siteId}` : '/faults/statistics/site');
 export const getStatisticsByLocation = (siteId) => api.get(siteId ? `/faults/statistics/location/${siteId}` : '/faults/statistics/location');
 
+// Updated and new functions for inspection reports
+export const getInspectionCriteria = (inspectionTypeId) => api.get(`/inspection-types/${inspectionTypeId}/criteria`);
+export const submitInspectionReport = (reportData) => api.post('/inspections', reportData);
+export const getSiteDetails = (siteId) => api.get(`/sites/${siteId}`);
+
 export default api;

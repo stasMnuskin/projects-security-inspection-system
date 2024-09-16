@@ -15,7 +15,7 @@ import EntrepreneurDashboard from './pages/EntrepreneurDashboard';
 import InspectorDashboard from './pages/InspectorDashboard';
 import LatestInspection from './pages/LatestInspection';
 import Faults from './pages/Faults';
-import NewInspection from './pages/NewInspection';
+import InspectionForm from './pages/InspectionForm';
 import PrivateRoute from './components/PrivateRoute';
 import LotanLogo from './assets/lotan-logo.svg';
 import './styles/rtl.css';
@@ -78,7 +78,7 @@ function App() {
                   } />
                   <Route path="/new-inspection/:siteId/:inspectionTypeId" element={
                     <PrivateRoute allowedRoles={['security_officer']}>
-                      <NewInspection />
+                      <InspectionForm />
                     </PrivateRoute>
                   } />
                   <Route path="/" element={<Navigate to="/login" replace />} />
