@@ -4,10 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Inspection extends Model {
     static associate(models) {
-      Inspection.belongsTo(models.User, {
-        foreignKey: 'entrepreneurId',
-        as: 'entrepreneur'
-      });
       Inspection.belongsTo(models.Site, {
         foreignKey: 'siteId'
       });
@@ -18,18 +14,15 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'inspector'
       });
+      Inspection.belongsToMany(models.Fault, {
+        through: 'InspectionFault',
+        foreignKey: 'inspectionId',
+        otherKey: 'faultId'
+      });
     }
   }
   
   Inspection.init({
-    entrepreneurId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
-    },
     siteId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -46,14 +39,22 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    inspectorName: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    date: {
+      type: DataTypes.DATE,
+      allowNull: false
+    },
+    criteria: {
+      type: DataTypes.JSON,
+      allowNull: false
+    },
     status: {
       type: DataTypes.ENUM('pending', 'completed', 'requires_action'),
       allowNull: false,
-      defaultValue: 'pending'
-    },
-    details: {
-      type: DataTypes.JSON,
-      allowNull: false
+      defaultValue: 'completed'
     },
     userId: {
       type: DataTypes.INTEGER,

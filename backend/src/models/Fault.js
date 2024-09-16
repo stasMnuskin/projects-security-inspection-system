@@ -111,6 +111,11 @@ module.exports = (sequelize, DataTypes) => {
 
   Fault.associate = function(models) {
     Fault.belongsTo(models.Site, { foreignKey: 'siteId', as: 'site' });
+    Fault.belongsToMany(models.Inspection, {
+      through: 'InspectionFault',
+      foreignKey: 'faultId',
+      otherKey: 'inspectionId'
+    });
   };
 
   return Fault;
