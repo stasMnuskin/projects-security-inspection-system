@@ -5,11 +5,16 @@ const logger = require('../utils/logger');
 
 exports.createEntrepreneur = async (req, res, next) => {
   try {
-    const { name, contactPerson, email, phone } = req.body;
-    if (!name || !contactPerson || !email || !phone) {
+    const { username, email, password } = req.body;
+    if (!username || !email || !password) {
       return next(new AppError('Missing required fields', 400, 'MISSING_FIELDS'));
     }
-    const entrepreneur = await db.Entrepreneur.create(req.body);
+    const entrepreneur = await db.User.create({
+      username,
+      email,
+      password,
+      role: 'entrepreneur'
+    });
     res.status(201).json(entrepreneur);
   } catch (error) {
     next(error);
@@ -19,7 +24,9 @@ exports.createEntrepreneur = async (req, res, next) => {
 exports.getAllEntrepreneurs = async (req, res, next) => {
   try {
     logger.info('Fetching all entrepreneurs');
-    const entrepreneurs = await db.Entrepreneur.findAll({
+    const entrepreneurs = await db.User.findAll({
+      where: { role: 'entrepreneur' },
+      attributes: ['id', 'username', 'email'],
       include: [{
         model: db.Site,
         as: 'sites'
@@ -32,7 +39,6 @@ exports.getAllEntrepreneurs = async (req, res, next) => {
     }
     logger.info('Entrepreneurs:', entrepreneurs);
     res.json(entrepreneurs);
-    logger.info(`Function getAllEntrepreneurs called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
     logger.error('Error in getAllEntrepreneurs:', error);
     next(error);
@@ -41,17 +47,18 @@ exports.getAllEntrepreneurs = async (req, res, next) => {
 
 exports.getEntrepreneur = async (req, res, next) => {
   try {
-    const entrepreneur = await db.Entrepreneur.findByPk(req.params.id, {
+    const entrepreneur = await db.User.findOne({
+      where: { id: req.params.id, role: 'entrepreneur' },
+      attributes: ['id', 'username', 'email'],
       include: [{
         model: db.Site,
         as: 'sites'
       }]
     });
     if (!entrepreneur) {
-      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND');
     }
     res.json(entrepreneur);
-    logger.info(`Function getEntrepreneur called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
     logger.error('Error in getEntrepreneur:', error);
     next(error);
@@ -61,17 +68,18 @@ exports.getEntrepreneur = async (req, res, next) => {
 exports.updateEntrepreneur = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    throw new AppError('Validation Error', 400, 'Validation_Error').setRequestDetails(req);
+    return next(new AppError('Validation Error', 400, 'VALIDATION_ERROR'));
   }
 
   try {
-    const entrepreneur = await db.Entrepreneur.findByPk(req.params.id);
+    const entrepreneur = await db.User.findOne({
+      where: { id: req.params.id, role: 'entrepreneur' }
+    });
     if (!entrepreneur) {
-      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND');
     }
     await entrepreneur.update(req.body);
     res.json(entrepreneur);
-    logger.info(`Function updateEntrepreneur called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
     logger.error('Error in updateEntrepreneur:', error);
     next(error);
@@ -80,13 +88,14 @@ exports.updateEntrepreneur = async (req, res, next) => {
 
 exports.deleteEntrepreneur = async (req, res, next) => {
   try {
-    const entrepreneur = await db.Entrepreneur.findByPk(req.params.id);
+    const entrepreneur = await db.User.findOne({
+      where: { id: req.params.id, role: 'entrepreneur' }
+    });
     if (!entrepreneur) {
-      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Entrepreneur not found', 404, 'NOT_FOUND');
     }
     await entrepreneur.destroy();
     res.json({ message: 'Entrepreneur deleted successfully' });
-    logger.info(`Function deleteEntrepreneur called with params: ${JSON.stringify(req.params)}`);
   } catch (error) {
     logger.error('Error in deleteEntrepreneur:', error);
     next(error);

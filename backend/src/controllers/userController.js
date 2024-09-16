@@ -162,6 +162,33 @@ exports.changeUserRole = async (req, res, next) => {
   }
 };
 
+exports.logoutUser = async (req, res, next) => {
+  try {
+    logger.info('Logout process started');
+
+    // Log the current cookies
+    logger.info(`Current cookies: ${JSON.stringify(req.cookies)}`);
+
+    // Clear the HTTP-only cookie
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+
+    logger.info('Token cookie cleared');
+
+    // Log the updated cookies
+    logger.info(`Updated cookies: ${JSON.stringify(req.cookies)}`);
+
+    logger.info('User logged out successfully');
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    logger.error('Logout error:', error);
+    next(new AppError('Error logging out', 500, 'LOGOUT_ERROR'));
+  }
+};
+
 exports.changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;

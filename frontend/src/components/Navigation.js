@@ -1,49 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, useTheme, useMediaQuery, Drawer, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import React, { useState } from 'react';
+import { AppBar, Toolbar, Typography, Button, Box, useTheme, useMediaQuery, Drawer, List, ListItem, ListItemText, IconButton, CircularProgress, Snackbar } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
+import { useAuth } from '../context/AuthContext';
 
 function Navigation() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const userRole = localStorage.getItem('userRole');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
-  }, []);
+  const { user, logout, loading } = useAuth();
 
   const getNavItems = () => {
-    if (!isAuthenticated) return [];
+    if (!user) return [];
     
-    switch(userRole) {
+    switch(user.role) {
       case 'admin':
         return [
-          { text: 'דשבורד', link: '/admin-dashboard' },
+          { text: 'דשבורד', link: '/admin' },
           { text: 'משתמשים', link: '/users' },
           { text: 'אתרים', link: '/sites' },
         ];
       case 'security_officer':
         return [
-          { text: 'דשבורד', link: '/security-dashboard' },
+          { text: 'דשבורד', link: '/security' },
           { text: 'ביקורת חדשה', link: '/new-inspection' },
           { text: 'ביקורות', link: '/inspections' },
           { text: 'תקלות', link: '/faults' },
         ];
       case 'entrepreneur':
         return [
-          { text: 'דשבורד', link: '/entrepreneur-dashboard' },
+          { text: 'דשבורד', link: '/entrepreneur' },
           { text: 'תקלות', link: '/faults' },
           { text: 'ביקורות אחרונות', link: '/latest-inspections' },
         ];
       case 'inspector':
         return [
-          { text: 'דשבורד', link: '/inspector-dashboard' },
+          { text: 'דשבורד', link: '/inspector' },
           { text: 'הביקורות שלי', link: '/inspections' },
         ];
       default:
@@ -51,11 +47,14 @@ function Navigation() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    setIsAuthenticated(false);
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      setError('התרחשה שגיאה בעת ההתנתקות. אנא נסה שוב.');
+    }
   };
 
   const handleLogin = () => {
@@ -70,7 +69,7 @@ function Navigation() {
         מערכת ביקורת אבטחה
       </Typography>
       <List>
-        {isAuthenticated ? (
+        {user ? (
           <>
             {navItems.map((item, index) => (
               <ListItem key={index} component={RouterLink} to={item.link} button>
@@ -92,6 +91,14 @@ function Navigation() {
     </Box>
   );
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="64px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <>
       <AppBar position="static" sx={{ backgroundColor: theme.palette.primary.main }}>
@@ -110,7 +117,7 @@ function Navigation() {
             </IconButton>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {isAuthenticated ? (
+              {user ? (
                 <>
                   {navItems.map((item, index) => (
                     <Button
@@ -153,6 +160,13 @@ function Navigation() {
       >
         {drawer}
       </Drawer>
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={() => setError('')}
+        message={error}
+      />
     </>
   );
 }

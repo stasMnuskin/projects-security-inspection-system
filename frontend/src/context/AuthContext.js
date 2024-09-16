@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getCurrentUser } from '../services/api';
+import { getCurrentUser, logoutUser } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -10,21 +10,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      getCurrentUser()
-        .then(response => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await getCurrentUser();
           setUser(response.data);
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Error fetching user data:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('userRole');
-        })
-        .finally(() => setLoading(false));
-    } else {
+          await logout();
+        }
+      }
       setLoading(false);
-    }
+    };
+
+    checkAuth();
   }, []);
 
   const login = (userData) => {
@@ -33,10 +33,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('userRole', userData.role);
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+    }
   };
 
   return (

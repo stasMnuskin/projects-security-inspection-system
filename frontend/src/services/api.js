@@ -15,7 +15,6 @@ const api = axios.create({
   withCredentials: true 
 });
 
-
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -36,6 +35,7 @@ export const register = (username, email, password, role) =>
   api.post('/users/register', { username, email, password, role });
 export const getCurrentUser = () => api.get('/users/me');
 export const getUsers = () => api.get('/users');
+export const logoutUser = () => api.post('/users/logout');
 export const getInspections = () => api.get('/inspections');
 export const createInspection = (data) => api.post('/inspections', data);
 export const updateInspection = (id, data) => api.put(`/inspections/${id}`, data);

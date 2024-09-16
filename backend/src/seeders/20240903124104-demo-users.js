@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Truncate the Users table and restart the id sequence
     await queryInterface.sequelize.query('TRUNCATE TABLE "Users" RESTART IDENTITY CASCADE');
 
     const hashedPassword = await bcrypt.hash('password123', 10);

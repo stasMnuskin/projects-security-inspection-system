@@ -54,8 +54,6 @@ const SecurityDashboard = () => {
     fetchInspectionTypes();
   }, []);
 
-  
-
   const fetchSites = async (entrepreneurId) => {
     try {
       const response = await getSites(entrepreneurId);
@@ -149,7 +147,7 @@ const SecurityDashboard = () => {
                   </MenuItem>
                   {entrepreneurs.map((entrepreneur) => (
                     <MenuItem key={entrepreneur.id} value={entrepreneur.id}>
-                      {entrepreneur.name}
+                      {entrepreneur.username}
                     </MenuItem>
                   ))}
                 </Select>

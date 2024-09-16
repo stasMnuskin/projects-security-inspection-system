@@ -21,6 +21,9 @@ router.post(
 // Login user
 router.post('/login', userController.loginUser);
 
+// Logout user
+router.post('/logout', auth, userController.logoutUser);
+
 // Get current user
 router.get('/me', auth, userController.getCurrentUser);
 
