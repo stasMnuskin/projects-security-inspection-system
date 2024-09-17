@@ -4,7 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class InspectionFault extends Model {
     static associate(models) {
-      // define association here
       InspectionFault.belongsTo(models.Inspection, {
         foreignKey: 'inspectionId'
       });
@@ -30,9 +29,10 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    criterionId: {
+    fieldId: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      comment: 'Identifier for the form field associated with this fault'
     }
   }, {
     sequelize,

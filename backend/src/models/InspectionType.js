@@ -1,34 +1,29 @@
+'use strict';
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const InspectionType = sequelize.define('InspectionType', {
+  class InspectionType extends Model {
+    static associate(models) {
+      InspectionType.hasMany(models.Inspection, {
+        foreignKey: 'inspectionTypeId',
+        as: 'inspections'
+      });
+      InspectionType.hasOne(models.InspectionFormStructure, {
+        foreignKey: 'inspectionTypeId',
+        as: 'formStructure'
+      });
+    }
+  }
+
+  InspectionType.init({
     name: {
       type: DataTypes.STRING,
       allowNull: false
-    },
-    formStructure: {
-      type: DataTypes.JSON,
-      allowNull: false
-    },
-    frequency: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    siteId: {
-      type: DataTypes.INTEGER,
-      allowNull: false
     }
+  }, {
+    sequelize,
+    modelName: 'InspectionType',
   });
-
-  InspectionType.associate = function(models) {
-    InspectionType.belongsTo(models.Site, { 
-      foreignKey: 'siteId', 
-      onDelete: 'CASCADE' 
-    });
-    InspectionType.hasMany(models.Inspection, { 
-      foreignKey: 'inspectionTypeId', 
-      onDelete: 'CASCADE' 
-    });
-  };
-
 
   return InspectionType;
 };

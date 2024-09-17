@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
         as: 'inspector'
       });
       Inspection.belongsToMany(models.Fault, {
-        through: 'InspectionFault',
+        through: models.InspectionFault,
         foreignKey: 'inspectionId',
         otherKey: 'faultId'
       });
@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: false
     },
-    criteria: {
+    formData: {
       type: DataTypes.JSON,
       allowNull: false
     },

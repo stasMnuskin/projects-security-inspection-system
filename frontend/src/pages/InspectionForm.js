@@ -1,40 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Typography, Box, Button, TextField, FormControl, FormControlLabel, Radio, RadioGroup, Paper, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText } from '@mui/material';
-import { getInspectionCriteria, submitInspectionReport, getSiteDetails, getCurrentUser, getFaults } from '../services/api';
+import { Container, Typography, Box, Button, TextField, FormControl, FormControlLabel, Radio, RadioGroup, Paper, Alert, Snackbar, Checkbox, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText } from '@mui/material';
+import { getInspectionFormStructure, submitInspectionReport, getSiteDetails, getCurrentUser, getOpenFaultsBySite, createFault, updateFault } from '../services/api';
 
 const InspectionForm = () => {
   const { siteId, inspectionTypeId } = useParams();
   const navigate = useNavigate();
-  const [criteria, setCriteria] = useState([]);
+  const [formStructure, setFormStructure] = useState([]);
   const [formData, setFormData] = useState({});
+  const [newFaults, setNewFaults] = useState({});
+  const [existingFaults, setExistingFaults] = useState([]);
   const [linkedFaults, setLinkedFaults] = useState({});
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [siteDetails, setSiteDetails] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [existingFaults, setExistingFaults] = useState([]);
   const [openFaultDialog, setOpenFaultDialog] = useState(false);
-  const [selectedCriterion, setSelectedCriterion] = useState(null);
+  const [selectedField, setSelectedField] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [criteriaResponse, siteResponse, userResponse, faultsResponse] = await Promise.all([
-          getInspectionCriteria(inspectionTypeId),
+        const [formStructureResponse, siteResponse, userResponse, faultsResponse] = await Promise.all([
+          getInspectionFormStructure(inspectionTypeId),
           getSiteDetails(siteId),
           getCurrentUser(),
-          getFaults(siteId)
+          getOpenFaultsBySite(siteId)
         ]);
-        setCriteria(criteriaResponse.data);
+        setFormStructure(formStructureResponse.data);
         setSiteDetails(siteResponse.data);
         setCurrentUser(userResponse.data);
         setExistingFaults(faultsResponse.data);
         
-        const initialFormData = criteriaResponse.data.reduce((acc, criterion) => {
-          acc[criterion.id] = '';
+        const initialFormData = formStructureResponse.data.reduce((acc, field) => {
+          if (field.autoFill) {
+            switch (field.id) {
+              case 'siteName':
+                acc[field.id] = siteResponse.data.name;
+                break;
+              case 'date':
+                acc[field.id] = new Date().toISOString().split('T')[0];
+                break;
+              case 'time':
+                acc[field.id] = new Date().toTimeString().split(' ')[0];
+                break;
+              case 'inspectorName':
+                acc[field.id] = userResponse.data.username;
+                break;
+              default:
+                acc[field.id] = '';
+            }
+          } else {
+            acc[field.id] = '';
+          }
           return acc;
         }, {});
         setFormData(initialFormData);
@@ -49,22 +69,29 @@ const InspectionForm = () => {
     fetchData();
   }, [inspectionTypeId, siteId]);
 
-  const handleInputChange = (criterionId, value) => {
+  const handleInputChange = (fieldId, value) => {
     setFormData(prevData => ({
       ...prevData,
-      [criterionId]: value
+      [fieldId]: value
     }));
   };
 
-  const handleFaultLinking = (criterionId) => {
-    setSelectedCriterion(criterionId);
+  const handleNewFaultToggle = (fieldId) => {
+    setNewFaults(prevFaults => ({
+      ...prevFaults,
+      [fieldId]: !prevFaults[fieldId]
+    }));
+  };
+
+  const handleExistingFaultLink = (fieldId) => {
+    setSelectedField(fieldId);
     setOpenFaultDialog(true);
   };
 
   const handleFaultSelection = (faultId) => {
     setLinkedFaults(prevLinkedFaults => ({
       ...prevLinkedFaults,
-      [selectedCriterion]: faultId
+      [selectedField]: faultId
     }));
     setOpenFaultDialog(false);
   };
@@ -72,15 +99,49 @@ const InspectionForm = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
+      // Create new faults
+      const createdFaults = await Promise.all(
+        Object.entries(newFaults)
+          .filter(([_, isNewFault]) => isNewFault)
+          .map(([fieldId, _]) => createFault({
+            siteId: parseInt(siteId),
+            description: formData[fieldId],
+            status: 'open'
+          }))
+      );
+
+      // Prepare linked faults data
+      const linkedFaultsData = Object.entries(linkedFaults).map(([fieldId, faultId]) => ({
+        faultId,
+        fieldId
+      }));
+
+      // Combine new and linked faults
+      const allFaults = [
+        ...createdFaults.map(fault => ({ faultId: fault.id, fieldId: fault.description })),
+        ...linkedFaultsData
+      ];
+
+      // Submit inspection report
       const reportData = {
-        ...formData,
-        siteId,
-        inspectionTypeId,
+        siteId: parseInt(siteId),
+        inspectionTypeId: parseInt(inspectionTypeId),
         inspectorName: currentUser.username,
         date: new Date().toISOString(),
-        linkedFaults: linkedFaults
+        formData: formData,
+        faults: allFaults
       };
       await submitInspectionReport(reportData);
+
+      // Close linked faults if they were marked as resolved
+      await Promise.all(
+        Object.entries(linkedFaults).map(async ([fieldId, faultId]) => {
+          if (formData[`resolved_${fieldId}`]) {
+            await updateFault(faultId, { status: 'closed' });
+          }
+        })
+      );
+
       setSuccess('Inspection report submitted successfully');
       setTimeout(() => {
         navigate('/security-dashboard');
@@ -104,71 +165,102 @@ const InspectionForm = () => {
     );
   }
 
-  const renderField = (criterion) => {
-    switch (criterion.name) {
-      case 'שם האתר':
-      case 'תאריך':
-      case 'שעה':
-      case 'שם קצין הביטחון':
-      case 'סיור אחרון באתר':
-      case 'שם מבצע הביקורת':
+  const renderField = (field) => {
+    return (
+      <>
+        {renderInputField(field)}
+        {!field.autoFill && renderFaultOptions(field)}
+      </>
+    );
+  };
+
+  const renderInputField = (field) => {
+    switch (field.type) {
+      case 'text':
+      case 'date':
+      case 'time':
         return (
           <TextField
             fullWidth
-            label={criterion.name}
-            value={
-              criterion.name === 'שם האתר' ? siteDetails.name :
-              criterion.name === 'תאריך' ? new Date().toLocaleDateString() :
-              criterion.name === 'שעה' ? new Date().toLocaleTimeString() :
-              criterion.name === 'שם קצין הביטחון' || criterion.name === 'שם מבצע הביקורת' ? currentUser.username :
-              criterion.name === 'סיור אחרון באתר' ? siteDetails.lastInspectionDate || 'לא ידוע' :
-              formData[criterion.id]
-            }
-            disabled
+            label={field.label}
+            type={field.type}
+            value={formData[field.id] || ''}
+            onChange={(e) => handleInputChange(field.id, e.target.value)}
+            disabled={field.autoFill}
+            required={field.required}
           />
         );
-      case 'הצלחה':
+      case 'radio':
         return (
           <FormControl component="fieldset">
             <RadioGroup
               row
-              name={`success_${criterion.id}`}
-              value={formData[criterion.id]}
-              onChange={(e) => handleInputChange(criterion.id, e.target.value)}
+              name={`field_${field.id}`}
+              value={formData[field.id] || ''}
+              onChange={(e) => handleInputChange(field.id, e.target.value)}
             >
-              <FormControlLabel value="כן" control={<Radio />} label="כן" />
-              <FormControlLabel value="לא" control={<Radio />} label="לא" />
+              {field.options.map(option => (
+                <FormControlLabel key={option.value} value={option.value} control={<Radio />} label={option.label} />
+              ))}
             </RadioGroup>
           </FormControl>
         );
-      default:
+      case 'textarea':
         return (
-          <>
-            <TextField
-              fullWidth
-              label={criterion.name}
-              value={formData[criterion.id]}
-              onChange={(e) => handleInputChange(criterion.id, e.target.value)}
-              multiline
-              rows={3}
-            />
-            <Button onClick={() => handleFaultLinking(criterion.id)}>
-              {linkedFaults[criterion.id] ? 'Change Linked Fault' : 'Link to Existing Fault'}
-            </Button>
-          </>
+          <TextField
+            fullWidth
+            label={field.label}
+            value={formData[field.id] || ''}
+            onChange={(e) => handleInputChange(field.id, e.target.value)}
+            multiline
+            rows={3}
+            required={field.required}
+          />
         );
+      default:
+        return null;
     }
+  };
+
+  const renderFaultOptions = (field) => {
+    return (
+      <Box mt={1}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={!!newFaults[field.id]}
+              onChange={() => handleNewFaultToggle(field.id)}
+            />
+          }
+          label="סמן כתקלה חדשה"
+        />
+        <Button onClick={() => handleExistingFaultLink(field.id)}>
+          קשר לתקלה קיימת
+        </Button>
+        {linkedFaults[field.id] && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={!!formData[`resolved_${field.id}`]}
+                onChange={(e) => handleInputChange(`resolved_${field.id}`, e.target.checked)}
+              />
+            }
+            label="סמן כתקלה שנפתרה"
+          />
+        )}
+      </Box>
+    );
   };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
       <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
-        טופס ביקורת
+        טופס ביקורת - {siteDetails?.name}
       </Typography>
       <Paper component="form" onSubmit={handleSubmit} sx={{ p: 3, mb: 4, boxShadow: 3 }}>
-        {criteria.map(criterion => (
-          <FormControl key={criterion.id} fullWidth sx={{ mb: 2 }}>
-            {renderField(criterion)}
+        {formStructure.map(field => (
+          <FormControl key={field.id} fullWidth sx={{ mb: 2 }}>
+            {renderField(field)}
           </FormControl>
         ))}
         <Box display="flex" justifyContent="flex-end" mt={2}>
