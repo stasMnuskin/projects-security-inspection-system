@@ -11,13 +11,13 @@ export class AppError extends Error {
 export const handleApiError = (error) => {
   if (error.response) {
     return new AppError(
-      error.response.data.message || 'Server error',
+      error.response.data.message || 'שגיאת שרת',
       error.response.status,
       error.response.data.errorCode || 'SERVER_ERROR'
     );
   } else if (error.request) {
-    return new AppError('No response from server', 500, 'NO_RESPONSE');
+    return new AppError('אין תגובה מהשרת', 500, 'NO_RESPONSE');
   } else {
-    return new AppError(error.message || 'Request setup error', 500, 'REQUEST_SETUP_ERROR');
+    return new AppError(error.message || 'שגיאה בהגדרת הבקשה', 500, 'REQUEST_SETUP_ERROR');
   }
 };

@@ -3,54 +3,155 @@ const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 
+exports.createDefaultInspectionTypes = async () => {
+  try {
+    const defaultTypes = [
+      {
+        name: 'ביקורת שגרתית',
+        formStructure: JSON.stringify({
+          siteName: { type: 'text', label: 'שם האתר', editable: false },
+          date: { type: 'date', label: 'תאריך', editable: false },
+          securityOfficerName: { type: 'text', label: 'שם קצין הביטחון', editable: false },
+          lastInspectionDate: { type: 'date', label: 'סיור אחרון באתר', editable: false },
+          accessRoad: { type: 'boolean', label: 'ציר גישה' },
+          gate: { type: 'boolean', label: 'שער' },
+          fence: { type: 'boolean', label: 'גדר' },
+          cameras: { type: 'boolean', label: 'מצלמות' },
+          announcement: { type: 'boolean', label: 'כריזה' },
+          lighting: { type: 'boolean', label: 'תאורה' },
+          vegetation: { type: 'boolean', label: 'עשבייה' },
+          generalNotes: { type: 'text', label: 'הערות כלליות' }
+        })
+      },
+      {
+        name: 'ביקורת משטרה',
+        formStructure: JSON.stringify({
+          siteName: { type: 'text', label: 'שם האתר', editable: false },
+          date: { type: 'date', label: 'תאריך', editable: false },
+          securityOfficerName: { type: 'text', label: 'שם קצין הביטחון', editable: false },
+          lastInspectionDate: { type: 'date', label: 'סיור אחרון באתר', editable: false },
+          passed: { type: 'boolean', label: 'עבר בהצלחה' },
+          notes: { type: 'text', label: 'הערות' }
+        })
+      },
+      {
+        name: 'ביקורת משרד האנרגיה',
+        formStructure: JSON.stringify({
+          siteName: { type: 'text', label: 'שם האתר', editable: false },
+          date: { type: 'date', label: 'תאריך', editable: false },
+          securityOfficerName: { type: 'text', label: 'שם קצין הביטחון', editable: false },
+          lastInspectionDate: { type: 'date', label: 'סיור אחרון באתר', editable: false },
+          passed: { type: 'boolean', label: 'עבר בהצלחה' },
+          notes: { type: 'text', label: 'הערות' }
+        })
+      },
+      {
+        name: 'תרגיל פנימי',
+        formStructure: JSON.stringify({
+          siteName: { type: 'text', label: 'שם האתר', editable: false },
+          drillType: { type: 'text', label: 'סוג התרגיל' },
+          date: { type: 'date', label: 'תאריך', editable: false },
+          securityOfficerName: { type: 'text', label: 'שם קצין הביטחון', editable: false },
+          passed: { type: 'boolean', label: 'עבר בהצלחה' },
+          notes: { type: 'text', label: 'הערות' }
+        })
+      }
+    ];
+
+    for (const type of defaultTypes) {
+      await db.InspectionType.findOrCreate({
+        where: { name: type.name },
+        defaults: type
+      });
+    }
+
+    logger.info('Default inspection types created successfully');
+  } catch (error) {
+    logger.error('Error creating default inspection types:', error);
+  }
+};
+
 exports.createInspection = async (req, res, next) => {
   const transaction = await db.sequelize.transaction();
 
   try {
-    const { siteId, inspectionTypeId, inspectorName, date, formData, linkedFaults } = req.body;
+    const { siteId, inspectionTypeId, securityOfficerName, date, formData, faults } = req.body;
 
-    // Validate required fields
-    if (!siteId || !inspectionTypeId || !inspectorName || !date || !formData) {
+    if (!siteId || !inspectionTypeId || !securityOfficerName || !date || !formData) {
       await transaction.rollback();
       return next(new AppError('Missing required fields', 400));
     }
 
-    // Validate linkedFaults structure
-    if (linkedFaults && !Array.isArray(linkedFaults)) {
+    if (faults && !Array.isArray(faults)) {
       await transaction.rollback();
-      return next(new AppError('Invalid linkedFaults format', 400));
+      return next(new AppError('Invalid faults format', 400));
     }
 
-    // Create the inspection
+    const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
+    if (!inspectionType) {
+      await transaction.rollback();
+      return next(new AppError('Inspection type not found', 400));
+    }
+
+    const formStructure = JSON.parse(inspectionType.formStructure);
+    const validatedFormData = {};
+
+    for (const [key, value] of Object.entries(formData)) {
+      if (formStructure[key]) {
+        if (formStructure[key].type === 'boolean' && typeof value !== 'boolean') {
+          await transaction.rollback();
+          return next(new AppError(`Field ${formStructure[key].label} must be a boolean`, 400));
+        }
+        validatedFormData[key] = value;
+      }
+    }
+
     const inspection = await db.Inspection.create({
       siteId,
       inspectionTypeId,
-      inspectorName,
+      securityOfficerName,
       date,
-      formData,
+      formData: validatedFormData,
       status: 'completed',
       userId: req.user.id
     }, { transaction });
 
-    // Link faults to the inspection
-    if (linkedFaults && linkedFaults.length > 0) {
-      try {
-        const faultLinks = linkedFaults.map(({ fieldId, faultId }) => ({
-          inspectionId: inspection.id,
-          fieldId,
-          faultId
-        }));
-        await db.InspectionFault.bulkCreate(faultLinks, { transaction });
-      } catch (faultError) {
-        logger.error('Error linking faults to inspection:', faultError);
-        await transaction.rollback();
-        return next(new AppError('Error linking faults to inspection', 500));
+    if (faults && faults.length > 0) {
+      for (const fault of faults) {
+        if (fault.id) {
+          if (fault.resolved) {
+            await db.Fault.update({ status: 'closed' }, { 
+              where: { id: fault.id },
+              transaction 
+            });
+          }
+          await db.InspectionFault.create({
+            inspectionId: inspection.id,
+            faultId: fault.id,
+            fieldId: fault.fieldId
+          }, { transaction });
+        } else {
+          const newFault = await db.Fault.create({
+            siteId,
+            description: fault.description,
+            status: 'open',
+            reportedBy: 'inspection',
+            reporterName: securityOfficerName,
+            entrepreneurName: req.user.entrepreneurName,
+            siteName: fault.siteName,
+            createdByInspectionId: inspection.id
+          }, { transaction });
+          await db.InspectionFault.create({
+            inspectionId: inspection.id,
+            faultId: newFault.id,
+            fieldId: fault.fieldId
+          }, { transaction });
+        }
       }
     }
 
     await transaction.commit();
 
-    // Fetch the created inspection with linked faults
     const createdInspection = await db.Inspection.findByPk(inspection.id, {
       include: [
         { model: db.Site, attributes: ['name'] },
@@ -58,7 +159,7 @@ exports.createInspection = async (req, res, next) => {
         { 
           model: db.Fault,
           through: { model: db.InspectionFault, attributes: ['fieldId'] },
-          attributes: ['id', 'description']
+          attributes: ['id', 'description', 'status']
         }
       ]
     });
@@ -67,7 +168,7 @@ exports.createInspection = async (req, res, next) => {
     logger.info(`New inspection created: ${inspection.id}`);
   } catch (error) {
     await transaction.rollback();
-    logger.error('Error in createInspection:', error);
+    logger.error('Error creating inspection:', error);
     next(new AppError('Error creating inspection', 500));
   }
 };
@@ -88,13 +189,13 @@ exports.getAllInspections = async (req, res, next) => {
     });
 
     if (!inspections) {
-      throw new AppError('Inspections not found', 404, 'INSPECTIONS_NOT_FOUND').setRequestDetails(req);
+      throw new AppError('No inspections found', 404, 'INSPECTIONS_NOT_FOUND');
     }
 
     res.json(inspections);
-    logger.info(`Function getAllInspections called with params: ${JSON.stringify(req.params)}`);
+    logger.info('getAllInspections function called');
   } catch (error) {
-    logger.error('Error in getAllInspections:', error);
+    logger.error('Error getting all inspections:', error);
     next(error);
   }
 };
@@ -113,12 +214,12 @@ exports.getInspection = async (req, res, next) => {
       ]
     });
     if (!inspection) {
-      throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND');
     }
     res.json(inspection);
-    logger.info(`Function getInspection called with params: ${JSON.stringify(req.params)}`);
+    logger.info(`getInspection function called with id: ${req.params.id}`);
   } catch (error) {
-    logger.error('Error in getInspection:', error);
+    logger.error('Error getting inspection:', error);
     next(error);
   }
 };
@@ -141,13 +242,13 @@ exports.getLatestInspection = async (req, res, next) => {
     });
 
     if (!latestInspection) {
-      throw new AppError('No inspection found for this site', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
+      throw new AppError('No inspection found for this site', 404, 'INSPECTION_NOT_FOUND');
     }
 
     res.json(latestInspection);
-    logger.info(`Function getLatestInspection called with params: ${JSON.stringify(req.params)}`);
+    logger.info(`getLatestInspection function called for site: ${siteId}`);
   } catch (error) {
-    logger.error('Error in getLatestInspection:', error);
+    logger.error('Error getting latest inspection:', error);
     next(error);
   }
 };
@@ -155,7 +256,7 @@ exports.getLatestInspection = async (req, res, next) => {
 exports.updateInspection = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return next(new AppError('Validation Error', 400, 'VALIDATION_ERROR').setRequestDetails(req));
+    return next(new AppError('Validation error', 400, 'VALIDATION_ERROR'));
   }
 
   const transaction = await db.sequelize.transaction();
@@ -166,10 +267,9 @@ exports.updateInspection = async (req, res, next) => {
 
     if (!inspection) {
       await transaction.rollback();
-      return next(new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req));
+      return next(new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND'));
     }
 
-    // Update only the fields that are provided and different from current values
     const updates = {
       siteId: siteId !== undefined && siteId !== inspection.siteId ? siteId : undefined,
       inspectionTypeId: inspectionTypeId !== undefined && inspectionTypeId !== inspection.inspectionTypeId ? inspectionTypeId : undefined,
@@ -177,7 +277,6 @@ exports.updateInspection = async (req, res, next) => {
       status: status !== undefined && status !== inspection.status ? status : undefined
     };
 
-    // Filter out undefined values
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
@@ -186,7 +285,6 @@ exports.updateInspection = async (req, res, next) => {
       await inspection.update(filteredUpdates, { transaction });
     }
 
-    // Update linked faults if provided
     if (linkedFaults) {
       await db.InspectionFault.destroy({ where: { inspectionId: inspection.id }, transaction });
       const faultLinks = linkedFaults.map(({ fieldId, faultId }) => ({
@@ -199,7 +297,6 @@ exports.updateInspection = async (req, res, next) => {
 
     await transaction.commit();
 
-    // Fetch the updated inspection with linked faults
     const updatedInspection = await db.Inspection.findByPk(inspection.id, {
       include: [
         { model: db.Site, attributes: ['name'] },
@@ -216,25 +313,33 @@ exports.updateInspection = async (req, res, next) => {
     logger.info(`Inspection updated: ${inspection.id}`, { updates: filteredUpdates });
   } catch (error) {
     await transaction.rollback();
-    logger.error('Error in updateInspection:', error);
-    next(new AppError('Error updating inspection', 500, 'UPDATE_ERROR').setRequestDetails(req));
+    logger.error('Error updating inspection:', error);
+    next(new AppError('Error updating inspection', 500, 'UPDATE_ERROR'));
   }
 };
 
-exports.delete = async (req, res, next) => {
+exports.deleteInspection = async (req, res, next) => {
+  const transaction = await db.sequelize.transaction();
+
   try {
-    const inspection = await db.Inspection.findByPk(req.params.id);
+    const inspection = await db.Inspection.findByPk(req.params.id, { transaction });
 
     if (!inspection) {
-      throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND').setRequestDetails(req);
+      await transaction.rollback();
+      return next(new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND'));
     }
 
-    await inspection.destroy();
+    await db.InspectionFault.destroy({ where: { inspectionId: inspection.id }, transaction });
+    await inspection.destroy({ transaction });
+
+    await transaction.commit();
+
     res.json({ message: 'Inspection deleted successfully' });
-    logger.info(`Function delete called with params: ${JSON.stringify(req.params)}`);
+    logger.info(`Inspection deleted: ${req.params.id}`);
   } catch (error) {
-    logger.error('Error in delete:', error);
-    next(error);
+    await transaction.rollback();
+    logger.error('Error deleting inspection:', error);
+    next(new AppError('Error deleting inspection', 500, 'DELETE_ERROR'));
   }
 };
 
@@ -244,15 +349,18 @@ exports.getInspectionFormStructure = async (req, res, next) => {
     const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
 
     if (!inspectionType) {
-      throw new AppError('Inspection type not found', 404, 'INSPECTION_TYPE_NOT_FOUND').setRequestDetails(req);
+      throw new AppError('Inspection type not found', 404, 'INSPECTION_TYPE_NOT_FOUND');
     }
 
-    const formStructure = inspectionType.formStructure;
+    const formStructure = JSON.parse(inspectionType.formStructure);
 
     res.json(formStructure);
-    logger.info(`Function getInspectionFormStructure called with params: ${JSON.stringify(req.params)}`);
+    logger.info(`getInspectionFormStructure function called for inspection type: ${inspectionTypeId}`);
   } catch (error) {
-    logger.error('Error in getInspectionFormStructure:', error);
+    logger.error('Error getting inspection form structure:', error);
     next(error);
   }
 };
+
+// Call this function when the server starts to ensure default inspection types exist
+exports.createDefaultInspectionTypes();

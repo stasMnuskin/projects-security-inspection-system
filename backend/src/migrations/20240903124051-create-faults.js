@@ -19,20 +19,22 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       description: {
-        type: Sequelize.STRING,
+        type: Sequelize.TEXT,
         allowNull: false
       },
-      severity: {
+      location: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
+        defaultValue: 'לא צוין'
       },
       status: {
-        type: Sequelize.ENUM('open', 'closed'),
-        defaultValue: 'open'
+        type: Sequelize.ENUM('פתוח', 'סגור'),
+        defaultValue: 'פתוח'
       },
       reportedBy: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
+        defaultValue: 'אימייל'
       },
       reportedTime: {
         type: Sequelize.DATE,
@@ -50,12 +52,49 @@ module.exports = {
       reporterName: {
         type: Sequelize.STRING,
         allowNull: false,
-        defaultValue: 'Email System'
+        defaultValue: 'לא ידוע'
       },
       contactNumber: {
         type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: 'לא זמין'
+      },
+      emailSubject: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      emailSender: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      closedTime: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      closedBy: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      closureNotes: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      acknowledgedTime: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      disabling: {
+        type: Sequelize.BOOLEAN,
         allowNull: false,
-        defaultValue: 'N/A'
+        defaultValue: false
+      },
+      createdByInspectionId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'Inspections',
+          key: 'id'
+        }
       },
       createdAt: {
         allowNull: false,

@@ -39,23 +39,6 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    inspectorName: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    date: {
-      type: DataTypes.DATE,
-      allowNull: false
-    },
-    formData: {
-      type: DataTypes.JSON,
-      allowNull: false
-    },
-    status: {
-      type: DataTypes.ENUM('pending', 'completed', 'requires_action'),
-      allowNull: false,
-      defaultValue: 'completed'
-    },
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -63,6 +46,68 @@ module.exports = (sequelize, DataTypes) => {
         model: 'Users',
         key: 'id'
       }
+    },
+    date: {
+      type: DataTypes.DATE,
+      allowNull: false
+    },
+    formData: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      validate: {
+        isValidFormData(value) {
+          const data = JSON.parse(value);
+          const requiredFields = ['siteName', 'date', 'securityOfficerName', 'lastInspectionDate'];
+          
+          requiredFields.forEach(field => {
+            if (!data.hasOwnProperty(field)) {
+              throw new Error(`Missing required field: ${field}`);
+            }
+          });
+
+          // Additional validation based on inspection type
+          const inspectionType = data.inspectionType;
+          switch (inspectionType) {
+            case 'ביקורת שגרתית':
+              ['accessRoad', 'gate', 'fence', 'cameras', 'announcement', 'lighting', 'vegetation', 'generalNotes'].forEach(field => {
+                if (!data.hasOwnProperty(field)) {
+                  throw new Error(`Missing required field for routine inspection: ${field}`);
+                }
+                if (field !== 'generalNotes' && typeof data[field] !== 'boolean') {
+                  throw new Error(`Invalid value for ${field}. Must be a boolean.`);
+                }
+              });
+              break;
+            case 'ביקורת משטרה':
+            case 'ביקורת משרד האנרגיה':
+              if (!data.hasOwnProperty('passed')) {
+                throw new Error('Missing "passed" field');
+              }
+              if (!data.hasOwnProperty('notes')) {
+                throw new Error('Missing "notes" field');
+              }
+              break;
+            case 'תרגיל פנימי':
+              if (!data.hasOwnProperty('drillType')) {
+                throw new Error('Missing "drillType" field');
+              }
+              if (!data.hasOwnProperty('passed')) {
+                throw new Error('Missing "passed" field');
+              }
+              if (!data.hasOwnProperty('notes')) {
+                throw new Error('Missing "notes" field');
+              }
+              break;
+            default:
+              throw new Error('Invalid inspection type');
+          }
+        }
+      }
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'completed', 'requires_action'),
+      allowNull: false,
+      defaultValue: 'completed'
     }
   }, {
     sequelize,

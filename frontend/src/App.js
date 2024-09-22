@@ -20,6 +20,11 @@ import PrivateRoute from './components/PrivateRoute';
 import LotanLogo from './assets/lotan-logo.svg';
 import './styles/rtl.css';
 import { AuthProvider } from './context/AuthContext';
+import Users from './pages/Users';
+import Sites from './pages/Sites';
+import Inspections from './pages/Inspections';
+import NewInspection from './pages/NewInspection';
+import LatestInspections from './pages/LatestInspections';
 
 const cache = createCache({
   key: 'css',
@@ -36,7 +41,7 @@ function App() {
               <Navigation />
               <AppBar position="static">
                 <Toolbar>
-                  <img src={LotanLogo} alt="Lotan Group" style={{ height: '40px', marginLeft: '16px' }} />
+                  <img src={LotanLogo} alt="קבוצת לוטן" style={{ height: '40px', marginLeft: '16px' }} />
                   <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                     ברוכים הבאים
                   </Typography>
@@ -44,22 +49,35 @@ function App() {
               </AppBar>
               <Container component="main" sx={{ flexGrow: 1, mt: 4, mb: 4 }}>
                 <Routes>
+                  <Route path="/" element={
+                    <PrivateRoute allowedRoles={['admin', 'security_officer', 'entrepreneur', 'inspector']}>
+                      <Navigate to={(user) => {
+                        switch(user.role) {
+                          case 'admin': return '/admin';
+                          case 'security_officer': return '/security';
+                          case 'entrepreneur': return '/entrepreneur';
+                          case 'inspector': return '/inspector';
+                          default: return '/login';
+                        }
+                      }} replace />
+                    </PrivateRoute>
+                  } />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/admin" element={
-                  <PrivateRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </PrivateRoute>
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <AdminDashboard />
+                    </PrivateRoute>
                   } />
                   <Route path="/security" element={
-                  <PrivateRoute allowedRoles={['security_officer']}>
-                    <SecurityDashboard />
-                  </PrivateRoute>
+                    <PrivateRoute allowedRoles={['security_officer']}>
+                      <SecurityDashboard />
+                    </PrivateRoute>
                   } />
                   <Route path="/entrepreneur" element={
-                  <PrivateRoute allowedRoles={['entrepreneur']}>
-                    <EntrepreneurDashboard />
-                  </PrivateRoute>
+                    <PrivateRoute allowedRoles={['entrepreneur']}>
+                      <EntrepreneurDashboard />
+                    </PrivateRoute>
                   } />
                   <Route path="/inspector" element={
                     <PrivateRoute allowedRoles={['inspector']}>
@@ -72,7 +90,7 @@ function App() {
                     </PrivateRoute>
                   } />
                   <Route path="/faults/:siteId" element={
-                    <PrivateRoute allowedRoles={['security_officer']}>
+                    <PrivateRoute allowedRoles={['security_officer', 'entrepreneur']}>
                       <Faults />
                     </PrivateRoute>
                   } />
@@ -81,13 +99,47 @@ function App() {
                       <InspectionForm />
                     </PrivateRoute>
                   } />
-                  <Route path="/" element={<Navigate to="/login" replace />} />
                   <Route path="/change-password" element={<ChangePassword />} />
+                  <Route path="/users" element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <Users />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/sites" element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <Sites />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/inspections" element={
+                    <PrivateRoute allowedRoles={['security_officer']}>
+                      <Inspections />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/my-inspections" element={
+                    <PrivateRoute allowedRoles={['inspector']}>
+                      <Inspections />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/new-inspection" element={
+                    <PrivateRoute allowedRoles={['security_officer']}>
+                      <NewInspection />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/faults" element={
+                    <PrivateRoute allowedRoles={['entrepreneur', 'security_officer']}>
+                      <Faults />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/latest-inspections" element={
+                    <PrivateRoute allowedRoles={['entrepreneur', 'security_officer', 'admin']}>
+                      <LatestInspections />
+                    </PrivateRoute>
+                  } />
                 </Routes>
-            </Container>
-            <Box component="footer" sx={{ py: 3, px: 2, mt: 'auto', backgroundColor: 'background.paper' }}>
+              </Container>
+              <Box component="footer" sx={{ py: 3, px: 2, mt: 'auto', backgroundColor: 'background.paper' }}>
                 <Typography variant="body2" color="text.secondary" align="center">
-                  Tel. +972-3-7-100200 | info@lotansecurity.com | www.lotansecurity.com
+                Tel. +972-3-7-100200 | info@lotansecurity.com | www.lotansecurity.com
                 </Typography>
               </Box>
             </Box>

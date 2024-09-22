@@ -261,15 +261,21 @@ exports.getAllFaultsBySite = async (req, res, next) => {
   }
 };
 
+
 exports.getOpenFaultsBySite = async (req, res, next) => {
   try {
     const { siteId } = req.params;
-    const site = await db.Site.findOne({
-      where: { id: siteId, entrepreneurId: req.user.id }
-    });
+    const { role } = req.user;
 
+    // Check if the site exists
+    const site = await db.Site.findByPk(siteId);
     if (!site) {
-      throw new AppError('Site not found or you do not have permission to access this site', 404);
+      throw new AppError('Site not found', 404);
+    }
+
+    // Allow access for entrepreneur, security_officer, and admin roles
+    if (!['entrepreneur', 'security_officer', 'admin'].includes(role)) {
+      throw new AppError('Unauthorized access', 403);
     }
 
     const faults = await db.Fault.findAll({

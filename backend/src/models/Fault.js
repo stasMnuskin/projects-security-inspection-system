@@ -106,15 +106,28 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false
+    },
+    createdByInspectionId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Inspections',
+        key: 'id'
+      }
     }
   });
 
   Fault.associate = function(models) {
     Fault.belongsTo(models.Site, { foreignKey: 'siteId', as: 'site' });
     Fault.belongsToMany(models.Inspection, {
-      through: 'InspectionFault',
+      through: models.InspectionFault,
       foreignKey: 'faultId',
       otherKey: 'inspectionId'
+    });
+    Fault.belongsTo(models.Inspection, { 
+      foreignKey: 'createdByInspectionId', 
+      as: 'createdByInspection',
+      constraints: false 
     });
   };
 

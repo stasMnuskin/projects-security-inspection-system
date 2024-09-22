@@ -8,16 +8,6 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      entrepreneurId: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
       siteId: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -43,8 +33,16 @@ module.exports = {
         allowNull: false,
         defaultValue: 'pending'
       },
-      details: {
+      formData: {
         type: Sequelize.JSON,
+        allowNull: false
+      },
+      inspectorName: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      date: {
+        type: Sequelize.DATE,
         allowNull: false
       },
       userId: {

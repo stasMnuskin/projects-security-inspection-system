@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { validationResult } = require('express-validator');
-const { User } = require('../models');
+const { User, sequelize } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { getActiveSecrets } = require('../utils/secretManager')
@@ -40,6 +40,9 @@ exports.registerUser = async (req, res, next) => {
     res.status(201).json({ token, role: user.role });
   } catch (error) {
     console.error('Registration error:', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return next(new AppError('Username or email already exists', 400, 'DUPLICATE_USER'));
+    }
     next(new AppError('Error registering user', 500, 'REGISTRATION_ERROR'));
   }
 };
@@ -210,5 +213,28 @@ exports.changePassword = async (req, res, next) => {
     });
   } catch (error) {
     next(new AppError('Error changing password', 500, 'CHANGE_PASSWORD_ERROR'));
+  }
+};
+
+exports.checkUsersAndResetSequence = async (req, res, next) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id'],
+      order: [['id', 'DESC']],
+    });
+
+    logger.info(`Existing users: ${JSON.stringify(users)}`);
+
+    if (users.length > 0) {
+      const maxId = users[0].id;
+      const resetQuery = `ALTER SEQUENCE "Users_id_seq" RESTART WITH ${maxId + 1}`;
+      await sequelize.query(resetQuery);
+      logger.info(`Sequence reset to ${maxId + 1}`);
+    }
+
+    res.json({ message: 'User check completed and sequence reset if necessary' });
+  } catch (error) {
+    logger.error('Error checking users and resetting sequence:', error);
+    next(new AppError('Error checking users', 500, 'USER_CHECK_ERROR'));
   }
 };

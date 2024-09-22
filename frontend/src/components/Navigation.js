@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, useTheme, useMediaQuery, Drawer, List, ListItem, ListItemText, IconButton, CircularProgress, Snackbar } from '@mui/material';
+import { AppBar, Toolbar, Button, Box, useTheme, useMediaQuery, Drawer, List, ListItem, ListItemText, IconButton, CircularProgress, Snackbar } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -20,26 +20,26 @@ function Navigation() {
     switch(user.role) {
       case 'admin':
         return [
-          { text: 'דשבורד', link: '/admin' },
+          { text: 'ראשי', link: '/admin' },
           { text: 'משתמשים', link: '/users' },
           { text: 'אתרים', link: '/sites' },
         ];
       case 'security_officer':
         return [
-          { text: 'דשבורד', link: '/security' },
+          { text: 'ראשי', link: '/security' },
           { text: 'ביקורת חדשה', link: '/new-inspection' },
           { text: 'ביקורות', link: '/inspections' },
           { text: 'תקלות', link: '/faults' },
         ];
       case 'entrepreneur':
         return [
-          { text: 'דשבורד', link: '/entrepreneur' },
+          { text: 'ראשי', link: '/entrepreneur' },
           { text: 'תקלות', link: '/faults' },
           { text: 'ביקורות אחרונות', link: '/latest-inspections' },
         ];
       case 'inspector':
         return [
-          { text: 'דשבורד', link: '/inspector' },
+          { text: 'ראשי', link: '/inspector' },
           { text: 'הביקורות שלי', link: '/inspections' },
         ];
       default:
@@ -65,9 +65,9 @@ function Navigation() {
 
   const drawer = (
     <Box onClick={() => setDrawerOpen(false)} sx={{ textAlign: 'center', width: 250 }}>
-      <Typography variant="h6" sx={{ my: 2, color: theme.palette.primary.main }}>
+      {/* <Typography variant="h6" sx={{ my: 2, color: theme.palette.primary.main }}>
         מערכת ביקורת אבטחה
-      </Typography>
+      </Typography> */}
       <List>
         {user ? (
           <>
@@ -103,9 +103,9 @@ function Navigation() {
     <>
       <AppBar position="static" sx={{ backgroundColor: theme.palette.primary.main }}>
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: '#fff' }}>
+          {/* <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: '#fff' }}>
             מערכת ביקורת אבטחה
-          </Typography>
+          </Typography> */}
           {isMobile ? (
             <IconButton
               color="inherit"

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Select, MenuItem, Table, TableBody, 
   TableCell, TableContainer, TableHead, TableRow, Paper, Tabs, Tab,
-  useTheme, useMediaQuery, Card, CardContent
+  useTheme, useMediaQuery, Card, CardContent, CircularProgress
 } from '@mui/material';
 import { getSitesByEntrepreneur, getOpenFaultsBySite, getRecurringFaultsBySite, getOpenFaultsByEntrepreneur, getRecentFaultsByEntrepreneur, getRecurringFaultsByEntrepreneur, getStatisticsBySite, getStatisticsByLocation } from '../services/api';
 import { Bar } from 'react-chartjs-2';
@@ -19,6 +19,7 @@ function EntrepreneurDashboard() {
   const [siteStatistics, setSiteStatistics] = useState([]);
   const [locationStatistics, setLocationStatistics] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
 
   const theme = useTheme();
@@ -27,12 +28,16 @@ function EntrepreneurDashboard() {
   useEffect(() => {
     const fetchSites = async () => {
       try {
+        setLoading(true);
         const sitesResponse = await getSitesByEntrepreneur();
         console.log('Sites fetched:', sitesResponse.data);
         setSites(sitesResponse.data);
+        setError(null);
       } catch (error) {
         console.error('Error fetching sites:', error);
         setError(error.message || 'Failed to fetch sites');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -41,7 +46,10 @@ function EntrepreneurDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (loading) return;
+      
       try {
+        setLoading(true);
         console.log('Fetching data...');
         if (selectedSite) {
           const [openFaultsResponse, recurringFaultsResponse, siteStatsResponse, locationStatsResponse] = await Promise.all([
@@ -50,7 +58,6 @@ function EntrepreneurDashboard() {
             getStatisticsBySite(selectedSite),
             getStatisticsByLocation(selectedSite)
           ]);
-          console.log('API Response - Recurring faults for selected site:', recurringFaultsResponse.data);
           setOpenFaults(openFaultsResponse.data);
           setRecurringFaults(recurringFaultsResponse.data);
           setSiteStatistics(siteStatsResponse.data);
@@ -65,29 +72,23 @@ function EntrepreneurDashboard() {
             getStatisticsBySite(),
             getStatisticsByLocation()
           ]);
-          console.log('API Response - Open faults:', openFaultsResponse.data);
-          console.log('API Response - Recent faults:', recentFaultsResponse.data);
-          console.log('API Response - Recurring faults:', recurringFaultsResponse.data);
-          console.log('Number of recurring faults:', recurringFaultsResponse.data.length);
-          console.log('API Response - Site statistics:', allSiteStatsResponse.data);
-          console.log('API Response - Location statistics:', allLocationStatsResponse.data);
           setOpenFaults(openFaultsResponse.data);
           setRecentFaults(recentFaultsResponse.data);
           setRecurringFaults(recurringFaultsResponse.data);
           setSiteStatistics(allSiteStatsResponse.data);
           setLocationStatistics(allLocationStatsResponse.data);
         }
+        setError(null);
       } catch (error) {
         console.error('Error fetching data:', error);
-        console.error('Error details:', error.response ? error.response.data : 'No response data');
         setError(error.message || 'Failed to fetch data');
+      } finally {
+        setLoading(false);
       }
     };
   
     fetchData();
-  }, [selectedSite]);
-
-  if (error) return <div>Error: {error}</div>;
+  }, [selectedSite, loading]);
 
   const handleSiteChange = (event) => {
     setSelectedSite(event.target.value);
@@ -98,7 +99,15 @@ function EntrepreneurDashboard() {
   };
 
   const renderFaultTable = (faults, title) => {
-    console.log('Rendering fault table:', title, faults);
+    if (faults.length === 0) {
+      return (
+        <Box mb={4}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>{title}</Typography>
+          <Typography>אין תקלות להצגה</Typography>
+        </Box>
+      );
+    }
+
     return (
       <Box mb={4}>
         <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>{title}</Typography>
@@ -106,7 +115,6 @@ function EntrepreneurDashboard() {
           <Table dir="rtl">
             <TableHead>
               <TableRow>
-                {/* <TableCell>חומרה</TableCell> */}
                 <TableCell>מיקום</TableCell>
                 <TableCell>סטטוס</TableCell>
                 <TableCell>זמן דיווח</TableCell>
@@ -117,7 +125,6 @@ function EntrepreneurDashboard() {
             <TableBody>
               {faults.map((fault) => (
                 <TableRow key={fault.id}>
-                  <TableCell>{fault.disabling}</TableCell>
                   <TableCell>{fault.location}</TableCell>
                   <TableCell>{fault.status}</TableCell>
                   <TableCell>{new Date(fault.reportedTime).toLocaleString()}</TableCell>
@@ -133,8 +140,15 @@ function EntrepreneurDashboard() {
   };
 
   const renderRecurringFaultsTable = () => {
-    console.log('Rendering recurring faults table:', recurringFaults);
-    console.log('Full component state:', { sites, selectedSite, openFaults, recentFaults, recurringFaults, siteStatistics, locationStatistics, tabValue });
+    if (recurringFaults.length === 0) {
+      return (
+        <Box mb={4}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>תקלות חוזרות בחודש האחרון</Typography>
+          <Typography>אין תקלות חוזרות להצגה</Typography>
+        </Box>
+      );
+    }
+
     return (
       <Box mb={4}>
         <Typography variant="h6" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>תקלות חוזרות בחודש האחרון</Typography>
@@ -165,10 +179,8 @@ function EntrepreneurDashboard() {
   };
 
   const renderStatisticsCards = (stats) => {
-    console.log('Rendering statistics cards:', stats);
     if (!stats || stats.length === 0) {
-      console.log('No statistics data available');
-      return <Typography>No statistics data available</Typography>;
+      return <Typography>אין נתונים סטטיסטיים זמינים</Typography>;
     }
     return (
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -176,7 +188,7 @@ function EntrepreneurDashboard() {
           <Card key={index} sx={{ minWidth: 275, flexGrow: 1 }}>
             <CardContent>
               <Typography variant="h6" component="div">
-                {stat.name || 'Unknown'}
+                {stat.name || 'לא ידוע'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 מספר תקלות: {stat.faultCount || 0}
@@ -187,9 +199,6 @@ function EntrepreneurDashboard() {
               <Typography variant="body2" color="text.secondary">
                 זמן תיקון ממוצע: {(stat.averageRepairTime || 0).toFixed(2)} שעות
               </Typography>
-              {/* <Typography variant="body2" color="text.secondary">
-                חומרה ממוצעת: {(stat.averageSeverity || 0).toFixed(2)}
-              </Typography> */}
               <Typography variant="body2" color="text.secondary">
                 תקלות חוזרות: {stat.recurringFaultCount || 0}
               </Typography>
@@ -204,13 +213,11 @@ function EntrepreneurDashboard() {
   };
 
   const renderStatisticsCharts = (stats) => {
-    console.log('Rendering statistics charts:', stats);
     if (!stats || stats.length === 0) {
-      console.log('No statistics data available for charts');
       return null;
     }
     const chartData = {
-      labels: stats.map(stat => stat.name || 'Unknown'),
+      labels: stats.map(stat => stat.name || 'לא ידוע'),
       datasets: [
         {
           label: 'מספר תקלות',
@@ -246,12 +253,25 @@ function EntrepreneurDashboard() {
     return <Bar data={chartData} options={options} />;
   };
 
-  console.log('Rendering EntrepreneurDashboard', { sites, selectedSite, openFaults, recentFaults, recurringFaults, siteStatistics, locationStatistics, tabValue });
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
+        <Typography color="error">{error}</Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
       <Typography variant="h5" sx={{ mb: 4, color: 'primary.main' }}>בחר אתר</Typography>
-      {error && <Typography color="error">{error}</Typography>}
       <Box mb={4}>
         <Select
           value={selectedSite}
@@ -274,7 +294,7 @@ function EntrepreneurDashboard() {
         centered
         variant={isMobile ? "scrollable" : "standard"}
         scrollButtons="auto"
-        >
+      >
         <Tab label="תקלות פתוחות" />
         <Tab label="תקלות אחרונות" />
         <Tab label="תקלות חוזרות" />

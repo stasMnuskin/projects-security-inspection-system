@@ -12,11 +12,28 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
-      siteId: {
+      createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE
+      }
+    });
+
+    await queryInterface.createTable('InspectionFormStructures', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER
+      },
+      inspectionTypeId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Sites',
+          model: 'InspectionTypes',
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -37,6 +54,7 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable('InspectionFormStructures');
     await queryInterface.dropTable('InspectionTypes');
   }
 };

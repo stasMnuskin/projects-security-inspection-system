@@ -1,96 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Typography, Paper, Button, FormControl, InputLabel, Select, MenuItem, TextField, Box, Grid } from '@mui/material';
-import { createInspection } from '../services/api';
+import { Container, Typography, Paper, Button, FormControl, InputLabel, Select, MenuItem, TextField, Box, CircularProgress, Snackbar, Grid } from '@mui/material';
+import MuiAlert from '@mui/material/Alert';
+import { createInspection, getInspectionTypes, getSiteDetails, getCurrentUser, getInspectionFormStructure, getLatestInspection } from '../services/api';
 import { useTheme } from '@mui/material/styles';
 
-const inspectionTypes = [
-  { id: 1, name: 'ביקורת שגרתית' },
-  { id: 2, name: 'ביקורת משטרה' },
-  { id: 3, name: 'ביקורת משרד האנרגיה' },
-  { id: 4, name: 'ביקורת תרגיל פנימי' },
-];
+const fieldTranslations = {
+  siteName: 'שם האתר',
+  date: 'תאריך',
+  time: 'שעה',
+  securityOfficerName: 'שם קצין הביטחון',
+  lastInspectionDate: 'סיור אחרון של הסייר',
+  accessRoute: 'ציר גישה',
+  sitegates: 'שערי האתר',
+  fence: 'גדר',
+  cameras: 'מצלמות',
+  publicAddress: 'כריזה',
+  lighting: 'תאורה',
+  vegetation: 'עשבייה',
+  notes: 'הערות',
+  drillType: 'סוג התרגיל'
+};
 
-const RoutineInspection = ({ onParameterChange }) => (
-  <Grid container spacing={2}>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="גדר היקפית" onChange={(e) => onParameterChange('gaderHikeft', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="שער כניסה" onChange={(e) => onParameterChange('shaarKnisa', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="מבנה שומר" onChange={(e) => onParameterChange('mivnehShomer', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="תאורה היקפית" onChange={(e) => onParameterChange('teuraHikefit', e.target.value)} margin="normal" required />
-    </Grid>
-  </Grid>
-);
-
-const PoliceInspection = ({ onParameterChange }) => (
-  <Grid container spacing={2}>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="שם השוטר" onChange={(e) => onParameterChange('officerName', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="מספר תג" onChange={(e) => onParameterChange('badgeNumber', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="תחנת משטרה" onChange={(e) => onParameterChange('policeStation', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="תאריך הביקורת" type="date" InputLabelProps={{ shrink: true }} onChange={(e) => onParameterChange('inspectionDate', e.target.value)} margin="normal" required />
-    </Grid>
-  </Grid>
-);
-
-const EnergyMinistryInspection = ({ onParameterChange }) => (
-  <Grid container spacing={2}>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="שם המפקח" onChange={(e) => onParameterChange('inspectorName', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="תחום ביקורת" onChange={(e) => onParameterChange('inspectionArea', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="מספר רישיון" onChange={(e) => onParameterChange('licenseNumber', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="תאריך הביקורת" type="date" InputLabelProps={{ shrink: true }} onChange={(e) => onParameterChange('inspectionDate', e.target.value)} margin="normal" required />
-    </Grid>
-  </Grid>
-);
-
-const InternalDrillInspection = ({ onParameterChange }) => (
-  <Grid container spacing={2}>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="סוג התרגיל" onChange={(e) => onParameterChange('drillType', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="מספר משתתפים" onChange={(e) => onParameterChange('participantCount', e.target.value)} type="number" margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="אחראי התרגיל" onChange={(e) => onParameterChange('drillManager', e.target.value)} margin="normal" required />
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <TextField fullWidth label="תאריך התרגיל" type="date" InputLabelProps={{ shrink: true }} onChange={(e) => onParameterChange('drillDate', e.target.value)} margin="normal" required />
-    </Grid>
-  </Grid>
-);
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const NewInspection = () => {
   const { siteId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
+  const [inspectionTypes, setInspectionTypes] = useState([]);
   const [selectedType, setSelectedType] = useState('');
   const [parameters, setParameters] = useState({});
-  const [notes, setNotes] = useState('');
+  const [siteDetails, setSiteDetails] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [formStructure, setFormStructure] = useState(null);
+  const [lastInspection, setLastInspection] = useState(null);
 
-  const handleTypeChange = (event) => {
-    setSelectedType(event.target.value);
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+        const [siteResponse, userResponse, typesResponse, latestInspectionResponse] = await Promise.all([
+          getSiteDetails(siteId),
+          getCurrentUser(),
+          getInspectionTypes(),
+          getLatestInspection(siteId)
+        ]);
+        setSiteDetails(siteResponse.data);
+        setCurrentUser(userResponse.data);
+        setInspectionTypes(typesResponse.data);
+        setLastInspection(latestInspectionResponse.data);
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+        setError('Failed to fetch initial data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, [siteId]);
+
+  const handleTypeChange = async (event) => {
+    const typeId = event.target.value;
+    setSelectedType(typeId);
     setParameters({});
+    if (typeId) {
+      try {
+        const formStructureResponse = await getInspectionFormStructure(siteId, typeId);
+        setFormStructure(formStructureResponse);
+      } catch (error) {
+        console.error('Error fetching form structure:', error);
+        setError('Failed to fetch form structure. Please try again.');
+      }
+    } else {
+      setFormStructure(null);
+    }
   };
 
   const handleParameterChange = (key, value) => {
@@ -98,9 +89,11 @@ const NewInspection = () => {
   };
 
   const validateForm = () => {
-    if (!selectedType) return false;
-    const requiredParams = Object.values(parameters).filter(Boolean);
-    return requiredParams.length >= 4 && notes.trim() !== '';
+    if (!selectedType || !formStructure) return false;
+    const requiredFields = Object.entries(formStructure)
+      .filter(([_, field]) => field.required)
+      .map(([key, _]) => key);
+    return requiredFields.every(field => parameters[field]);
   };
 
   const handleSubmit = async () => {
@@ -110,77 +103,151 @@ const NewInspection = () => {
     }
 
     try {
+      setSubmitting(true);
+      const currentDate = new Date().toISOString();
       const inspectionData = {
         siteId: parseInt(siteId),
-        inspectionTypeId: selectedType,
-        details: {
-          parameters: parameters,
-          notes: notes
-        },
-        status: 'completed'
+        inspectionTypeId: parseInt(selectedType),
+        securityOfficerName: currentUser.username,
+        date: currentDate,
+        formData: parameters,
+        status: 'completed',
+        faults: [] // TODO Add site faults 
       };
       await createInspection(inspectionData);
-      navigate('/inspections');
+      setSuccessMessage('הביקורת נשמרה בהצלחה');
+      setTimeout(() => {
+        navigate('/inspections');
+      }, 2000);
     } catch (error) {
       console.error('Error creating inspection:', error);
       setError('Failed to create inspection. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const renderInspectionParameters = () => {
-    switch(selectedType) {
-      case 1:
-        return <RoutineInspection onParameterChange={handleParameterChange} />;
-      case 2:
-        return <PoliceInspection onParameterChange={handleParameterChange} />;
-      case 3:
-        return <EnergyMinistryInspection onParameterChange={handleParameterChange} />;
-      case 4:
-        return <InternalDrillInspection onParameterChange={handleParameterChange} />;
-      default:
-        return null;
-    }
+  const renderInspectionFields = () => {
+    if (!formStructure) return null;
+
+    return Object.entries(formStructure).map(([key, field]) => {
+      const label = fieldTranslations[key] || field.label;
+      switch (field.type) {
+        case 'text':
+        case 'date':
+          return (
+            <TextField
+              key={key}
+              fullWidth
+              label={label}
+              type={field.type}
+              value={parameters[key] || ''}
+              onChange={(e) => handleParameterChange(key, e.target.value)}
+              disabled={!field.editable}
+              required={field.required}
+              margin="normal"
+            />
+          );
+        case 'boolean':
+          return (
+            <FormControl fullWidth key={key} margin="normal">
+              <InputLabel>{label}</InputLabel>
+              <Select
+                value={parameters[key] || ''}
+                onChange={(e) => handleParameterChange(key, e.target.value)}
+                label={label}
+              >
+                <MenuItem value="ok">תקין</MenuItem>
+                <MenuItem value="not_ok">לא תקין</MenuItem>
+              </Select>
+            </FormControl>
+          );
+        default:
+          return null;
+      }
+    });
   };
+
+  const renderSiteInfo = () => (
+    <Grid container spacing={2}>
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="שם האתר"
+          value={siteDetails?.name || ''}
+          disabled
+          margin="normal"
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="כתובת"
+          value={siteDetails?.address || ''}
+          disabled
+          margin="normal"
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="ביקורת אחרונה"
+          value={lastInspection ? new Date(lastInspection.date).toLocaleDateString('he-IL') : 'אין מידע'}
+          disabled
+          margin="normal"
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="סוג ביקורת אחרונה"
+          value={lastInspection?.InspectionType?.name || 'אין מידע'}
+          disabled
+          margin="normal"
+        />
+      </Grid>
+    </Grid>
+  );
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
       <Typography variant="h4" gutterBottom sx={{ mb: 4, color: theme.palette.primary.main }}>
-        ביקורת חדשה
+        ביקורת חדשה - {siteDetails?.name}
       </Typography>
       <Paper sx={{ p: 3, mb: 4, boxShadow: 3, backgroundColor: theme.palette.background.paper }}>
+        {renderSiteInfo()}
         <FormControl fullWidth margin="normal">
-          <InputLabel id="inspection-type-label">סוג ביקורת</InputLabel>
+          <InputLabel>סוג ביקורת</InputLabel>
           <Select
-            labelId="inspection-type-label"
             value={selectedType}
             label="סוג ביקורת"
             onChange={handleTypeChange}
           >
+            <MenuItem value="">
+              <em>בחר סוג ביקורת</em>
+            </MenuItem>
             {inspectionTypes.map((type) => (
               <MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>
             ))}
           </Select>
         </FormControl>
 
-        {renderInspectionParameters()}
+        {renderInspectionFields()}
 
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          variant="outlined"
-          label="הערות"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          margin="normal"
-          required
-        />
         <Box mt={2}>
           <Button 
             variant="contained" 
             color="primary" 
             onClick={handleSubmit} 
-            disabled={!validateForm()}
+            disabled={!validateForm() || submitting}
             sx={{ 
               backgroundColor: theme.palette.primary.main,
               '&:hover': {
@@ -188,15 +255,15 @@ const NewInspection = () => {
               },
             }}
           >
-            שמור ביקורת
+            {submitting ? <CircularProgress size={24} color="inherit" /> : 'שמור ביקורת'}
           </Button>
         </Box>
       </Paper>
-      {error && (
-        <Typography color="error" sx={{ mt: 2 }}>
-          {error}
-        </Typography>
-      )}
+      <Snackbar open={!!error || !!successMessage} autoHideDuration={6000} onClose={() => setError(null)}>
+        <Alert onClose={() => setError(null)} severity={error ? "error" : "success"} sx={{ width: '100%' }}>
+          {error || successMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

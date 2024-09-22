@@ -4,7 +4,7 @@ import { handleApiError } from '../utils/errorHandler';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 if (!API_URL) {
-  throw new Error('REACT_APP_API_URL is not defined');
+  throw new Error('REACT_APP_API_URL לא מוגדר');
 }
 
 const api = axios.create({
@@ -30,7 +30,7 @@ api.interceptors.response.use(
   (error) => Promise.reject(handleApiError(error))
 );
 
-// User related API calls
+// User-related API calls
 export const login = (email, password) => api.post('/users/login', { email, password });
 export const register = (username, email, password, role) => 
   api.post('/users/register', { username, email, password, role });
@@ -45,27 +45,43 @@ export const changePassword = async (currentPassword, newPassword) => {
   return response;
 };
 
-// Inspection related API calls
+// Inspection-related API calls
 export const getInspections = () => api.get('/inspections');
 export const createInspection = (data) => api.post('/inspections', data);
 export const updateInspection = (id, data) => api.put(`/inspections/${id}`, data);
 export const getLatestInspection = (siteId) => api.get(`/inspections/latest/${siteId}`);
 export const getInspectionTypes = () => api.get('/inspection-types');
-export const getInspectionFormStructure = (inspectionTypeId) => api.get(`/inspection-types/${inspectionTypeId}/form-structure`);
+export const getInspectionFormStructure = async (siteId, inspectionTypeId) => {
+  try {
+    const response = await api.get(`/inspection-types/${inspectionTypeId}/form-structure`, {
+      params: { siteId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching inspection form structure:', error);
+    throw error;
+  }
+};
 export const submitInspectionReport = (reportData) => api.post('/inspections', reportData);
 
-// Site related API calls
-export const getSites = () => api.get('/sites');
+// Site-related API calls
+export const getSites = (entrepreneurId = null) => {
+  if (entrepreneurId) {
+    return api.get(`/sites/entrepreneur/${entrepreneurId}`);
+  }
+  return getSitesByEntrepreneur();
+};
 export const createSite = (data) => api.post('/sites', data);
 export const updateSite = (id, data) => api.put(`/sites/${id}`, data);
 export const getSiteDetails = (siteId) => api.get(`/sites/${siteId}`);
+export const getSitesByEntrepreneur = () => api.get('/sites/entrepreneur');
 
-// Entrepreneur related API calls
+// Entrepreneur-related API calls
 export const getEntrepreneurs = () => api.get('/entrepreneurs');
 export const createEntrepreneur = (data) => api.post('/entrepreneurs', data);
 export const updateEntrepreneur = (id, data) => api.put(`/entrepreneurs/${id}`, data);
 
-// Fault related API calls
+// Fault-related API calls
 export const getFaults = () => api.get('/faults');
 export const createFault = (data) => api.post('/faults', data);
 export const updateFault = (id, data) => api.put(`/faults/${id}`, data);
@@ -77,9 +93,10 @@ export const getAllFaultsBySite = (siteId) => api.get(`/faults/all/site/${siteId
 export const getOpenFaultsBySite = (siteId) => api.get(`/faults/open/site/${siteId}`);
 export const getRecentFaultsBySite = (siteId) => api.get(`/faults/recent/site/${siteId}`);
 export const getRecurringFaultsBySite = (siteId) => api.get(`/faults/recurring/site/${siteId}`);
+export const getLatestInspections = () => api.get('/inspections/latest');
 
-// Statistics related API calls
+// Statistics-related API calls
 export const getStatisticsBySite = (siteId) => api.get(siteId ? `/faults/statistics/site/${siteId}` : '/faults/statistics/site');
 export const getStatisticsByLocation = (siteId) => api.get(siteId ? `/faults/statistics/location/${siteId}` : '/faults/statistics/location');
 
- export default api;
+export default api;

@@ -5,13 +5,22 @@ const roleAuth = (...allowedRoles) => {
   return (req, res, next) => {
     logger.info('Entering roleAuth middleware');
     logger.info(`User: ${JSON.stringify(req.user)}`);
-    logger.info(`Checking role. User role: ${req.user.role}, Allowed roles: ${allowedRoles}`);
+    
+    // Flatten the allowedRoles array in case it's nested
+    const flattenedRoles = allowedRoles.flat();
+    
+    logger.info(`Checking role. User role: ${req.user.role}, Allowed roles: ${flattenedRoles}`);
+    
     if (!req.user) {
       logger.error('User not found in request');
       return next(new AppError('User not found in request', 401, 'USER_NOT_FOUND'));
     }
     
-    if (allowedRoles.includes(req.user.role)) {
+    logger.info(`User role: ${req.user.role}`);
+    logger.info(`Allowed roles: ${JSON.stringify(flattenedRoles)}`);
+    logger.info(`Is role allowed: ${flattenedRoles.includes(req.user.role)}`);
+    
+    if (flattenedRoles.includes(req.user.role)) {
       logger.info(`Access granted for user ${req.user.id} with role ${req.user.role}`);
       next();
     } else {

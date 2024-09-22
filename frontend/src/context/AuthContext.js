@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
           const response = await getCurrentUser();
           setUser(response.data);
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('שגיאה בטעינת נתוני המשתמש:', error);
           await logout();
         }
       }
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await logoutUser();
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('שגיאה בתהליך ההתנתקות:', error);
     } finally {
       setUser(null);
       localStorage.removeItem('token');

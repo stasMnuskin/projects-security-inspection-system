@@ -53,4 +53,7 @@ router.put(
 
 router.post('/change-password', auth, userController.changePassword);
 
+// route for checking users and resetting sequence (admin only)
+router.post('/check-and-reset', auth, roleAuth('admin'), userController.checkUsersAndResetSequence);
+
 module.exports = router;
