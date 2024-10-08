@@ -67,7 +67,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Internationalization setup
+// Int. setup
 i18n.configure({
   locales: ['en', 'he'],
   directory: path.join(__dirname, 'locales'),
@@ -123,7 +123,7 @@ app.use('/api/inspection-types', inspectionTypeRoutes);
 app.use('/api/sites', siteRoutes);
 app.use('/api/entrepreneurs', entrepreneurRoutes);
 
-// Language middleware
+// Language
 app.use((req, res, next) => {
   const lang = req.query.lang || req.cookies.lang || 'en';
   res.cookie('lang', lang, { maxAge: 900000, httpOnly: true });
@@ -131,7 +131,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
   if (err.code === 'EBADCSRFTOKEN') {
     logger.error('CSRF error:', err);
@@ -170,7 +170,6 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json(errorResponse);
 });
 
-// Server startup
 const PORT = process.env.PORT || 5000;
 
 function setupWebSocket() {
@@ -182,7 +181,6 @@ function setupWebSocket() {
   });
 }
 
-// Error handlers
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });
 });
@@ -209,7 +207,6 @@ async function startServer() {
     await db.sequelize.sync({ alter: true });
     logger.info('Database synced successfully.');
 
-    // Clean up existing faults before starting the server
     await cleanupExistingFaults();
     logger.info('Existing faults cleaned up successfully.');
 

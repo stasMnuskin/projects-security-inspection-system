@@ -6,7 +6,6 @@ const roleAuth = require('../middleware/roleAuth');
 
 const router = express.Router();
 
-// Register a new user
 router.post(
   '/register',
   [
@@ -18,16 +17,12 @@ router.post(
   userController.registerUser
 );
 
-// Login user
 router.post('/login', userController.loginUser);
 
-// Logout user
 router.post('/logout', auth, userController.logoutUser);
 
-// Get current user
 router.get('/me', auth, userController.getCurrentUser);
 
-// Update user profile
 router.put(
   '/update',
   [
@@ -39,13 +34,10 @@ router.put(
   userController.updateUser
 );
 
-// Get all users (admin and security_officer)
 router.get('/', auth, roleAuth('admin', 'security_officer'), userController.getAllUsers);
 
-// Delete user (admin only)
 router.delete('/:id', auth, roleAuth('admin', 'inspector'), userController.deleteUser);
 
-// Change user role (admin only)
 router.put(
   '/:id/role',
   auth, roleAuth('admin', 'inspector'), userController.changeUserRole
@@ -53,7 +45,6 @@ router.put(
 
 router.post('/change-password', auth, userController.changePassword);
 
-// route for checking users and resetting sequence (admin only)
 router.post('/check-and-reset', auth, roleAuth('admin'), userController.checkUsersAndResetSequence);
 
 module.exports = router;

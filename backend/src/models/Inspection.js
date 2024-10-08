@@ -65,7 +65,6 @@ module.exports = (sequelize, DataTypes) => {
             }
           });
 
-          // Additional validation based on inspection type
           const inspectionType = data.inspectionType;
           switch (inspectionType) {
             case 'ביקורת שגרתית':

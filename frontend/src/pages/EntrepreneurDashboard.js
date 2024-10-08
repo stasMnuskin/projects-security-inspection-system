@@ -115,7 +115,7 @@ function EntrepreneurDashboard() {
           <Table dir="rtl">
             <TableHead>
               <TableRow>
-                <TableCell>מיקום</TableCell>
+                <TableCell>רכיב</TableCell>
                 <TableCell>סטטוס</TableCell>
                 <TableCell>זמן דיווח</TableCell>
                 <TableCell>תיאור</TableCell>
@@ -156,7 +156,7 @@ function EntrepreneurDashboard() {
           <Table dir="rtl">
             <TableHead>
               <TableRow>
-                <TableCell>מיקום</TableCell>
+                <TableCell>רכיב</TableCell>
                 <TableCell>תיאור</TableCell>
                 <TableCell>מספר הופעות</TableCell>
                 {!selectedSite && <TableCell>שם האתר</TableCell>}
@@ -311,7 +311,7 @@ function EntrepreneurDashboard() {
             <Box mt={4}>
               {renderStatisticsCharts(siteStatistics)}
             </Box>
-            <Typography variant="h6" gutterBottom sx={{ mt: 6, mb: 4, color: 'primary.main' }}>סטטיסטיקות לפי מיקום</Typography>
+            <Typography variant="h6" gutterBottom sx={{ mt: 6, mb: 4, color: 'primary.main' }}>סטטיסטיקות לפי רכיב</Typography>
             {renderStatisticsCards(locationStatistics)}
             <Box mt={4}>
               {renderStatisticsCharts(locationStatistics)}

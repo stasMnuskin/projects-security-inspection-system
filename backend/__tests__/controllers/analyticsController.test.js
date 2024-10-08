@@ -56,7 +56,7 @@ describe('Analytics Controller', () => {
 
   describe('GET /api/analytics/alerts', () => {
     it('should get analytics alerts', async () => {
-      // Create an overdue inspection
+
       const overdueDate = new Date();
       overdueDate.setDate(overdueDate.getDate() - 31);  // 31 days ago
       await createInspection({
@@ -67,7 +67,6 @@ describe('Analytics Controller', () => {
         createdAt: overdueDate
       });
 
-      // Create a critical issue
       await createInspection({
         entrepreneurId: entrepreneur.id,
         siteId: site.id,
@@ -91,7 +90,7 @@ describe('Analytics Controller', () => {
 
   describe('Error handling', () => {
     it('should handle internal server errors gracefully', async () => {
-      // Simulating an internal error by passing an invalid date
+
       const response = await request(app)
         .get('/api/analytics/statistics')
         .query({ startDate: 'invalid-date', endDate: 'also-invalid' })

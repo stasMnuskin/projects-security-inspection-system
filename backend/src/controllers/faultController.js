@@ -267,13 +267,11 @@ exports.getOpenFaultsBySite = async (req, res, next) => {
     const { siteId } = req.params;
     const { role } = req.user;
 
-    // Check if the site exists
     const site = await db.Site.findByPk(siteId);
     if (!site) {
       throw new AppError('Site not found', 404);
     }
 
-    // Allow access for entrepreneur, security_officer, and admin roles
     if (!['entrepreneur', 'security_officer', 'admin'].includes(role)) {
       throw new AppError('Unauthorized access', 403);
     }
@@ -394,7 +392,7 @@ exports.getStatisticsBySite = async (req, res, next) => {
     if (role === 'entrepreneur') {
       whereClause.entrepreneurId = userId;
     } else if (role === 'admin') {
-      // Admins can see all sites
+      
     } else {
       throw new AppError('Unauthorized: Insufficient permissions', 403);
     }
@@ -466,7 +464,7 @@ exports.getStatisticsByLocation = async (req, res, next) => {
     if (role === 'entrepreneur') {
       whereClause['$site.entrepreneurId$'] = userId;
     } else if (role === 'admin') {
-      // Admins can see all locations
+
     } else {
       throw new AppError('Unauthorized: Insufficient permissions', 403);
     }

@@ -1,12 +1,10 @@
-// backend/src/utils/emailService.js
-
 const nodemailer = require('nodemailer');
 const Imap = require('imap');
 const simpleParser = require('mailparser').simpleParser;
 const logger = require('./logger');
 
 const transporter = nodemailer.createTransport({
-  // הגדרות SMTP (יש להשלים לפי הגדרות הפרויקט)
+  //TODO SMT CONFIG
 });
 
 const imapConfig = {

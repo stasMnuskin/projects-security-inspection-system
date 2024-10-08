@@ -82,27 +82,27 @@ exports.deleteInspectionType = async (req, res, next) => {
     return next(new AppError('Error deleting inspection type', 500));
   }
 };
+
 exports.getInspectionFormStructure = async (req, res, next) => {
   try {
     const { siteId, inspectionTypeId } = req.params;
 
-    // Check if the site exists
+    logger.info(`Fetching inspection form structure for siteId: ${siteId}, inspectionTypeId: ${inspectionTypeId}`);
+
     const site = await db.Site.findByPk(siteId);
     if (!site) {
-      throw new AppError('Site not found', 404);
+      logger.error(`Site not found for siteId: ${siteId}`);
+      return next(new AppError('Site not found', 404));
     }
 
-    // Check if the inspection type exists and is associated with the site
-    const inspectionType = await db.InspectionType.findOne({
-      where: { id: inspectionTypeId, siteId: siteId }
-    });
+    const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);
     
-    console.log('inspectionType:', inspectionType)
-
     if (!inspectionType) {
-      throw new AppError('Inspection type not found for this site', 404);
+      logger.error(`Inspection type not found for inspectionTypeId: ${inspectionTypeId}`);
+      return next(new AppError('Inspection type not found', 404));
     }
 
+    logger.info(`Fetched inspection form structure for siteId: ${siteId}, inspectionTypeId: ${inspectionTypeId}`);
     res.json(JSON.parse(inspectionType.formStructure));
   } catch (error) {
     logger.error('Error in getInspectionFormStructure:', error);

@@ -17,7 +17,8 @@ import LatestInspection from './pages/LatestInspection';
 import Faults from './pages/Faults';
 import InspectionForm from './pages/InspectionForm';
 import PrivateRoute from './components/PrivateRoute';
-import LotanLogo from './assets/lotan-logo.svg';
+import LotanLogo from './assets/logo-black.svg';
+
 import './styles/rtl.css';
 import { AuthProvider } from './context/AuthContext';
 import Users from './pages/Users';
@@ -42,9 +43,9 @@ function App() {
               <AppBar position="static">
                 <Toolbar>
                   <img src={LotanLogo} alt="קבוצת לוטן" style={{ height: '40px', marginLeft: '16px' }} />
-                  <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                  {/* <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                     ברוכים הבאים
-                  </Typography>
+                  </Typography> */}
                 </Toolbar>
               </AppBar>
               <Container component="main" sx={{ flexGrow: 1, mt: 4, mb: 4 }}>
@@ -139,7 +140,7 @@ function App() {
               </Container>
               <Box component="footer" sx={{ py: 3, px: 2, mt: 'auto', backgroundColor: 'background.paper' }}>
                 <Typography variant="body2" color="text.secondary" align="center">
-                Tel. +972-3-7-100200 | info@lotansecurity.com | www.lotansecurity.com
+                  Tel. +972-3-7-100254 | <a href="mailto:info@lotangroup.com">info@lotangroup.com</a> | <a href="https://www.lotangrp.com" target="_blank" rel="noopener noreferrer">https://www.lotangrp.com</a>
                 </Typography>
               </Box>
             </Box>

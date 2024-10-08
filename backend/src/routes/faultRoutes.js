@@ -5,7 +5,7 @@ const roleAuth = require('../middleware/roleAuth');
 
 const router = express.Router();
 
-router.get('/', auth, faultController.getAllFaults); // New route to get all faults
+router.get('/', auth, faultController.getAllFaults); 
 router.post('/', auth, roleAuth(['admin', 'security_officer']), faultController.createFault);
 router.get('/site/:siteId', auth, faultController.getFaultsBySite);
 router.put('/:id', auth, roleAuth(['admin', 'security_officer']), faultController.updateFault);

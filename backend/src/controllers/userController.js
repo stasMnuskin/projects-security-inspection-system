@@ -169,10 +169,8 @@ exports.logoutUser = async (req, res, next) => {
   try {
     logger.info('Logout process started');
 
-    // Log the current cookies
     logger.info(`Current cookies: ${JSON.stringify(req.cookies)}`);
 
-    // Clear the HTTP-only cookie
     res.clearCookie('token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -181,7 +179,6 @@ exports.logoutUser = async (req, res, next) => {
 
     logger.info('Token cookie cleared');
 
-    // Log the updated cookies
     logger.info(`Updated cookies: ${JSON.stringify(req.cookies)}`);
 
     logger.info('User logged out successfully');

@@ -112,9 +112,9 @@ const SecurityDashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
+      {/* <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
         דשבורד קצין הביטחון
-      </Typography>
+      </Typography> */}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error.message}</Alert>}
       {loading ? (
         <Typography>טוען נתונים...</Typography>

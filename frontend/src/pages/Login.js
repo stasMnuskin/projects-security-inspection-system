@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { TextField, Button, Typography, Container, Box, Link } from '@mui/material';
+import { useNavigate} from 'react-router-dom';
+import { TextField, Button, Typography, Container, Box } from '@mui/material';
 import { login as apiLogin } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
@@ -59,7 +59,7 @@ function Login() {
         }}
       >
         <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
-          התחברות
+          כניסה למערכת
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -94,11 +94,11 @@ function Login() {
           >
             התחבר
           </Button>
-          <Box sx={{ textAlign: 'center' }}>
+          {/* <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/register" variant="body2">
               {"אין לך חשבון? הירשם"}
             </Link>
-          </Box>
+          </Box> */}
           {error && (
             <Typography color="error" align="center">
               {error}

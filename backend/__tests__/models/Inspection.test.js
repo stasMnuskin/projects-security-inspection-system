@@ -32,5 +32,4 @@ describe('Inspection Model', () => {
     await expect(db.Inspection.create({})).rejects.toThrow();
   });
 
-  // בדיקות נוספות...
 });

@@ -3,7 +3,7 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.sequelize.transaction(async (transaction) => {
-      // Create InspectionFaults table
+
       await queryInterface.createTable('InspectionFaults', {
         id: {
           allowNull: false,
@@ -45,7 +45,6 @@ module.exports = {
         }
       }, { transaction });
 
-      // Add index to improve query performance
       await queryInterface.addIndex('InspectionFaults', ['inspectionId', 'faultId'], {
         unique: true,
         transaction
@@ -55,7 +54,7 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.sequelize.transaction(async (transaction) => {
-      // Drop InspectionFaults table
+
       await queryInterface.dropTable('InspectionFaults', { transaction });
     });
   }

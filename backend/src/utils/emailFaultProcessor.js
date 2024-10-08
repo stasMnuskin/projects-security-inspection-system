@@ -81,7 +81,6 @@ const processEmails = async () => {
           logger.info(`נוצרה תקלה מאימייל: ${message.id}`);
         }
         
-        // Mark the email as read
         await gmail.users.messages.modify({
           userId: 'me',
           id: message.id,
@@ -136,7 +135,6 @@ const parseFaultFromEmail = (email) => {
     }
   });
 
-  // If site name is not found in the body, try to extract it from the subject
   if (!faultData.siteName) {
     const siteNameMatch = subject.match(/תקלה(?:\s+חדשה)?\s+באתר:\s*(.+)/i);
     if (siteNameMatch) {
@@ -144,7 +142,6 @@ const parseFaultFromEmail = (email) => {
     }
   }
 
-  // Remove any non-printable characters and trim all fields
   Object.keys(faultData).forEach(key => {
     if (typeof faultData[key] === 'string') {
       faultData[key] = faultData[key].replace(/[^\x20-\x7E\u0590-\u05FF]/g, '').trim();
@@ -212,7 +209,6 @@ const closeFault = async (faultData) => {
     throw new Error(`האתר לא נמצא: ${faultData.siteName}`);
   }
 
-  // Find the most recent open fault for this site
   const fault = await db.Fault.findOne({
     where: {
       siteId: site.id,

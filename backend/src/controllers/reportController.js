@@ -28,7 +28,6 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
       return next(new AppError('Invalid date format', 400, 'INVALID_DATE_FORMAT'));
     }
 
-    // Try to get data from cache
     const cacheKey = `inspections:${startDate}:${endDate}`;
     const cachedData = await cache.get(cacheKey);
     
@@ -38,7 +37,6 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
       return res.json(JSON.parse(cachedData));
     }
 
-    // If not in cache, fetch from database
     const inspections = await Inspection.findAll({
       where: {
         createdAt: {
@@ -49,7 +47,6 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // Fetch related data in bulk
     const entrepreneurIds = [...new Set(inspections.map(i => i.entrepreneurId))];
     const siteIds = [...new Set(inspections.map(i => i.siteId))];
     const inspectionTypeIds = [...new Set(inspections.map(i => i.inspectionTypeId))];
@@ -60,19 +57,16 @@ exports.getInspectionsByDateRange = async (req, res, next) => {
       InspectionType.findAll({ where: { id: inspectionTypeIds }, attributes: ['id', 'name'] })
     ]);
 
-    // Create lookup objects
     const entrepreneurLookup = entrepreneurs.reduce((acc, e) => ({ ...acc, [e.id]: e.name }), {});
     const siteLookup = sites.reduce((acc, s) => ({ ...acc, [s.id]: s.name }), {});
     const inspectionTypeLookup = inspectionTypes.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
 
-    // Combine data
     const result = inspections.map(inspection => ({
       ...inspection.toJSON(),
       createdAt: new Date(inspection.createdAt).toISOString()
     }));
 
-    // Cache the result
-    await cache.set(cacheKey, JSON.stringify(result), 3600); // Cache for 1 hour
+    await cache.set(cacheKey, JSON.stringify(result), 3600); // 1 hour
 
     const endTime = process.hrtime(startTime);
     logger.info(`Retrieved inspections from database in ${endTime[0]}s ${endTime[1] / 1000000}ms`);

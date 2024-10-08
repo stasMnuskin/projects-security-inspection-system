@@ -3,7 +3,6 @@ const { sequelize, Entrepreneur, Site, InspectionType, Inspection, Fault, User }
 async function clearAllTables() {
   try {
     await sequelize.transaction(async (t) => {
-      // מחיקת כל הרשומות מהטבלאות
       await Fault.destroy({ where: {}, force: true, transaction: t });
       await Inspection.destroy({ where: {}, force: true, transaction: t });
       await InspectionType.destroy({ where: {}, force: true, transaction: t });

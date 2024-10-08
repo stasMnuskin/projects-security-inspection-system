@@ -6,7 +6,6 @@ const roleAuth = (...allowedRoles) => {
     logger.info('Entering roleAuth middleware');
     logger.info(`User: ${JSON.stringify(req.user)}`);
     
-    // Flatten the allowedRoles array in case it's nested
     const flattenedRoles = allowedRoles.flat();
     
     logger.info(`Checking role. User role: ${req.user.role}, Allowed roles: ${flattenedRoles}`);

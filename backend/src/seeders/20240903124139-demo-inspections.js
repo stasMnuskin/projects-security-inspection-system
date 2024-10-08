@@ -14,7 +14,6 @@ module.exports = {
 
     const inspector = users[0];
 
-    // Fetch inspection types
     const inspectionTypes = await queryInterface.sequelize.query(
       `SELECT id, name FROM "InspectionTypes";`,
       { type: queryInterface.sequelize.QueryTypes.SELECT }

@@ -13,7 +13,7 @@ function UserDashboard() {
       try {
         const response = await getInspections();
         const pendingInspections = response.data.filter(i => i.status === 'pending');
-        setUpcomingInspection(pendingInspections[0]); // Get the first pending inspection
+        setUpcomingInspection(pendingInspections[0]); 
       } catch (error) {
         if (error instanceof AppError) {
           setError(`${error.errorCode}: ${error.message}`);
