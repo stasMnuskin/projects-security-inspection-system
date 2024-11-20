@@ -12,7 +12,7 @@ import {
   Tooltip
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { getDrillsBySite } from '../services/api';  // Changed from getInspectionsBySite to getDrillsBySite
+import { getDrillsBySite } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import { colors } from '../styles/colors';
 
@@ -37,12 +37,11 @@ const Drills = () => {
     securityOfficer: ''
   });
 
-  // Columns configuration
+  // Columns configuration - Removed time column
   const columns = [
     { id: 'site', label: 'אתר', getValue: drill => drill.Site?.name },
     { id: 'securityOfficer', label: 'קב"ט', getValue: drill => drill.formData?.securityOfficer },
     { id: 'date', label: 'תאריך', getValue: drill => drill.formData?.date },
-    { id: 'time', label: 'שעה', getValue: drill => drill.formData?.time },
     { id: 'drill_type', label: 'סוג תרגיל', getValue: drill => drill.formData?.drill_type },
     { id: 'status', label: 'סטטוס', getValue: drill => drill.formData?.status },
     { id: 'notes', label: 'הערות', getValue: drill => drill.formData?.notes }
@@ -132,7 +131,7 @@ const Drills = () => {
       if (!filters.site) return;
 
       try {
-        const response = await getDrillsBySite(filters.site, {  // Changed to getDrillsBySite
+        const response = await getDrillsBySite(filters.site, {
           startDate: filters.startDate.toISOString(),
           endDate: filters.endDate.toISOString(),
           drillType: filters.drillType,
@@ -141,8 +140,8 @@ const Drills = () => {
 
         // Sort drills by date in descending order
         const sortedDrills = (response || []).sort((a, b) => {
-          const dateA = new Date(a.formData?.date + ' ' + (a.formData?.time || '00:00'));
-          const dateB = new Date(b.formData?.date + ' ' + (b.formData?.time || '00:00'));
+          const dateA = new Date(a.formData?.date);
+          const dateB = new Date(b.formData?.date);
           return dateB - dateA;
         });
 

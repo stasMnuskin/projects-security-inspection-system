@@ -9,9 +9,33 @@ exports.createInspection = async (req, res, next) => {
   try {
     const { siteId, inspectionTypeId, formData, type } = req.body;
 
+    // Basic validation
     if (!siteId || !inspectionTypeId || !formData) {
       await transaction.rollback();
       return next(new AppError('Missing required fields', 400));
+    }
+
+    // For drills, validate based on drill type
+    if (type === 'drill') {
+      if (!formData.drill_type) {
+        await transaction.rollback();
+        return next(new AppError('Missing drill type', 400));
+      }
+
+      // Only validate status if drill type is not 'אחר'
+      if (formData.drill_type !== 'אחר' && !formData.status) {
+        await transaction.rollback();
+        return next(new AppError('Status is required for this drill type', 400));
+      }
+
+      // Notes are required if:
+      // 1. Drill type is 'אחר' OR
+      // 2. Status is 'לא תקין'
+      const notesRequired = formData.drill_type === 'אחר' || formData.status === 'לא תקין';
+      if (notesRequired && !formData.notes?.trim()) {
+        await transaction.rollback();
+        return next(new AppError('Notes are required for this drill type/status', 400));
+      }
     }
 
     const inspectionType = await db.InspectionType.findByPk(inspectionTypeId);

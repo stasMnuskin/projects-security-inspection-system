@@ -9,8 +9,7 @@ import {
   TextField, 
   Dialog, 
   DialogActions, 
-  DialogContent, 
-  DialogContentText, 
+  DialogContent,  
   DialogTitle, 
   Snackbar, 
   Autocomplete,
@@ -42,7 +41,11 @@ const InspectionForm = () => {
   const isDrill = location.pathname === '/drills/new';
 
   // State for form data and validation
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({
+    securityOfficer: user.firstName,
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+  });
   const [validationErrors, setValidationErrors] = useState({});
   const [formStructure, setFormStructure] = useState(null);
 
@@ -60,11 +63,9 @@ const InspectionForm = () => {
   // State for UI feedback
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
-  // State for dialogs
+  // State for dialog
   const [showInitialDialog, setShowInitialDialog] = useState(true);
-  const [showTypeDialog, setShowTypeDialog] = useState(false);
 
   // Check permissions
   const canCreate = isDrill 
@@ -122,6 +123,8 @@ const InspectionForm = () => {
             if (drillTypeField) {
               setDrillTypes(drillTypeField.options || []);
             }
+            // Set the drill type as selected type
+            setSelectedType(drillType);
           }
         }
       } catch (error) {
@@ -138,10 +141,10 @@ const InspectionForm = () => {
     fetchInspectionTypes();
   }, [selectedSite, isDrill]);
 
-  // Load form structure when type is selected
+  // Load form structure when type is selected (only for inspections)
   useEffect(() => {
     const fetchFormStructure = async () => {
-      if (selectedSite && selectedType) {
+      if (selectedSite && selectedType && !isDrill) {
         try {
           const response = await getInspectionFormStructure(selectedSite.id, selectedType.id);
           if (response.data?.fields) {
@@ -169,9 +172,8 @@ const InspectionForm = () => {
     };
 
     fetchFormStructure();
-  }, [selectedSite, selectedType, user.firstName]);
+  }, [selectedSite, selectedType, isDrill, user.firstName]);
 
-  // Handle type selection
   const handleTypeChange = (_, value) => {
     setSelectedType(value);
     setFormStructure(null);
@@ -190,7 +192,11 @@ const InspectionForm = () => {
     setSelectedSite(null);
     setSelectedType(null);
     setFormStructure(null);
-    setFormData({});
+    setFormData({
+      securityOfficer: user.firstName,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    });
   };
 
   const handleSiteChange = (_, value) => {
@@ -207,7 +213,11 @@ const InspectionForm = () => {
         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       });
     } else {
-      setFormData({});
+      setFormData({
+        securityOfficer: user.firstName,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+      });
     }
     
     // Auto-select entrepreneur if not already selected
@@ -221,6 +231,9 @@ const InspectionForm = () => {
     setFormData(prev => ({
       ...prev,
       drill_type: type,
+      // Clear status and notes if type is 'אחר'
+      ...(type === 'אחר' ? { status: '', notes: '' } : {}),
+      // Clear notes if type is not 'אחר' and status is not 'לא תקין'
       ...(type !== 'אחר' && prev.status !== 'לא תקין' ? { notes: '' } : {})
     }));
   };
@@ -234,43 +247,32 @@ const InspectionForm = () => {
     }));
   };
 
-  const handleInitialDialogSubmit = () => {
-    if (!selectedSite) {
-      setValidationErrors(prev => ({ ...prev, site: 'יש לבחור אתר' }));
-      return;
-    }
-
-    setShowInitialDialog(false);
-    if (isDrill) {
-      setShowTypeDialog(true);
-    } else {
-      // Initialize form data with auto fields for inspections
-      setFormData({
-        securityOfficer: user.firstName,
-        site: selectedSite.name,
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-      });
-    }
-  };
-
-  const handleTypeDialogSubmit = () => {
+  const handleInitialDialogSubmit = async () => {
     const errors = {};
 
-    if (!formData.drill_type) {
-      errors.drill_type = 'יש לבחור סוג תרגיל';
+    // Validate site selection
+    if (!selectedSite) {
+      errors.site = 'יש לבחור אתר';
     }
 
-    if (!formData.status) {
-      errors.status = 'יש לבחור סטטוס';
-    }
+    // For drills, validate drill type and related fields
+    if (isDrill) {
+      if (!formData.drill_type) {
+        errors.drill_type = 'יש לבחור סוג תרגיל';
+      }
 
-    // Notes are required if:
-    // 1. Drill type is 'אחר' OR
-    // 2. Status is 'לא תקין'
-    const notesRequired = formData.drill_type === 'אחר' || formData.status === 'לא תקין';
-    if (notesRequired && !formData.notes?.trim()) {
-      errors.notes = 'יש להזין הערות';
+      // Only validate status if drill type is not 'אחר'
+      if (formData.drill_type !== 'אחר' && !formData.status) {
+        errors.status = 'יש לבחור סטטוס';
+      }
+
+      // Notes are required if:
+      // 1. Drill type is 'אחר' OR
+      // 2. Status is 'לא תקין'
+      const notesRequired = formData.drill_type === 'אחר' || formData.status === 'לא תקין';
+      if (notesRequired && !formData.notes?.trim()) {
+        errors.notes = 'יש להזין הערות';
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -278,19 +280,31 @@ const InspectionForm = () => {
       return;
     }
 
-    // Set the drill type as selected type
-    setSelectedType(inspectionTypes.find(type => type.type === 'drill'));
-    
-    // Keep existing form data (including drill_type and status) and just add auto fields
-    setFormData(prev => ({
-      ...prev,  // Keep drill_type, status, and notes
-      securityOfficer: user.firstName,
-      site: selectedSite.name,
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-    }));
-    
-    setShowTypeDialog(false);
+    // For drills, submit directly
+    if (isDrill) {
+      try {
+        const inspectionData = {
+          siteId: selectedSite.id,
+          inspectionTypeId: selectedType.id,  // We already have the drill type from fetchInspectionTypes
+          formData,
+          type: 'drill'
+        };
+
+        await createInspection(inspectionData);
+        setSuccessMessage('התרגיל נשמר בהצלחה');
+        
+        // Navigate back after success
+        setTimeout(() => {
+          navigate('/drills');
+        }, 2000);
+      } catch (error) {
+        console.error('Error submitting drill:', error);
+        setError(error instanceof AppError ? error.message : 'Failed to submit drill');
+      }
+    } else {
+      // For inspections, continue to main form
+      setShowInitialDialog(false);
+    }
   };
 
   const handleInputChange = (fieldId, value) => {
@@ -379,21 +393,14 @@ const InspectionForm = () => {
       return;
     }
 
-    setOpenConfirmDialog(true);
-  };
-
-  const handleConfirmSubmit = async () => {
-    setOpenConfirmDialog(false);
-
     try {
       const inspectionData = {
         siteId: selectedSite.id,
         inspectionTypeId: selectedType.id,
-        formData: formData,
+        formData,
         type: isDrill ? 'drill' : 'inspection'
       };
 
-      console.log('Submitting formData:', formData);
       await createInspection(inspectionData);
       setSuccessMessage(`ה${isDrill ? 'תרגיל' : 'ביקורת'} נשמר/ה בהצלחה`);
       
@@ -417,7 +424,7 @@ const InspectionForm = () => {
         <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
           {isDrill ? 'תרגיל חדש' : 'ביקורת חדשה'}
         </Typography>
-    
+
         {/* Initial Dialog */}
         <Dialog
           open={showInitialDialog}
@@ -456,7 +463,7 @@ const InspectionForm = () => {
                   />
                 )}
               />
-    
+
               {/* Site Selection */}
               <Autocomplete
                 options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
@@ -480,7 +487,7 @@ const InspectionForm = () => {
                   />
                 )}
               />
-    
+
               {/* Type Selection (only for inspections) */}
               {!isDrill && (
                 <Autocomplete
@@ -507,94 +514,60 @@ const InspectionForm = () => {
                   )}
                 />
               )}
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => navigate(-1)}
-              sx={{ color: colors.text.white }}
-            >
-              ביטול
-            </Button>
-            <Button 
-              onClick={handleInitialDialogSubmit}
-              variant="contained"
-              sx={{
-                backgroundColor: colors.background.orange,
-                '&:hover': {
-                  backgroundColor: colors.background.darkOrange
-                }
-              }}
-            >
-              המשך
-            </Button>
-          </DialogActions>
-        </Dialog>
-    
-        {/* Type Dialog (only for drills) */}
-        <Dialog
-          open={showTypeDialog}
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.background.black,
-              color: colors.text.white
-            }
-          }}
-        >
-          <DialogTitle>
-            בחר סוג תרגיל
-          </DialogTitle>
-          <DialogContent>
-            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Drill Type Selection */}
-              <TextField
-                select
-                fullWidth
-                label="סוג תרגיל"
-                value={formData.drill_type || ''}
-                onChange={handleDrillTypeSelect}
-                required
-                error={!!validationErrors.drill_type}
-                helperText={validationErrors.drill_type}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: colors.text.white
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: colors.text.grey
-                  }
-                }}
-              >
-                {drillTypes.map(type => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
-                ))}
-              </TextField>
-    
-              {/* Status Selection */}
-              <TextField
-                select
-                fullWidth
-                label="סטטוס"
-                value={formData.status || ''}
-                onChange={handleStatusChange}
-                required
-                error={!!validationErrors.status}
-                helperText={validationErrors.status}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: colors.text.white
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: colors.text.grey
-                  }
-                }}
-              >
-                <MenuItem value="תקין">תקין</MenuItem>
-                <MenuItem value="לא תקין">לא תקין</MenuItem>
-              </TextField>
-    
-              {/* Notes (required if drill type is 'אחר' or status is 'לא תקין') */}
-              {(formData.drill_type === 'אחר' || formData.status === 'לא תקין') && (
+
+              {/* Drill Type Selection - Only show for drills */}
+              {isDrill && selectedSite && (
+                <TextField
+                  select
+                  fullWidth
+                  label="סוג תרגיל"
+                  value={formData.drill_type || ''}
+                  onChange={handleDrillTypeSelect}
+                  required
+                  error={!!validationErrors.drill_type}
+                  helperText={validationErrors.drill_type}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.text.white
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: colors.text.grey
+                    }
+                  }}
+                >
+                  {drillTypes.map(type => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </TextField>
+              )}
+
+              {/* Status Selection - Only show if drill type is selected and not 'אחר' */}
+              {isDrill && formData.drill_type && formData.drill_type !== 'אחר' && (
+                <TextField
+                  select
+                  fullWidth
+                  label="סטטוס"
+                  value={formData.status || ''}
+                  onChange={handleStatusChange}
+                  required
+                  error={!!validationErrors.status}
+                  helperText={validationErrors.status}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.text.white
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: colors.text.grey
+                    }
+                  }}
+                >
+                  <MenuItem value="תקין">תקין</MenuItem>
+                  <MenuItem value="לא תקין">לא תקין</MenuItem>
+                </TextField>
+              )}
+
+              {/* Notes - Only show if drill type is 'אחר' or status is 'לא תקין' */}
+              {isDrill && (formData.drill_type === 'אחר' || formData.status === 'לא תקין') && (
                 <TextField
                   fullWidth
                   multiline
@@ -619,16 +592,13 @@ const InspectionForm = () => {
           </DialogContent>
           <DialogActions>
             <Button 
-              onClick={() => {
-                setShowTypeDialog(false);
-                setShowInitialDialog(true);
-              }}
+              onClick={() => navigate(-1)}
               sx={{ color: colors.text.white }}
             >
-              חזור
+              ביטול
             </Button>
             <Button 
-              onClick={handleTypeDialogSubmit}
+              onClick={handleInitialDialogSubmit}
               variant="contained"
               sx={{
                 backgroundColor: colors.background.orange,
@@ -637,13 +607,13 @@ const InspectionForm = () => {
                 }
               }}
             >
-              המשך
+              {isDrill ? 'סיום' : 'המשך'}
             </Button>
           </DialogActions>
         </Dialog>
-    
-        {/* Main Form */}
-        {!showInitialDialog && !showTypeDialog && (
+
+        {/* Main Form - Only for inspections */}
+        {!isDrill && !showInitialDialog && (
           <Paper elevation={3} sx={{ p: 2, mb: 3, backgroundColor: colors.background.black }}>
             <form onSubmit={handleSubmit}>
               <Box sx={{ mt: 3 }}>
@@ -687,7 +657,7 @@ const InspectionForm = () => {
                   </TextField>
                 ))}
               </Box>
-    
+
               <Box mt={2} display="flex" justifyContent="flex-end">
                 <Button 
                   type="submit" 
@@ -705,49 +675,7 @@ const InspectionForm = () => {
             </form>
           </Paper>
         )}
-    
-        {/* Confirmation Dialog */}
-        <Dialog
-          open={openConfirmDialog}
-          onClose={() => setOpenConfirmDialog(false)}
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.background.black,
-              color: colors.text.white
-            }
-          }}
-        >
-          <DialogTitle>
-            אישור הגשת {isDrill ? 'תרגיל' : 'ביקורת'}
-          </DialogTitle>
-          <DialogContent>
-            <DialogContentText sx={{ color: colors.text.white }}>
-              האם אתה בטוח שברצונך להגיש את ה{isDrill ? 'תרגיל' : 'ביקורת'}? לא ניתן יהיה לערוך לאחר ההגשה.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => setOpenConfirmDialog(false)}
-              sx={{ color: colors.text.white }}
-            >
-              ביטול
-            </Button>
-            <Button 
-              onClick={handleConfirmSubmit} 
-              variant="contained"
-              sx={{
-                backgroundColor: colors.background.orange,
-                '&:hover': {
-                  backgroundColor: colors.background.darkOrange
-                }
-              }}
-              autoFocus
-            >
-              אישור
-            </Button>
-          </DialogActions>
-        </Dialog>
-    
+
         {/* Notifications */}
         <Snackbar 
           open={!!error || !!successMessage} 

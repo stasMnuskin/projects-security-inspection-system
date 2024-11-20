@@ -62,21 +62,39 @@ module.exports = (sequelize, DataTypes) => {
       // Get enabled fields
       const fields = inspectionType.formStructure.filter(field => field.enabled);
       
-      // Validate each field
+      // First validate drill_type as it affects other validations
+      if (!data.drill_type) {
+        throw new Error('סוג תרגיל הוא שדה חובה');
+      }
+
+      // Validate other fields based on drill_type
       fields.forEach(field => {
         const value = data[field.id];
 
-        // Check if field is required
-        if (field.required && !value) {
-          throw new Error(`שדה ${field.label} הוא חובה`);
+        // Special handling for status field
+        if (field.id === 'status') {
+          // Only validate status if drill type is not 'אחר'
+          if (data.drill_type !== 'אחר' && !value) {
+            throw new Error('שדה סטטוס הוא חובה כאשר סוג התרגיל אינו "אחר"');
+          }
+          return;  // Skip other validations for status field
         }
 
-        // Check if field is required based on another field's value
-        if (field.requiredIf) {
-          const { field: dependentField, value: dependentValue } = field.requiredIf;
-          if (data[dependentField] === dependentValue && !data[field.id]?.trim()) {
-            throw new Error(`שדה ${field.label} הוא חובה כאשר ${dependentField} הוא ${dependentValue}`);
+        // Special handling for notes field
+        if (field.id === 'notes') {
+          // Notes are required if:
+          // 1. Drill type is 'אחר' OR
+          // 2. Status is 'לא תקין'
+          const notesRequired = data.drill_type === 'אחר' || data.status === 'לא תקין';
+          if (notesRequired && !value?.trim()) {
+            throw new Error('שדה הערות הוא חובה במקרה זה');
           }
+          return;  // Skip other validations for notes field
+        }
+
+        // For other fields, check if they're required
+        if (field.required && !value) {
+          throw new Error(`שדה ${field.label} הוא חובה`);
         }
 
         // Validate field type if value exists

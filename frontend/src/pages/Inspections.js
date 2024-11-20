@@ -188,7 +188,7 @@ const Inspections = () => {
     <Box sx={{ display: 'flex' }}>
       <Sidebar 
         activeSection="inspections"
-        userInfo={{ name: user.username }}
+        userInfo={{ name: user.firstName }}
       />
       <Container maxWidth="lg">
         <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
