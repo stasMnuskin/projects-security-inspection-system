@@ -14,10 +14,86 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'inspector'
       });
-      Inspection.belongsToMany(models.Fault, {
-        through: models.InspectionFault,
-        foreignKey: 'inspectionId',
-        otherKey: 'faultId'
+    }
+
+    // Helper method to get inspection date
+    getDate() {
+      return this.formData?.date;
+    }
+
+    // Helper method to get inspector name
+    getInspectorName() {
+      return this.formData?.securityOfficer;  // Always use securityOfficer
+    }
+
+    // Helper method to check if this is a drill
+    isDrill() {
+      return this.type === 'drill';
+    }
+
+    // Helper method to check if this is an inspection
+    isInspection() {
+      return this.type === 'inspection';
+    }
+
+    // Helper method to get drill type
+    getDrillType() {
+      return this.isDrill() ? this.formData?.drill_type : null;
+    }
+
+    // Helper method to get drill status
+    getDrillStatus() {
+      return this.isDrill() ? this.formData?.status : null;
+    }
+
+    // Generic method to get field value
+    getFieldValue(fieldId) {
+      return this.formData?.[fieldId];
+    }
+
+    // Helper method to validate drill fields
+    async validateDrillFields(data) {
+      // Get inspection type
+      const inspectionType = await sequelize.models.InspectionType.findByPk(this.inspectionTypeId);
+      if (!inspectionType) {
+        throw new Error('סוג תרגיל לא נמצא');
+      }
+
+      // Get enabled fields
+      const fields = inspectionType.formStructure.filter(field => field.enabled);
+      
+      // Validate each field
+      fields.forEach(field => {
+        const value = data[field.id];
+
+        // Check if field is required
+        if (field.required && !value) {
+          throw new Error(`שדה ${field.label} הוא חובה`);
+        }
+
+        // Check if field is required based on another field's value
+        if (field.requiredIf) {
+          const { field: dependentField, value: dependentValue } = field.requiredIf;
+          if (data[dependentField] === dependentValue && !data[field.id]?.trim()) {
+            throw new Error(`שדה ${field.label} הוא חובה כאשר ${dependentField} הוא ${dependentValue}`);
+          }
+        }
+
+        // Validate field type if value exists
+        if (value) {
+          switch (field.type) {
+            case 'select':
+              if (!field.options?.includes(value)) {
+                throw new Error(`ערך לא חוקי בשדה ${field.label}`);
+              }
+              break;
+            case 'textarea':
+              if (typeof value !== 'string') {
+                throw new Error(`שדה ${field.label} חייב להיות טקסט`);
+              }
+              break;
+          }
+        }
       });
     }
   }
@@ -47,66 +123,85 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    date: {
-      type: DataTypes.DATE,
-      allowNull: false
+    type: {
+      type: DataTypes.ENUM('inspection', 'drill'),
+      allowNull: false,
+      defaultValue: 'inspection'
     },
     formData: {
       type: DataTypes.JSON,
       allowNull: false,
       validate: {
-        isValidFormData(value) {
-          const data = JSON.parse(value);
-          const requiredFields = ['siteName', 'date', 'securityOfficerName', 'lastInspectionDate'];
+        async isValidFormData(value) {
+          const data = typeof value === 'string' ? JSON.parse(value) : value;
           
-          requiredFields.forEach(field => {
-            if (!data.hasOwnProperty(field)) {
-              throw new Error(`Missing required field: ${field}`);
-            }
-          });
+          // Get inspection type
+          const inspectionType = await sequelize.models.InspectionType.findByPk(this.inspectionTypeId);
+          if (!inspectionType) {
+            throw new Error('סוג ביקורת לא נמצא');
+          }
 
-          const inspectionType = data.inspectionType;
-          switch (inspectionType) {
-            case 'ביקורת שגרתית':
-              ['accessRoad', 'gate', 'fence', 'cameras', 'announcement', 'lighting', 'vegetation', 'generalNotes'].forEach(field => {
-                if (!data.hasOwnProperty(field)) {
-                  throw new Error(`Missing required field for routine inspection: ${field}`);
+          // Validate based on type
+          if (this.type === 'drill') {
+            await this.validateDrillFields(data);
+          } else {
+            // Get enabled fields from inspection type
+            const enabledFields = inspectionType.formStructure.filter(field => field.enabled);
+
+            // Validate required fields
+            enabledFields.forEach(field => {
+              if (field.required && !data.hasOwnProperty(field.id)) {
+                throw new Error(`שדה חובה חסר: ${field.label}`);
+              }
+
+              // Check if field is required based on another field's value
+              if (field.requiredIf) {
+                const { field: dependentField, value: dependentValue } = field.requiredIf;
+                if (data[dependentField] === dependentValue && !data[field.id]?.trim()) {
+                  throw new Error(`שדה ${field.label} הוא חובה כאשר ${dependentField} הוא ${dependentValue}`);
                 }
-                if (field !== 'generalNotes' && typeof data[field] !== 'boolean') {
-                  throw new Error(`Invalid value for ${field}. Must be a boolean.`);
+              }
+
+              // Validate field type if value exists
+              if (data.hasOwnProperty(field.id)) {
+                const value = data[field.id];
+                
+                switch (field.type) {
+                  case 'boolean':
+                    if (!['תקין', 'לא תקין'].includes(value)) {
+                      throw new Error(`שדה ${field.label} חייב להיות תקין/לא תקין`);
+                    }
+                    break;
+                  case 'text':
+                  case 'textarea':
+                    if (typeof value !== 'string') {
+                      throw new Error(`שדה ${field.label} חייב להיות טקסט`);
+                    }
+                    if (field.required && !value.trim()) {
+                      throw new Error(`שדה ${field.label} לא יכול להיות ריק`);
+                    }
+                    break;
+                  case 'date':
+                    if (!(value instanceof Date) && isNaN(Date.parse(value))) {
+                      throw new Error(`שדה ${field.label} חייב להיות תאריך תקין`);
+                    }
+                    break;
+                  case 'time':
+                    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                      throw new Error(`שדה ${field.label} חייב להיות שעה תקינה (HH:MM)`);
+                    }
+                    break;
+                  case 'select':
+                    if (!field.options?.includes(value)) {
+                      throw new Error(`ערך לא חוקי בשדה ${field.label}`);
+                    }
+                    break;
                 }
-              });
-              break;
-            case 'ביקורת משטרה':
-            case 'ביקורת משרד האנרגיה':
-              if (!data.hasOwnProperty('passed')) {
-                throw new Error('Missing "passed" field');
               }
-              if (!data.hasOwnProperty('notes')) {
-                throw new Error('Missing "notes" field');
-              }
-              break;
-            case 'תרגיל פנימי':
-              if (!data.hasOwnProperty('drillType')) {
-                throw new Error('Missing "drillType" field');
-              }
-              if (!data.hasOwnProperty('passed')) {
-                throw new Error('Missing "passed" field');
-              }
-              if (!data.hasOwnProperty('notes')) {
-                throw new Error('Missing "notes" field');
-              }
-              break;
-            default:
-              throw new Error('Invalid inspection type');
+            });
           }
         }
       }
-    },
-    status: {
-      type: DataTypes.ENUM('pending', 'completed', 'requires_action'),
-      allowNull: false,
-      defaultValue: 'completed'
     }
   }, {
     sequelize,

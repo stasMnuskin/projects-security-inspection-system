@@ -1,445 +1,769 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Typography, Box, Button, TextField, FormControl, FormControlLabel, Radio, RadioGroup, Paper, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText, Select, MenuItem, CircularProgress } from '@mui/material';
-import { getInspectionFormStructure, submitInspectionReport, getSiteDetails, getCurrentUser, getOpenFaultsBySite, createFault, getEntrepreneurs, getSitesByEntrepreneur, getInspectionTypes } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Button, 
+  Paper, 
+  TextField, 
+  Dialog, 
+  DialogActions, 
+  DialogContent, 
+  DialogContentText, 
+  DialogTitle, 
+  Snackbar, 
+  Autocomplete,
+  MenuItem
+} from '@mui/material';
+import MuiAlert from '@mui/material/Alert';
+import { 
+  getInspectionFormStructure, 
+  createInspection, 
+  getSites,
+  getInspectionTypesBySite
+} from '../services/api';
+import { AppError } from '../utils/errorHandler';
+import { useAuth } from '../context/AuthContext';
+import { PERMISSIONS } from '../constants/roles';
+import { colors } from '../styles/colors';
+import Sidebar from '../components/Sidebar';
+
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const InspectionForm = () => {
-  const { siteId, inspectionTypeId } = useParams();
   const navigate = useNavigate();
-  const [formStructure, setFormStructure] = useState({ fields: {} });
+  const location = useLocation();
+  const { user } = useAuth();
+
+  // Determine if this is a drill form based on the URL
+  const isDrill = location.pathname === '/drills/new';
+
+  // State for form data and validation
   const [formData, setFormData] = useState({});
-  const [faults, setFaults] = useState({});
-  const [existingFaults, setExistingFaults] = useState([]);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [formStructureLoading, setFormStructureLoading] = useState(false);
-  const [siteDetails, setSiteDetails] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [openFaultDialog, setOpenFaultDialog] = useState(false);
-  const [selectedField, setSelectedField] = useState(null);
-  const [entrepreneurs, setEntrepreneurs] = useState([]);
-  const [entrepreneursLoading, setEntrepreneursLoading] = useState(false);
-  const [selectedEntrepreneur, setSelectedEntrepreneur] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
+  const [formStructure, setFormStructure] = useState(null);
+
+  // State for selections
+  const [selectedEntrepreneur, setSelectedEntrepreneur] = useState(null);
+  const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
+  const [drillTypes, setDrillTypes] = useState([]);
+
+  // State for data lists
   const [sites, setSites] = useState([]);
-  const [sitesLoading, setSitesLoading] = useState(false);
-  const [selectedSite, setSelectedSite] = useState(siteId || '');
+  const [entrepreneurs, setEntrepreneurs] = useState([]);
   const [inspectionTypes, setInspectionTypes] = useState([]);
-  const [inspectionTypesLoading, setInspectionTypesLoading] = useState(false);
-  const [selectedInspectionType, setSelectedInspectionType] = useState(inspectionTypeId || '');
 
-  const fetchFormData = useCallback(async (site, inspectionType) => {
-    if (!site || !inspectionType) return;
-    try {
-      setFormStructureLoading(true);
-      const [formStructureResponse, siteResponse, faultsResponse] = await Promise.all([
-        getInspectionFormStructure(site, inspectionType),
-        getSiteDetails(site),
-        getOpenFaultsBySite(site)
-      ]);
-      setFormStructure(formStructureResponse);
-      setSiteDetails(siteResponse);
-      setExistingFaults(faultsResponse);
-      console.log('formStructureResponse:', formStructureResponse);
-      const initialFormData = Object.keys(formStructureResponse.fields).reduce((acc, fieldId) => {
-        const field = formStructureResponse.fields[fieldId];
-        if (!field.editable) {
-          switch (fieldId) {
-            case 'siteName':
-              acc[fieldId] = siteResponse.name;
-              break;
-            case 'date':
-              acc[fieldId] = new Date().toISOString().split('T')[0];
-              break;
-            case 'securityOfficerName':
-              acc[fieldId] = currentUser?.username || '';
-              break;
-            case 'lastInspectionDate':
-              // TODO fetch from backend
-              acc[fieldId] = 'לא זמין';
-              break;
-            default:
-              acc[fieldId] = '';
-          }
-        } else if (field.type === 'boolean') {
-          acc[fieldId] = true; 
-        } else {
-          acc[fieldId] = '';
-        }
-        return acc;
-      }, {});
-      setFormData(initialFormData);
-    } catch (error) {
-      console.error('שגיאה בטעינת נתונים:', error);
-      setError(error.message || 'שגיאה בטעינת נתונים. אנא נסה שנית מאוחר יותר.');
-    } finally {
-      setFormStructureLoading(false);
+  // State for UI feedback
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+
+  // State for dialogs
+  const [showInitialDialog, setShowInitialDialog] = useState(true);
+  const [showTypeDialog, setShowTypeDialog] = useState(false);
+
+  // Check permissions
+  const canCreate = isDrill 
+    ? user.hasPermission(PERMISSIONS.NEW_DRILL) 
+    : user.hasPermission(PERMISSIONS.NEW_INSPECTION);
+
+  // Redirect if no permission
+  useEffect(() => {
+    if (!canCreate) {
+      navigate(isDrill ? '/drills' : '/inspections');
     }
-  }, [currentUser]);
+  }, [canCreate, navigate, isDrill]);
 
+  // Load initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        setLoading(true);
-        setEntrepreneursLoading(true);
-        setInspectionTypesLoading(true);
+        const sitesResponse = await getSites();
+        setSites(sitesResponse || []);
 
-        const [userResponse, entrepreneursResponse, inspectionTypesResponse] = await Promise.all([
-          getCurrentUser(),
-          getEntrepreneurs(),
-          getInspectionTypes()
-        ]);
-
-        setCurrentUser(userResponse);
-        setEntrepreneurs(entrepreneursResponse);
-        setInspectionTypes(inspectionTypesResponse);
-
-        if (siteId) {
-          setSitesLoading(true);
-          const siteResponse = await getSiteDetails(siteId);
-          setSiteDetails(siteResponse);
-          setSelectedSite(siteId);
-          setSelectedEntrepreneur(siteResponse.entrepreneurId ? siteResponse.entrepreneurId.toString() : '');
-          const sitesResponse = await getSitesByEntrepreneur(siteResponse.entrepreneurId);
-          setSites(sitesResponse);
-          setSitesLoading(false);
-        }
-
-        if (inspectionTypeId) {
-          setSelectedInspectionType(inspectionTypeId);
-        }
-
-        if (siteId && inspectionTypeId) {
-          await fetchFormData(siteId, inspectionTypeId);
-        }
+        // Get unique entrepreneurs from sites
+        const uniqueEntrepreneurs = Array.from(
+          new Map(
+            sitesResponse
+              .map(site => site.entrepreneur)
+              .filter(Boolean)
+              .map(e => [e.id, e])
+          ).values()
+        );
+        setEntrepreneurs(uniqueEntrepreneurs);
       } catch (error) {
-        console.error('שגיאה בטעינת נתונים ראשוניים:', error);
-        setError(error.message || 'שגיאה בטעינת נתונים ראשוניים. אנא נסה שנית מאוחר יותר.');
-      } finally {
-        setLoading(false);
-        setEntrepreneursLoading(false);
-        setInspectionTypesLoading(false);
+        console.error('Error fetching initial data:', error);
+        setError(error instanceof AppError ? error.message : 'Failed to fetch initial data');
       }
     };
 
     fetchInitialData();
-  }, [siteId, inspectionTypeId, fetchFormData]);
+  }, []);
 
+  // Load inspection types when site is selected
   useEffect(() => {
-    if (selectedEntrepreneur) {
-      const fetchSites = async () => {
-        try {
-          setSitesLoading(true);
-          const sitesResponse = await getSitesByEntrepreneur(selectedEntrepreneur);
-          setSites(sitesResponse);
-        } catch (error) {
-          console.error('שגיאה בטעינת אתרים:', error);
-          setError(error.message || 'שגיאה בטעינת אתרים. אנא נסה שנית מאוחר יותר.');
-        } finally {
-          setSitesLoading(false);
+    const fetchInspectionTypes = async () => {
+      if (!selectedSite) return;
+
+      try {
+        const response = await getInspectionTypesBySite(selectedSite.id, isDrill ? 'drill' : 'inspection');
+        const types = response.data || [];
+        setInspectionTypes(types);
+
+        // If this is a drill form, get drill types
+        if (isDrill) {
+          const drillType = types.find(type => type.type === 'drill');
+          if (drillType) {
+            const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
+            if (drillTypeField) {
+              setDrillTypes(drillTypeField.options || []);
+            }
+          }
         }
-      };
+      } catch (error) {
+        if (error.status === 400 && error.message.includes('Invalid inspection type')) {
+          setError('סוג הביקורת לא מתאים לסוג האתר');
+          setSelectedType(null);
+        } else {
+          console.error('Error fetching inspection types:', error);
+          setError('Failed to fetch inspection types');
+        }
+      }
+    };
 
-      fetchSites();
-    }
-  }, [selectedEntrepreneur]);
+    fetchInspectionTypes();
+  }, [selectedSite, isDrill]);
 
+  // Load form structure when type is selected
   useEffect(() => {
-    if (selectedSite && selectedInspectionType) {
-      console.log('selectedSite changed to', selectedSite);
-      console.log('selectedInspectionType changed to', selectedInspectionType);
-      fetchFormData(selectedSite, selectedInspectionType);
-    }
-  }, [selectedSite, selectedInspectionType, fetchFormData]);
+    const fetchFormStructure = async () => {
+      if (selectedSite && selectedType) {
+        try {
+          const response = await getInspectionFormStructure(selectedSite.id, selectedType.id);
+          if (response.data?.fields) {
+            setFormStructure(response.data.fields);
+            // Initialize form data with auto fields
+            setFormData(prev => ({
+              ...prev,
+              securityOfficer: user.firstName,
+              site: selectedSite.name,
+              date: new Date().toISOString().split('T')[0],
+              time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+            }));
+          }
+        } catch (error) {
+          if (error.status === 400 && error.message.includes('Invalid inspection type')) {
+            setError('סוג הביקורת לא מתאים לסוג האתר');
+            setSelectedType(null);
+            setFormStructure(null);
+          } else {
+            console.error('Error fetching form structure:', error);
+            setError('Failed to fetch form structure');
+          }
+        }
+      }
+    };
 
-  const handleInputChange = (fieldId, value) => {
-    setFormData(prevData => ({
-      ...prevData,
-      [fieldId]: value
+    fetchFormStructure();
+  }, [selectedSite, selectedType, user.firstName]);
+
+  // Handle type selection
+  const handleTypeChange = (_, value) => {
+    setSelectedType(value);
+    setFormStructure(null);
+    // Keep existing form data and update auto fields
+    setFormData(prev => ({
+      ...prev,
+      securityOfficer: user.firstName,
+      site: selectedSite.name,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     }));
+  };
 
-    if (formStructure.fields[fieldId].type === 'boolean' && !value) {
-      setFaults(prevFaults => ({
-        ...prevFaults,
-        [fieldId]: { description: '', isNew: true }
-      }));
+  const handleEntrepreneurChange = (_, value) => {
+    setSelectedEntrepreneur(value);
+    setSelectedSite(null);
+    setSelectedType(null);
+    setFormStructure(null);
+    setFormData({});
+  };
+
+  const handleSiteChange = (_, value) => {
+    setSelectedSite(value);
+    setSelectedType(null);
+    setFormStructure(null);
+    
+    // Initialize form data with site name
+    if (value) {
+      setFormData({
+        securityOfficer: user.firstName,
+        site: value.name,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+      });
     } else {
-      setFaults(prevFaults => {
-        const { [fieldId]: _, ...rest } = prevFaults;
-        return rest;
+      setFormData({});
+    }
+    
+    // Auto-select entrepreneur if not already selected
+    if (value && !selectedEntrepreneur) {
+      setSelectedEntrepreneur(value.entrepreneur);
+    }
+  };
+
+  const handleDrillTypeSelect = (e) => {
+    const type = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      drill_type: type,
+      ...(type !== 'אחר' && prev.status !== 'לא תקין' ? { notes: '' } : {})
+    }));
+  };
+
+  const handleStatusChange = (e) => {
+    const status = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      status,
+      ...(status === 'תקין' && prev.drill_type !== 'אחר' ? { notes: '' } : {})
+    }));
+  };
+
+  const handleInitialDialogSubmit = () => {
+    if (!selectedSite) {
+      setValidationErrors(prev => ({ ...prev, site: 'יש לבחור אתר' }));
+      return;
+    }
+
+    setShowInitialDialog(false);
+    if (isDrill) {
+      setShowTypeDialog(true);
+    } else {
+      // Initialize form data with auto fields for inspections
+      setFormData({
+        securityOfficer: user.firstName,
+        site: selectedSite.name,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       });
     }
   };
 
-  const handleFaultDescriptionChange = (fieldId, description) => {
-    setFaults(prevFaults => ({
-      ...prevFaults,
-      [fieldId]: { ...prevFaults[fieldId], description }
+  const handleTypeDialogSubmit = () => {
+    const errors = {};
+
+    if (!formData.drill_type) {
+      errors.drill_type = 'יש לבחור סוג תרגיל';
+    }
+
+    if (!formData.status) {
+      errors.status = 'יש לבחור סטטוס';
+    }
+
+    // Notes are required if:
+    // 1. Drill type is 'אחר' OR
+    // 2. Status is 'לא תקין'
+    const notesRequired = formData.drill_type === 'אחר' || formData.status === 'לא תקין';
+    if (notesRequired && !formData.notes?.trim()) {
+      errors.notes = 'יש להזין הערות';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    // Set the drill type as selected type
+    setSelectedType(inspectionTypes.find(type => type.type === 'drill'));
+    
+    // Keep existing form data (including drill_type and status) and just add auto fields
+    setFormData(prev => ({
+      ...prev,  // Keep drill_type, status, and notes
+      securityOfficer: user.firstName,
+      site: selectedSite.name,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    }));
+    
+    setShowTypeDialog(false);
+  };
+
+  const handleInputChange = (fieldId, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+    // Clear validation error for this field
+    setValidationErrors(prev => ({
+      ...prev,
+      [fieldId]: undefined
     }));
   };
 
-  const handleExistingFaultLink = (fieldId) => {
-    setSelectedField(fieldId);
-    setOpenFaultDialog(true);
-  };
-
-  const handleFaultSelection = (fault) => {
-    setFaults(prevFaults => ({
-      ...prevFaults,
-      [selectedField]: { ...fault, isNew: false }
-    }));
-    setOpenFaultDialog(false);
-  };
-
+  // Validate form data
   const validateForm = () => {
-    const errors = [];
-    Object.entries(formStructure.fields).forEach(([fieldId, field]) => {
-      if (field.required && !formData[fieldId]) {
-        errors.push(`השדה "${field.label}" הוא שדה חובה`);
+    const errors = {};
+
+    // Validate selections
+    if (!selectedSite) {
+      errors.site = 'יש לבחור אתר';
+    }
+
+    if (!selectedType) {
+      errors.type = isDrill ? 'יש לבחור סוג תרגיל' : 'יש לבחור סוג';
+    }
+
+    // Validate form fields
+    formStructure?.forEach(field => {
+      if (field.required && !formData[field.id]) {
+        errors[field.id] = 'שדה חובה';
+        return;
+      }
+
+      if (field.requiredIf) {
+        const { field: dependentField, value: dependentValue } = field.requiredIf;
+        if (formData[dependentField] === dependentValue && !formData[field.id]?.trim()) {
+          errors[field.id] = 'שדה חובה';
+          return;
+        }
+      }
+
+      if (formData[field.id]) {
+        const value = formData[field.id];
+        
+        switch (field.type) {
+          case 'text':
+          case 'textarea':
+            if (typeof value !== 'string') {
+              errors[field.id] = 'ערך חייב להיות טקסט';
+            }
+            break;
+
+          case 'select':
+            if (!field.options?.includes(value)) {
+              errors[field.id] = `ערך לא חוקי בשדה ${field.label}`;
+            }
+            break;
+
+          case 'boolean':
+            if (!['תקין', 'לא תקין'].includes(value)) {
+              errors[field.id] = `ערך לא חוקי בשדה ${field.label}`;
+            }
+            break;
+          default:
+            errors[field.id] = 'סוג שדה לא נתמך';
+            break;
+        }
       }
     });
-    return errors;
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join(', '));
+
+    if (!canCreate) {
+      setError(`אין לך הרשאה ליצור ${isDrill ? 'תרגיל' : 'ביקורת'}`);
       return;
     }
+
+    if (!validateForm()) {
+      setError('יש למלא את כל השדות הנדרשים');
+      return;
+    }
+
+    setOpenConfirmDialog(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setOpenConfirmDialog(false);
+
     try {
-      const faultsToSubmit = await Promise.all(
-        Object.entries(faults).map(async ([fieldId, faultData]) => {
-          if (faultData.isNew) {
-            const newFault = await createFault({
-              siteId: parseInt(selectedSite),
-              description: faultData.description,
-              status: 'פתוח'
-            });
-            return { faultId: newFault.id, fieldId };
-          } else {
-            return { faultId: faultData.id, fieldId };
-          }
-        })
-      );
-
-      const reportData = {
-        siteId: parseInt(selectedSite),
-        inspectionTypeId: parseInt(selectedInspectionType),
-        securityOfficerName: currentUser.username,
-        date: new Date().toISOString(),
+      const inspectionData = {
+        siteId: selectedSite.id,
+        inspectionTypeId: selectedType.id,
         formData: formData,
-        faults: faultsToSubmit
+        type: isDrill ? 'drill' : 'inspection'
       };
-      await submitInspectionReport(reportData);
 
-      setSuccess('דוח הביקורת נשלח בהצלחה');
+      console.log('Submitting formData:', formData);
+      await createInspection(inspectionData);
+      setSuccessMessage(`ה${isDrill ? 'תרגיל' : 'ביקורת'} נשמר/ה בהצלחה`);
+      
+      // Navigate back after success
       setTimeout(() => {
-        navigate('/security-dashboard');
+        navigate(isDrill ? '/drills' : '/inspections');
       }, 2000);
     } catch (error) {
-      console.error('שגיאה בשליחת דוח ביקורת:', error);
-      setError(error.message || 'שגיאה בשליחת דוח ביקורת. אנא נסה שנית מאוחר יותר.');
-    }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSuccess(null);
-    setError(null);
-  };
-
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
-        <Typography>טוען טופס ביקורת...</Typography>
-      </Container>
-    );
-  }
-
-  const renderField = (fieldId, field) => {
-    switch (field.type) {
-      case 'text':
-        return (
-          <TextField
-            fullWidth
-            label={field.label}
-            value={formData[fieldId] || ''}
-            onChange={(e) => handleInputChange(fieldId, e.target.value)}
-            disabled={!field.editable}
-            required={field.required}
-            error={field.required && !formData[fieldId]}
-            helperText={field.required && !formData[fieldId] ? 'שדה חובה' : ''}
-          />
-        );
-      case 'boolean':
-        return (
-          <>
-            <FormControl component="fieldset">
-              <RadioGroup
-                row
-                name={`field_${fieldId}`}
-                value={formData[fieldId] ? 'תקין' : 'לא תקין'}
-                onChange={(e) => handleInputChange(fieldId, e.target.value === 'תקין')}
-              >
-                <FormControlLabel value="תקין" control={<Radio />} label="תקין" />
-                <FormControlLabel value="לא תקין" control={<Radio />} label="לא תקין" />
-              </RadioGroup>
-            </FormControl>
-            {!formData[fieldId] && (
-              <>
-                <TextField
-                  fullWidth
-                  label="תיאור התקלה"
-                  value={faults[fieldId]?.description || ''}
-                  onChange={(e) => handleFaultDescriptionChange(fieldId, e.target.value)}
-                  multiline
-                  rows={3}
-                  required
-                  error={!faults[fieldId]?.description}
-                  helperText={!faults[fieldId]?.description ? 'נדרש תיאור תקלה' : ''}
-                />
-                <Button onClick={() => handleExistingFaultLink(fieldId)}>
-                  קשר לתקלה קיימת
-                </Button>
-              </>
-            )}
-          </>
-        );
-      default:
-        return null;
+      console.error('Error submitting inspection:', error);
+      setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill ? 'drill' : 'inspection'}`);
     }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
-        {siteId && inspectionTypeId ? 'עריכת ביקורת' : 'טופס ביקורת חדש'}
-      </Typography>
-      <Paper sx={{ p: 3, mb: 4, boxShadow: 3 }}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            בחר יזם
-          </Typography>
-          <Select
-            value={selectedEntrepreneur}
-            onChange={(e) => setSelectedEntrepreneur(e.target.value)}
-            displayEmpty
-            disabled={!!siteId || entrepreneursLoading}
-          >
-            <MenuItem value="" disabled>בחר יזם</MenuItem>
-            {entrepreneursLoading ? (
-              <MenuItem disabled>
-                <CircularProgress size={20} />
-                &nbsp;טוען יזמים...
-              </MenuItem>
-            ) : (
-              entrepreneurs.map((entrepreneur) => (
-                <MenuItem key={entrepreneur.id} value={entrepreneur.id.toString()}>
-                  {entrepreneur.name || entrepreneur.username}
-                </MenuItem>
-              ))
-            )}
-          </Select>
-        </FormControl>
-        {selectedEntrepreneur && (
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              בחר אתר
-            </Typography>
-            <Select
-              value={selectedSite}
-              onChange={(e) => setSelectedSite(e.target.value)}
-              displayEmpty
-              disabled={!!siteId || sitesLoading}
-            >
-              <MenuItem value="" disabled>בחר אתר</MenuItem>
-              {sitesLoading ? (
-                <MenuItem disabled>
-                  <CircularProgress size={20} />
-                  &nbsp;טוען אתרים...
-                </MenuItem>
-              ) : (
-                sites.map((site) => (
-                  <MenuItem key={site.id} value={site.id.toString()}>{site.name}</MenuItem>
-                ))
+    <Box sx={{ display: 'flex' }}>
+      <Sidebar 
+        activeSection={isDrill ? "drills" : "inspections"}
+        userInfo={{ name: `${user.firstName} ${user.lastName}` }}
+      />
+      <Container maxWidth="lg">
+        <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
+          {isDrill ? 'תרגיל חדש' : 'ביקורת חדשה'}
+        </Typography>
+    
+        {/* Initial Dialog */}
+        <Dialog
+          open={showInitialDialog}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.background.black,
+              color: colors.text.white
+            }
+          }}
+        >
+          <DialogTitle>
+            {isDrill ? 'תרגיל חדש' : 'ביקורת חדשה'}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              {/* Entrepreneur Selection */}
+              <Autocomplete
+                options={entrepreneurs}
+                getOptionLabel={(option) => option?.firstName || ''}
+                value={selectedEntrepreneur}
+                onChange={handleEntrepreneurChange}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="יזם"
+                    error={!!validationErrors.entrepreneur}
+                    helperText={validationErrors.entrepreneur}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: colors.text.white
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: colors.text.grey
+                      }
+                    }}
+                  />
+                )}
+              />
+    
+              {/* Site Selection */}
+              <Autocomplete
+                options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
+                getOptionLabel={(option) => option?.name || ''}
+                value={selectedSite}
+                onChange={handleSiteChange}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="אתר"
+                    error={!!validationErrors.site}
+                    helperText={validationErrors.site}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: colors.text.white
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: colors.text.grey
+                      }
+                    }}
+                  />
+                )}
+              />
+    
+              {/* Type Selection (only for inspections) */}
+              {!isDrill && (
+                <Autocomplete
+                  options={inspectionTypes}
+                  getOptionLabel={(option) => option?.name || ''}
+                  value={selectedType}
+                  onChange={handleTypeChange}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="סוג ביקורת"
+                      error={!!validationErrors.type}
+                      helperText={validationErrors.type}
+                      required
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          color: colors.text.white
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: colors.text.grey
+                        }
+                      }}
+                    />
+                  )}
+                />
               )}
-            </Select>
-          </FormControl>
-        )}
-        {selectedSite && (
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              בחר סוג ביקורת
-            </Typography>
-            <Select
-              value={selectedInspectionType}
-              onChange={(e) => setSelectedInspectionType(e.target.value)}
-              displayEmpty
-              disabled={!!inspectionTypeId || inspectionTypesLoading}
-            >
-              <MenuItem value="" disabled>בחר סוג ביקורת</MenuItem>
-              {inspectionTypesLoading ? (
-                <MenuItem disabled>
-                  <CircularProgress size={20} />
-                  &nbsp;טוען סוגי ביקורת...
-                </MenuItem>
-              ) : (
-                inspectionTypes.map((type) => (
-                  <MenuItem key={type.id} value={type.id.toString()}>{type.name}</MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
-        )}
-      </Paper>
-      {selectedSite && selectedInspectionType && (
-        <Paper component="form" onSubmit={handleSubmit} sx={{ p: 3, mb: 4, boxShadow: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ mb: 2, color: 'secondary.main' }}>
-            פרטי הביקורת - {siteDetails?.name}
-          </Typography>
-          {formStructureLoading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" height="200px">
-              <CircularProgress />
             </Box>
-          ) : (
-            Object.entries(formStructure.fields).map(([fieldId, field]) => (
-              <FormControl key={fieldId} fullWidth sx={{ mb: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  {field.label}
-                </Typography>
-                {renderField(fieldId, field)}
-              </FormControl>
-            ))
-          )}
-          <Box display="flex" justifyContent="flex-end" mt={2}>
-            <Button type="submit" variant="contained" color="primary" sx={{ borderRadius: '20px', px: 4 }}>
-              שלח דוח ביקורת
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => navigate(-1)}
+              sx={{ color: colors.text.white }}
+            >
+              ביטול
             </Button>
-          </Box>
-        </Paper>
-      )}
-      <Dialog open={openFaultDialog} onClose={() => setOpenFaultDialog(false)}>
-        <DialogTitle>בחר תקלה קיימת</DialogTitle>
-        <DialogContent>
-          <List>
-            {existingFaults.map(fault => (
-              <ListItem button key={fault.id} onClick={() => handleFaultSelection(fault)}>
-                <ListItemText primary={fault.description} />
-              </ListItem>
-            ))}
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenFaultDialog(false)}>ביטול</Button>
-        </DialogActions>
-      </Dialog>
-      <Snackbar open={!!error || !!success} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={error ? "error" : "success"} sx={{ width: '100%' }}>
-          {error || success}
-        </Alert>
-      </Snackbar>
-    </Container>
+            <Button 
+              onClick={handleInitialDialogSubmit}
+              variant="contained"
+              sx={{
+                backgroundColor: colors.background.orange,
+                '&:hover': {
+                  backgroundColor: colors.background.darkOrange
+                }
+              }}
+            >
+              המשך
+            </Button>
+          </DialogActions>
+        </Dialog>
+    
+        {/* Type Dialog (only for drills) */}
+        <Dialog
+          open={showTypeDialog}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.background.black,
+              color: colors.text.white
+            }
+          }}
+        >
+          <DialogTitle>
+            בחר סוג תרגיל
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Drill Type Selection */}
+              <TextField
+                select
+                fullWidth
+                label="סוג תרגיל"
+                value={formData.drill_type || ''}
+                onChange={handleDrillTypeSelect}
+                required
+                error={!!validationErrors.drill_type}
+                helperText={validationErrors.drill_type}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: colors.text.white
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: colors.text.grey
+                  }
+                }}
+              >
+                {drillTypes.map(type => (
+                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                ))}
+              </TextField>
+    
+              {/* Status Selection */}
+              <TextField
+                select
+                fullWidth
+                label="סטטוס"
+                value={formData.status || ''}
+                onChange={handleStatusChange}
+                required
+                error={!!validationErrors.status}
+                helperText={validationErrors.status}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: colors.text.white
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: colors.text.grey
+                  }
+                }}
+              >
+                <MenuItem value="תקין">תקין</MenuItem>
+                <MenuItem value="לא תקין">לא תקין</MenuItem>
+              </TextField>
+    
+              {/* Notes (required if drill type is 'אחר' or status is 'לא תקין') */}
+              {(formData.drill_type === 'אחר' || formData.status === 'לא תקין') && (
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="הערות"
+                  value={formData.notes || ''}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  required
+                  error={!!validationErrors.notes}
+                  helperText={validationErrors.notes}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.text.white
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: colors.text.grey
+                    }
+                  }}
+                />
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => {
+                setShowTypeDialog(false);
+                setShowInitialDialog(true);
+              }}
+              sx={{ color: colors.text.white }}
+            >
+              חזור
+            </Button>
+            <Button 
+              onClick={handleTypeDialogSubmit}
+              variant="contained"
+              sx={{
+                backgroundColor: colors.background.orange,
+                '&:hover': {
+                  backgroundColor: colors.background.darkOrange
+                }
+              }}
+            >
+              המשך
+            </Button>
+          </DialogActions>
+        </Dialog>
+    
+        {/* Main Form */}
+        {!showInitialDialog && !showTypeDialog && (
+          <Paper elevation={3} sx={{ p: 2, mb: 3, backgroundColor: colors.background.black }}>
+            <form onSubmit={handleSubmit}>
+              <Box sx={{ mt: 3 }}>
+                {/* Display form fields */}
+                {formStructure?.map((field) => (
+                  <TextField
+                    key={field.id}
+                    fullWidth
+                    label={field.label}
+                    value={formData[field.id] || ''}
+                    onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    required={field.required}
+                    error={!!validationErrors[field.id]}
+                    helperText={validationErrors[field.id]}
+                    margin="normal"
+                    multiline={field.type === 'textarea'}
+                    rows={field.type === 'textarea' ? 4 : undefined}
+                    select={field.type === 'select' || field.type === 'boolean'}
+                    SelectProps={field.type === 'select' || field.type === 'boolean' ? { native: true } : undefined}
+                    disabled={field.autoFill}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: colors.text.white
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: colors.text.grey
+                      }
+                    }}
+                  >
+                    {field.type === 'select' && [
+                      <option key="" value="" />,
+                      ...(field.options || []).map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))
+                    ]}
+                    {field.type === 'boolean' && [
+                      <option key="" value="" />,
+                      <option key="תקין" value="תקין">תקין</option>,
+                      <option key="לא תקין" value="לא תקין">לא תקין</option>
+                    ]}
+                  </TextField>
+                ))}
+              </Box>
+    
+              <Box mt={2} display="flex" justifyContent="flex-end">
+                <Button 
+                  type="submit" 
+                  variant="contained"
+                  sx={{
+                    backgroundColor: colors.background.orange,
+                    '&:hover': {
+                      backgroundColor: colors.background.darkOrange
+                    }
+                  }}
+                >
+                  הגש {isDrill ? 'תרגיל' : 'ביקורת'}
+                </Button>
+              </Box>
+            </form>
+          </Paper>
+        )}
+    
+        {/* Confirmation Dialog */}
+        <Dialog
+          open={openConfirmDialog}
+          onClose={() => setOpenConfirmDialog(false)}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.background.black,
+              color: colors.text.white
+            }
+          }}
+        >
+          <DialogTitle>
+            אישור הגשת {isDrill ? 'תרגיל' : 'ביקורת'}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ color: colors.text.white }}>
+              האם אתה בטוח שברצונך להגיש את ה{isDrill ? 'תרגיל' : 'ביקורת'}? לא ניתן יהיה לערוך לאחר ההגשה.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setOpenConfirmDialog(false)}
+              sx={{ color: colors.text.white }}
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={handleConfirmSubmit} 
+              variant="contained"
+              sx={{
+                backgroundColor: colors.background.orange,
+                '&:hover': {
+                  backgroundColor: colors.background.darkOrange
+                }
+              }}
+              autoFocus
+            >
+              אישור
+            </Button>
+          </DialogActions>
+        </Dialog>
+    
+        {/* Notifications */}
+        <Snackbar 
+          open={!!error || !!successMessage} 
+          autoHideDuration={6000} 
+          onClose={() => { setError(null); setSuccessMessage(''); }}
+        >
+          <Alert 
+            onClose={() => { setError(null); setSuccessMessage(''); }} 
+            severity={error ? "error" : "success"} 
+            sx={{ width: '100%' }}
+          >
+            {error || successMessage}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Box>
   );
 };
 

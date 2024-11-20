@@ -1,59 +1,107 @@
 const express = require('express');
-const { check } = require('express-validator');
 const inspectionController = require('../controllers/inspectionController');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
+const { PERMISSIONS } = require('../constants/roles');
 
 const router = express.Router();
 
-router.post(
-  '/',
-  [
-    auth,
-    roleAuth('admin', 'security_officer'),
-    [
-      check('siteId', 'Site ID is required').notEmpty().isInt(),
-      check('inspectionTypeId', 'Inspection Type ID is required').notEmpty().isInt(),
-      check('securityOfficerName', 'Security Officer Name is required').notEmpty().isString(),
-      check('date', 'Date is required').notEmpty().isISO8601(),
-      check('formData', 'Form data is required').notEmpty().isObject(),
-      check('formData.siteName', 'Site name is required').notEmpty().isString(),
-      check('formData.date', 'Date is required').notEmpty().isISO8601(),
-      check('formData.securityOfficerName', 'Security Officer Name is required').notEmpty().isString(),
-      check('formData.lastInspectionDate', 'Last inspection date is required').notEmpty().isISO8601(),
-    ],
-  ],
+// Get all inspections
+router.get('/', 
+  auth, 
+  roleAuth([PERMISSIONS.VIEW_INSPECTIONS, PERMISSIONS.VIEW_DRILLS]), 
+  inspectionController.getAllInspections
+);
+
+// Create a new inspection/drill
+router.post('/', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
   inspectionController.createInspection
 );
 
-router.get('/', auth, inspectionController.getAllInspections);
+// Get latest inspections
+router.get('/latest', 
+  auth, 
+  roleAuth([PERMISSIONS.VIEW_INSPECTIONS, PERMISSIONS.VIEW_DRILLS]), 
+  inspectionController.getLatestInspections
+);
 
-router.get('/:id', auth, inspectionController.getInspection);
+// Get latest routine inspection for a site
+router.get('/latest-routine/:siteId', 
+  auth, 
+  roleAuth([PERMISSIONS.VIEW_INSPECTIONS]), 
+  inspectionController.getLatestRoutineInspection
+);
 
-router.get('/latest/:siteId', auth, inspectionController.getLatestInspection);
+// Get drill success rate for a site
+router.get('/drill-success-rate/:siteId', 
+  auth, 
+  roleAuth([PERMISSIONS.VIEW_DRILLS]), 
+  inspectionController.getDrillSuccessRate
+);
 
-router.put(
-  '/:id',
-  [
-    auth,
-    roleAuth('admin', 'security_officer'),
-    [
-      check('siteId', 'Site ID must be an integer').optional().isInt(),
-      check('inspectionTypeId', 'Inspection Type ID must be an integer').optional().isInt(),
-      check('formData', 'Form data must be an object').optional().isObject(),
-      check('status', 'Status must be one of the allowed values').optional().isIn(['pending', 'completed', 'requires_action']),
-    ],
-  ],
+// Get inspection form structure
+router.get('/form-structure/:siteId/:inspectionTypeId', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
+  inspectionController.getInspectionFormStructure
+);
+
+// Save draft inspection/drill
+router.post('/draft', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
+  inspectionController.saveDraftInspection
+);
+
+// Get draft inspection/drill
+router.get('/draft/:id', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
+  inspectionController.getDraftInspection
+);
+
+// Delete draft inspection/drill
+router.delete('/draft/:id', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
+  inspectionController.deleteDraftInspection
+);
+
+// Get user's draft inspections/drills
+router.get('/user/drafts', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
+  inspectionController.getUserDraftInspections
+);
+
+// Get inspections by site
+router.get('/site/:siteId', 
+  auth, 
+  roleAuth([PERMISSIONS.VIEW_INSPECTIONS, PERMISSIONS.VIEW_DRILLS]), 
+  inspectionController.getInspectionsBySite
+);
+
+// Get inspection by ID or latest
+router.get('/:id', 
+  auth, 
+  roleAuth([PERMISSIONS.VIEW_INSPECTIONS, PERMISSIONS.VIEW_DRILLS]), 
+  inspectionController.getLatestInspection
+);
+
+// Update an inspection/drill
+router.put('/:id', 
+  auth, 
+  roleAuth([PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL]), 
   inspectionController.updateInspection
 );
 
-router.delete('/:id', auth, roleAuth('admin'), inspectionController.deleteInspection);
-
-router.get(
-  '/form-structure/:inspectionTypeId',
-  auth,
-  roleAuth('admin', 'security_officer'),
-  inspectionController.getInspectionFormStructure
+// Delete an inspection/drill (admin only)
+router.delete('/:id', 
+  auth, 
+  roleAuth([PERMISSIONS.ADMIN]), 
+  inspectionController.deleteInspection
 );
 
 module.exports = router;

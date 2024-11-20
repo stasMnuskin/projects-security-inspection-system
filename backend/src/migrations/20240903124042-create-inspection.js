@@ -28,23 +28,6 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      status: {
-        type: Sequelize.ENUM('pending', 'completed', 'requires_action'),
-        allowNull: false,
-        defaultValue: 'pending'
-      },
-      formData: {
-        type: Sequelize.JSON,
-        allowNull: false
-      },
-      inspectorName: {
-        type: Sequelize.STRING,
-        allowNull: false
-      },
-      date: {
-        type: Sequelize.DATE,
-        allowNull: false
-      },
       userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -54,6 +37,16 @@ module.exports = {
         },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
+      },
+      type: {
+        type: Sequelize.ENUM('inspection', 'drill'),
+        allowNull: false,
+        defaultValue: 'inspection'
+      },
+      formData: {
+        type: Sequelize.JSON,
+        allowNull: false,
+        comment: 'Contains all field values as defined in InspectionType.formStructure'
       },
       createdAt: {
         allowNull: false,

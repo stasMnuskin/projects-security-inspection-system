@@ -1,22 +1,140 @@
+import { colors } from './colors';
+
 export const dashboardStyles = {
-  container: {
-    mt: 4,
-    mb: 4
-  },
-  paper: {
-    p: 2,
+  filterBar: {
     display: 'flex',
-    flexDirection: 'column',
-    height: 240,
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    backgroundColor: colors.background.darkGrey,
+    borderRadius: '8px',
+    border: `2px solid ${colors.primary.orange}`,
+    marginBottom: '20px',
+    flexDirection: 'row-reverse', // For RTL layout
+    justifyContent: 'flex-start'
   },
-  formControl: {
-    minWidth: 120,
-    mb: 2
+  filterIcon: {
+    color: colors.text.white,
+    marginLeft: '8px'
   },
-  selectEmpty: {
-    mt: 2
+  filterText: {
+    color: colors.text.white,
+    fontSize: '1rem',
+    fontWeight: 'normal'
   },
-  button: {
-    mt: 2
+  filterSelect: {
+    backgroundColor: colors.background.darkGrey,
+    color: colors.text.white,
+    minWidth: '120px',
+    '& .MuiOutlinedInput-root': {
+      color: colors.text.white,
+      backgroundColor: colors.background.darkGrey,
+      '& fieldset': {
+        borderColor: colors.border.grey,
+        borderRadius: '4px'
+      },
+      '&:hover fieldset': {
+        borderColor: colors.border.orange
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: colors.primary.orange
+      }
+    },
+    '& .MuiSelect-select': {
+      padding: '8px 12px'
+    },
+    '& .MuiSvgIcon-root': {
+      color: colors.text.grey
+    }
+  },
+  datePicker: {
+    backgroundColor: colors.background.darkGrey,
+    minWidth: '120px',
+    '& .MuiOutlinedInput-root': {
+      color: colors.text.white,
+      backgroundColor: colors.background.darkGrey,
+      '& fieldset': {
+        borderColor: colors.border.grey,
+        borderRadius: '4px'
+      },
+      '&:hover fieldset': {
+        borderColor: colors.border.orange
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: colors.primary.orange
+      }
+    },
+    '& .MuiInputBase-input': {
+      padding: '8px 12px',
+      color: colors.text.white
+    },
+    '& .MuiSvgIcon-root': {
+      color: colors.text.grey
+    }
+  },
+  overviewContainer: {
+    display: 'flex',
+    gap: '20px',
+    marginBottom: '20px',
+    backgroundColor: colors.background.darkGrey,
+    padding: '16px',
+    borderRadius: '8px',
+    border: `2px solid ${colors.primary.orange}`
+  },
+  overviewBox: {
+    flex: 1,
+    backgroundColor: colors.background.black,
+    padding: '16px',
+    borderRadius: '4px',
+    '& h6': {
+      color: colors.text.grey,
+      marginBottom: '8px',
+      fontSize: '1rem',
+      fontWeight: 'normal'
+    },
+    '& h3': {
+      color: colors.text.white,
+      fontSize: '2.5rem',
+      fontWeight: 'bold'
+    }
+  },
+  faultTablesContainer: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '20px'
+  },
+  faultTable: {
+    backgroundColor: colors.background.darkGrey,
+    padding: '16px',
+    borderRadius: '8px',
+    border: `2px solid ${colors.primary.orange}`,
+    '& h6': {
+      color: colors.text.white,
+      marginBottom: '12px',
+      fontSize: '1rem',
+      fontWeight: 'normal'
+    },
+    '& table': {
+      width: '100%',
+      borderCollapse: 'collapse',
+      '& th': {
+        color: colors.text.grey,
+        textAlign: 'right',
+        padding: '8px',
+        borderBottom: `1px solid ${colors.border.grey}`,
+        fontWeight: 'normal',
+        fontSize: '0.9rem'
+      },
+      '& td': {
+        color: colors.text.white,
+        textAlign: 'right',
+        padding: '8px',
+        borderBottom: `1px solid ${colors.border.grey}`,
+        fontSize: '0.9rem'
+      },
+      '& tr:last-child td': {
+        borderBottom: 'none'
+      }
+    }
   }
 };

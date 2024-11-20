@@ -12,36 +12,15 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
-      createdAt: {
+      type: {
+        type: Sequelize.ENUM('inspection', 'drill'),
         allowNull: false,
-        type: Sequelize.DATE
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE
-      }
-    });
-
-    await queryInterface.createTable('InspectionFormStructures', {
-      id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
-        type: Sequelize.INTEGER
-      },
-      inspectionTypeId: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'InspectionTypes',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        defaultValue: 'inspection'
       },
       formStructure: {
         type: Sequelize.JSON,
-        allowNull: false
+        allowNull: false,
+        defaultValue: []
       },
       createdAt: {
         allowNull: false,
@@ -53,8 +32,8 @@ module.exports = {
       }
     });
   },
+
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('InspectionFormStructures');
     await queryInterface.dropTable('InspectionTypes');
   }
 };

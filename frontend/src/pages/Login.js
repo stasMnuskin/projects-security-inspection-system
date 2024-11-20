@@ -1,112 +1,158 @@
-import React, { useState } from 'react';
-import { useNavigate} from 'react-router-dom';
-import { TextField, Button, Typography, Container, Box } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { 
+  TextField, 
+  Button, 
+  Typography, 
+  Box, 
+  Paper, 
+  Link,
+  FormControl,
+  Snackbar,
+  Alert,
+  CircularProgress
+} from '@mui/material';
 import { login as apiLogin } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
+import { pageStyles, formStyles } from '../styles/components';
+import logo from '../assets/logo-black.svg';
 
 function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'error'
+  });
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Show loading screen while checking authentication
+  if (authLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Don't render login form if already authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setLoading(true);
     try {
-      const response = await apiLogin(email, password);
-      login(response.data);
-      
-      if (response.data.passwordChangeRequired) {
-        navigate('/change-password');
-      } else {
-        switch(response.data.role) {
-          case 'admin':
-            navigate('/admin');
-            break;
-          case 'security_officer':
-            navigate('/security');
-            break;
-          case 'entrepreneur':
-            navigate('/entrepreneur');
-            break;
-          case 'inspector':
-            navigate('/inspector');
-            break;
-          default:
-            navigate('/');
-        }
-      }
+      const response = await apiLogin(formData);
+      login(response);
+      navigate('/');
     } catch (error) {
+      console.error('Login error:', error);
+      let message = 'שגיאה בהתחברות למערכת';
       if (error instanceof AppError) {
-        setError(`${error.errorCode}: ${error.message}`);
-      } else {
-        setError('An unexpected error occurred during login');
+        message = error.message;
       }
+      setNotification({
+        open: true,
+        message,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
-          כניסה למערכת
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="כתובת אימייל"
-            name="email"
-            autoComplete="email"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="סיסמה"
-            type="password"
-            id="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            התחבר
-          </Button>
-          {/* <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/register" variant="body2">
-              {"אין לך חשבון? הירשם"}
-            </Link>
-          </Box> */}
-          {error && (
-            <Typography color="error" align="center">
-              {error}
+    <Box sx={pageStyles.root} dir="rtl">
+      <Box 
+        component="img" 
+        src={logo}
+        alt="Logo"
+        sx={pageStyles.logo}
+      />
+      <Box sx={formStyles.container}>
+        <Paper elevation={3} sx={formStyles.paper}>
+          <Box component="form" onSubmit={handleSubmit} sx={formStyles.formBox}>
+            <Typography variant="h4" sx={formStyles.title}>
+              ברוכים הבאים לסול-טן
             </Typography>
-          )}
-        </Box>
+
+            <FormControl fullWidth>
+              <TextField
+                required
+                label="אימייל"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                sx={formStyles.textField}
+                inputProps={{
+                  dir: "ltr"
+                }}
+              />
+            </FormControl>
+
+            <FormControl fullWidth>
+              <TextField
+                required
+                type="password"
+                label="סיסמה"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                sx={formStyles.textField}
+                inputProps={{
+                  dir: "ltr"
+                }}
+              />
+            </FormControl>
+
+            <Link
+              component={RouterLink}
+              to="/forgot-password"
+              sx={formStyles.link}
+            >
+              שכחתם סיסמה?
+            </Link>
+
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={loading}
+              sx={formStyles.submitButton}
+            >
+              {loading ? 'מתחבר...' : 'כנס למערכת'}
+            </Button>
+          </Box>
+        </Paper>
       </Box>
-    </Container>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={notification.severity}
+          onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }
 

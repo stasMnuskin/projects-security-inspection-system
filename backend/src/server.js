@@ -1,5 +1,6 @@
 require('dotenv').config();
 require('./jobs/emailProcessor');
+require('./jobs/faultReminderJob'); // Add fault reminder job
 const express = require('express');
 const { google } = require('googleapis');
 const csrf = require('csurf');
@@ -14,17 +15,16 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerConfig = require('./config/swaggerConfig');
 const { startRotation } = require('./utils/secretManager');
 
+// Route imports
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
 const faultRoutes = require('./routes/faultRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const userRoutes = require('./routes/userRoutes');
+const registrationRoutes = require('./routes/registrationRoutes');
 const inspectionTypeRoutes = require('./routes/inspectionTypeRoutes');
 const siteRoutes = require('./routes/siteRoutes');
-const entrepreneurRoutes = require('./routes/entrepreneurRoutes');
-
-const { processEmails, cleanupExistingFaults } = require('./utils/emailFaultProcessor');
 
 const db = require('./models');
 const cache = require('./utils/cache');
@@ -110,18 +110,19 @@ app.get('/', async (req, res) => {
   }
 });
 
-setInterval(processEmails, 1 * 60 * 1000);
-
 // Routes
+// Authentication & User Management
+app.use('/api/auth/register', registrationRoutes);
+app.use('/api/users', userRoutes);
+
+// Core Features
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/inspections', inspectionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/faults', faultRoutes);
 app.use('/api/inspection-types', inspectionTypeRoutes);
 app.use('/api/sites', siteRoutes);
-app.use('/api/entrepreneurs', entrepreneurRoutes);
 
 // Language
 app.use((req, res, next) => {
@@ -206,9 +207,6 @@ async function startServer() {
 
     await db.sequelize.sync({ alter: true });
     logger.info('Database synced successfully.');
-
-    await cleanupExistingFaults();
-    logger.info('Existing faults cleaned up successfully.');
 
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);

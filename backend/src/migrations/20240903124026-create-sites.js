@@ -1,4 +1,5 @@
 'use strict';
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Sites', {
@@ -13,8 +14,9 @@ module.exports = {
         allowNull: false
       },
       type: {
-        type: Sequelize.STRING,
-        allowNull: false
+        type: Sequelize.ENUM('radar', 'inductive_fence'),
+        allowNull: false,
+        defaultValue: 'inductive_fence'
       },
       entrepreneurId: {
         type: Sequelize.INTEGER,
@@ -22,9 +24,30 @@ module.exports = {
         references: {
           model: 'Users',
           key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        }
+      },
+      integratorUserIds: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        defaultValue: []
+      },
+      maintenanceUserIds: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        defaultValue: []
+      },
+      controlCenterUserId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id'
+        }
+      },
+      customFields: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        defaultValue: []
       },
       createdAt: {
         allowNull: false,
@@ -36,6 +59,7 @@ module.exports = {
       }
     });
   },
+
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable('Sites');
   }

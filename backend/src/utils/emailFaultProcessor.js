@@ -108,15 +108,15 @@ const parseFaultFromEmail = (email) => {
 
   const faultData = {
     siteName: '',
+    type: 'אחר',
     description: '',
-    location: '',
     reporterName: 'לא ידוע',
     contactNumber: 'לא זמין',
     emailSubject: subject,
     emailSender: sender,
     isClosureEmail: isClosureEmail,
     closureNotes: isClosureEmail ? body : '',
-    disabling: false
+    isCritical: false
   };
 
   const lines = body.split('\n');
@@ -125,13 +125,16 @@ const parseFaultFromEmail = (email) => {
     const trimmedLine = line.trim();
     if (trimmedLine.startsWith('באתר:')) {
       faultData.siteName = trimmedLine.replace('באתר:', '').trim();
-    } else if (trimmedLine.startsWith('מיקום:')) {
-      faultData.location = trimmedLine.replace('מיקום:', '').trim();
+    } else if (trimmedLine.startsWith('סוג תקלה:')) {
+      const type = trimmedLine.replace('סוג תקלה:', '').trim();
+      if (['גדר', 'מצלמות', 'תקשורת'].includes(type)) {
+        faultData.type = type;
+      }
     } else if (trimmedLine.startsWith('תקלה:')) {
       faultData.description = trimmedLine.replace('תקלה:', '').trim();
     } else if (trimmedLine.startsWith('משבית:')) {
-      const disablingValue = trimmedLine.replace('משבית:', '').trim().toLowerCase();
-      faultData.disabling = disablingValue === 'כן';
+      const criticalValue = trimmedLine.replace('משבית:', '').trim().toLowerCase();
+      faultData.isCritical = criticalValue === 'כן';
     }
   });
 
@@ -165,7 +168,7 @@ const createFault = async (faultData) => {
     include: [{ 
       model: db.User, 
       as: 'entrepreneur',
-      attributes: ['id', 'username'] 
+      attributes: ['id', 'firstName', 'lastName'] 
     }]
   });
 
@@ -176,18 +179,12 @@ const createFault = async (faultData) => {
 
   const fault = await db.Fault.create({
     siteId: site.id,
+    type: faultData.type,
     description: faultData.description || 'לא סופק תיאור',
-    location: faultData.location || 'לא צוין',
     status: 'פתוח',
     reportedBy: 'אימייל',
     reportedTime: new Date(),
-    entrepreneurName: site.entrepreneur ? site.entrepreneur.username : 'לא ידוע',
-    siteName: site.name,
-    reporterName: faultData.reporterName || 'לא ידוע',
-    contactNumber: faultData.contactNumber || 'לא זמין',
-    emailSubject: faultData.emailSubject,
-    emailSender: faultData.emailSender,
-    disabling: faultData.disabling
+    isCritical: faultData.isCritical
   });
 
   logger.info(`נוצרה תקלה: ${fault.id}`);
@@ -226,36 +223,11 @@ const closeFault = async (faultData) => {
     status: 'סגור',
     closedTime: new Date(),
     closedBy: faultData.emailSender,
-    closureNotes: faultData.closureNotes
+    description: fault.description + '\n\nהערות סגירה: ' + faultData.closureNotes
   });
 
   logger.info(`נסגרה תקלה: ${fault.id}`);
   return fault;
 };
 
-const cleanupExistingFaults = async () => {
-  try {
-    const faults = await db.Fault.findAll({
-      where: {
-        location: {
-          [db.Sequelize.Op.or]: ['', 'לא צוין']
-        }
-      }
-    });
-
-    for (const fault of faults) {
-      const locationMatch = fault.description.match(/(מיקום|location):\s*(.+)/i);
-      if (locationMatch) {
-        const location = locationMatch[2].trim();
-        await fault.update({ location });
-        logger.info(`עודכן מיקום לתקלה ${fault.id}: ${location}`);
-      }
-    }
-
-    logger.info(`הושלם ניקוי נתוני תקלות קיימות`);
-  } catch (error) {
-    logger.error('שגיאה בניקוי נתוני תקלות קיימות:', error);
-  }
-};
-
-module.exports = { processEmails, createFault, parseFaultFromEmail, getGmailTransporter, cleanupExistingFaults, closeFault };
+module.exports = { processEmails, createFault, parseFaultFromEmail, getGmailTransporter, closeFault };

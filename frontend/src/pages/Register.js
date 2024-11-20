@@ -1,135 +1,189 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { TextField, Button, Typography, Container, Box, Select, MenuItem, FormControl, InputLabel, Link } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  TextField, 
+  Button, 
+  Typography, 
+  Box, 
+  Paper,
+  FormControl,
+  Snackbar,
+  Alert,
+  InputAdornment
+} from '@mui/material';
 import { register } from '../services/api';
 import { AppError } from '../utils/errorHandler';
-import { useAuth } from '../context/AuthContext';
+import { pageStyles, formStyles } from '../styles/components';
+import logo from '../assets/logo-black.svg';
+import EmailIcon from '@mui/icons-material/Email';
+import { colors } from '../styles/colors';
 
 function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const email = queryParams.get('email');
+  const token = queryParams.get('token');
+
+  const [formData, setFormData] = useState({
+    email: email || '',
+    firstName: '',
+    lastName: '',
+    password: '',
+    token: token || ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'error'
+  });
+
+  // Redirect if no token or email
+  React.useEffect(() => {
+    if (!token || !email) {
+      navigate('/login');
+    }
+  }, [token, email, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setLoading(true);
     try {
-      const response = await register(username, email, password, role);
-      login(response.data);
-      
-      switch(response.data.role) {
-        case 'admin':
-          navigate('/admin');
-          break;
-        case 'security_officer':
-          navigate('/security');
-          break;
-        case 'entrepreneur':
-          navigate('/entrepreneur');
-          break;
-        case 'inspector':
-          navigate('/inspector');
-          break;
-        default:
-          navigate('/');
-      }
+      await register(formData);
+      setNotification({
+        open: true,
+        message: 'ההרשמה בוצעה בהצלחה',
+        severity: 'success'
+      });
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (error) {
-      if (error instanceof AppError) {
-        setError(`${error.errorCode}: ${error.message}`);
-      } else {
-        setError('An unexpected error occurred');
-      }
       console.error('Registration error:', error);
+      let message = 'שגיאה בהרשמה למערכת';
+      if (error instanceof AppError) {
+        message = error.message;
+      }
+      setNotification({
+        open: true,
+        message,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
+  // If no token or email, show nothing while redirecting
+  if (!token || !email) {
+    return null;
+  }
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'right' }}>
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5" color="primary" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
-          הרשמה
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="username"
-            label="שם משתמש"
-            name="username"
-            autoComplete="username"
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="אימייל"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="סיסמה"
-            type="password"
-            id="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="role-label">תפקיד</InputLabel>
-            <Select
-              labelId="role-label"
-              id="role"
-              value={role}
-              label="תפקיד"
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <MenuItem value="security_officer">קב"ט</MenuItem>
-              <MenuItem value="admin">מנהל</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            הרשמה
-          </Button>
-          <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/login" variant="body2">
-              {"יש לך כבר חשבון? התחבר"}
-            </Link>
-          </Box>
-          {error && (
-            <Typography color="error" align="center" sx={{ mt: 2 }}>
-              {error}
+    <Box sx={pageStyles.root} dir="rtl">
+      <Box 
+        component="img" 
+        src={logo}
+        alt="Logo"
+        sx={pageStyles.logo}
+      />
+      <Box sx={formStyles.container}>
+        <Paper elevation={3} sx={formStyles.paper}>
+          <Box component="form" onSubmit={handleSubmit} sx={formStyles.formBox}>
+            <Typography variant="h4" sx={formStyles.title}>
+              הרשמה למערכת
             </Typography>
-          )}
-        </Box>
+
+            <FormControl fullWidth>
+              <TextField
+                required
+                label="שם פרטי"
+                value={formData.firstName}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                sx={formStyles.textField}
+              />
+            </FormControl>
+
+            <FormControl fullWidth>
+              <TextField
+                required
+                label="שם משפחה"
+                value={formData.lastName}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                sx={formStyles.textField}
+              />
+            </FormControl>
+
+            <FormControl fullWidth>
+              <TextField
+                required
+                type="email"
+                label="אימייל"
+                value={formData.email}
+                disabled={!!email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                sx={{
+                  ...formStyles.textField,
+                  '& .Mui-disabled': {
+                    WebkitTextFillColor: `${colors.text.grey} !important`,
+                    backgroundColor: `${colors.background.darkGrey} !important`
+                  }
+                }}
+                inputProps={{
+                  dir: "ltr"
+                }}
+                InputProps={{
+                  endAdornment: email && (
+                    <InputAdornment position="end">
+                      <EmailIcon sx={{ color: colors.text.grey }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </FormControl>
+
+            <FormControl fullWidth>
+              <TextField
+                required
+                type="password"
+                label="סיסמה"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                sx={formStyles.textField}
+                inputProps={{
+                  dir: "ltr"
+                }}
+              />
+            </FormControl>
+
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={loading}
+              sx={formStyles.submitButton}
+            >
+              {loading ? 'נרשם...' : 'הירשם'}
+            </Button>
+          </Box>
+        </Paper>
       </Box>
-    </Container>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={notification.severity}
+          onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }
 

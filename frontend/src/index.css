@@ -1,10 +1,57 @@
+html,
 body {
   margin: 0;
+  direction: rtl !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force RTL for all elements */
+* {
+  direction: rtl !important;
+}
+
+/* Force RTL for Material-UI components */
+.MuiBox-root,
+.MuiContainer-root,
+.MuiGrid-root,
+.MuiTableCell-root,
+.MuiTextField-root,
+.MuiAutocomplete-root,
+.MuiFormControl-root {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* Fix Material-UI input direction */
+.MuiInputBase-input {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* Fix Material-UI select direction */
+.MuiSelect-select {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* Fix Material-UI menu items direction */
+.MuiMenuItem-root {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* Fix Material-UI dialog direction */
+.MuiDialog-paper {
+  direction: rtl !important;
+}
+
+/* Fix Material-UI table direction */
+.MuiTable-root {
+  direction: rtl !important;
 }
 
 code {

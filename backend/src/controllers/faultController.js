@@ -1,117 +1,40 @@
 const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
-const { sendEmail } = require('../utils/emailService');
-const { Op, fn, col, literal, cast } = require('sequelize');
-const { createFault: createEmailFault, closeFault: closeEmailFault } = require('../utils/emailFaultProcessor');
+const { Op } = require('sequelize');
 
-exports.getAllFaults = async (req, res, next) => {
-  try {
-    const faults = await db.Fault.findAll({
+// Helper function to get sites based on user role and organization
+const getSitesByUserRole = async (user) => {
+  const { role, id: userId, organization } = user;
+  
+  if (role === 'admin' || role === 'security_officer') {
+    return await db.Site.findAll({ attributes: ['id'] });
+  }
+  
+  if (role === 'integrator' || role === 'maintenance') {
+    // Get all sites in their organization
+    return await db.Site.findAll({
+      attributes: ['id'],
       include: [{
-        model: db.Site,
-        as: 'site',
-        attributes: ['name']
-      }],
-      order: [['reportedTime', 'DESC']]
+        model: db.User,
+        as: 'entrepreneur',
+        where: { organization },
+        attributes: []
+      }]
     });
-
-    const formattedFaults = faults.map(fault => ({
-      id: fault.id,
-      description: fault.description,
-      location: fault.location,
-      status: fault.status,
-      reportedTime: fault.reportedTime,
-      siteName: fault.site ? fault.site.name : null,
-      disabling: fault.disabling
-    }));
-
-    logger.info('Fetched all faults');
-    res.json(formattedFaults);
-  } catch (error) {
-    logger.error('Error fetching all faults:', error);
-    next(new AppError('Error fetching all faults', 500, 'FETCH_ALL_FAULTS_ERROR'));
   }
+  
+  // For entrepreneurs, get their sites
+  return await db.Site.findAll({
+    attributes: ['id'],
+    where: { entrepreneurId: userId }
+  });
 };
 
-exports.createFault = async (req, res, next) => {
+// Get open faults for dashboard
+exports.getOpenFaults = async (req, res, next) => {
   try {
-    logger.info('Creating fault with data:', req.body);
-    if (!req.body.description || !req.body.location) {
-      throw new AppError('Description and location are required', 400);
-    }
-    const fault = await db.Fault.create(req.body);
-    logger.info('Fault created successfully:', fault);
-    res.status(201).json(fault);
-  } catch (error) {
-    logger.error('Error creating fault:', error);
-    next(new AppError(error.message || 'Error creating fault', error.status || 500));
-  }
-};
-
-exports.createEmailFault = async (req, res, next) => {
-  try {
-    logger.info('Creating fault from email with data:', req.body);
-    const fault = await createEmailFault(req.body);
-    logger.info('Fault created successfully from email:', fault);
-    res.status(201).json(fault);
-  } catch (error) {
-    logger.error('Error creating fault from email:', error);
-    next(new AppError(error.message || 'Error creating fault from email', error.status || 500));
-  }
-};
-
-exports.closeEmailFault = async (req, res, next) => {
-  try {
-    logger.info('Closing fault from email with data:', req.body);
-    const fault = await closeEmailFault(req.body);
-    logger.info('Fault closed successfully from email:', fault);
-    res.status(200).json(fault);
-  } catch (error) {
-    logger.error('Error closing fault from email:', error);
-    next(new AppError(error.message || 'Error closing fault from email', error.status || 500));
-  }
-};
-
-exports.updateFault = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const [updated] = await db.Fault.update(req.body, {
-      where: { id: id }
-    });
-    if (updated) {
-      const updatedFault = await db.Fault.findByPk(id);
-      return res.json(updatedFault);
-    }
-    throw new AppError('Fault not found', 404);
-  } catch (error) {
-    logger.error('Error updating fault:', error);
-    next(new AppError('Error updating fault', 500));
-  }
-};
-
-exports.getFaultsBySite = async (req, res, next) => {
-  try {
-    const { siteId } = req.params;
-    const faults = await db.Fault.findAll({
-      where: { siteId },
-      include: [{ model: db.Site, as: 'site', where: { entrepreneurId: req.user.id } }],
-    });
-    res.json(faults);
-  } catch (error) {
-    logger.error('Error fetching faults by site:', error);
-    next(new AppError('Error fetching faults', 500));
-  }
-};
-
-exports.getOpenFaultsByEntrepreneur = async (req, res, next) => {
-  try {
-    const sites = await db.Site.findAll({
-      where: { entrepreneurId: req.user.id },
-      attributes: ['id']
-    });
-    
-    const siteIds = sites.map(site => site.id);
+    const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
 
     const faults = await db.Fault.findAll({
       where: {
@@ -123,412 +46,529 @@ exports.getOpenFaultsByEntrepreneur = async (req, res, next) => {
         as: 'site',
         attributes: ['name']
       }],
-      order: [['reportedTime', 'DESC']],
-      limit: 10
+      order: [['reportedTime', 'DESC']]
     });
 
-    const formattedFaults = faults.map(fault => ({
-      id: fault.id,
-      description: fault.description,
-      location: fault.location,
-      status: fault.status,
-      reportedTime: fault.reportedTime,
-      siteName: fault.site ? fault.site.name : null,
-      disabling: fault.disabling
+    const formattedFaults = faults.map((fault, index) => ({
+      site: fault.site.name,
+      fault: fault.type === 'אחר' ? fault.description : fault.type,
+      serialNumber: index + 1
     }));
 
-    logger.info('Formatted open faults:', formattedFaults);
     res.json(formattedFaults);
   } catch (error) {
     logger.error('Error fetching open faults:', error);
-    next(new AppError('Error fetching open faults', 500, 'FETCH_FAULTS_ERROR'));
+    next(new AppError('שגיאה בשליפת תקלות פתוחות', 500));
   }
 };
 
-exports.getRecentFaultsByEntrepreneur = async (req, res, next) => {
+// Get recurring faults for dashboard
+exports.getRecurringFaults = async (req, res, next) => {
   try {
-    const sites = await db.Site.findAll({
-      where: { entrepreneurId: req.user.id },
-      attributes: ['id']
-    });
-    
-    const siteIds = sites.map(site => site.id);
-
-    const faults = await db.Fault.findAll({
-      where: {
-        siteId: { [Op.in]: siteIds }
-      },
-      include: [{
-        model: db.Site,
-        as: 'site',
-        attributes: ['name']
-      }],
-      order: [['reportedTime', 'DESC']],
-      limit: 10
-    });
-
-    const formattedFaults = faults.map(fault => ({
-      id: fault.id,
-      description: fault.description,
-      location: fault.location,
-      status: fault.status,
-      reportedTime: fault.reportedTime,
-      siteName: fault.site ? fault.site.name : null,
-      disabling: fault.disabling
-    }));
-
-    logger.info('Formatted recent faults:', formattedFaults);
-    res.json(formattedFaults);
-  } catch (error) {
-    logger.error('Error fetching recent faults:', error);
-    next(new AppError('Error fetching recent faults', 500, 'FETCH_RECENT_FAULTS_ERROR'));
-  }
-};
-
-exports.getRecurringFaultsByEntrepreneur = async (req, res, next) => {
-  try {
-    logger.info('getRecurringFaultsByEntrepreneur function called');
-    
-    const sites = await db.Site.findAll({
-      where: { entrepreneurId: req.user.id },
-      attributes: ['id']
-    });
-    
-    const siteIds = sites.map(site => site.id);
-    logger.info('Site IDs:', siteIds);
+    const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    logger.info('Fetching recurring faults for sites:', siteIds);
-    logger.info('Date range:', oneMonthAgo, 'to', new Date());
 
     const faults = await db.Fault.findAll({
       where: {
         siteId: { [Op.in]: siteIds },
         reportedTime: { [Op.gte]: oneMonthAgo }
       },
-      include: [{
-        model: db.Site,
-        as: 'site',
-        attributes: ['id', 'name']
-      }],
       attributes: [
-        'Fault.description',
-        'Fault.location',
-        'Fault.disabling',
-        [db.sequelize.fn('COUNT', db.sequelize.col('Fault.id')), 'occurrences']
+        'type',
+        'description',
+        [db.sequelize.fn('COUNT', '*'), 'count']
       ],
-      group: ['Fault.description', 'Fault.location', 'Fault.disabling', 'site.id', 'site.name'],
-      having: db.sequelize.literal('COUNT("Fault"."id") > 1'),
-      order: [[db.sequelize.literal('occurrences'), 'DESC']]
+      group: ['type', 'description'],
+      having: db.sequelize.literal('COUNT(*) > 1'),
+      order: [[db.sequelize.literal('count'), 'DESC']]
     });
 
-    logger.info('Number of recurring faults found:', faults.length);
-    logger.info('Raw faults data:', JSON.stringify(faults.map(f => f.toJSON()), null, 2));
-
-    const formattedFaults = faults.map(fault => ({
-      description: fault.description,
-      location: fault.location,
-      disabling: fault.disabling,
-      occurrences: parseInt(fault.get('occurrences')),
-      siteId: fault.site.id,
-      siteName: fault.site.name
+    const formattedFaults = faults.map((fault, index) => ({
+      count: parseInt(fault.get('count')),
+      fault: fault.type === 'אחר' ? fault.description : fault.type,
+      serialNumber: index + 1
     }));
-
-    logger.info('Number of formatted recurring faults:', formattedFaults.length);
-    logger.info('Formatted recurring faults:', JSON.stringify(formattedFaults, null, 2));
 
     res.json(formattedFaults);
   } catch (error) {
-    logger.error('Error in getRecurringFaultsByEntrepreneur:', error);
-    next(new AppError('Error fetching recurring faults', 500, 'FETCH_RECURRING_FAULTS_ERROR'));
+    logger.error('Error fetching recurring faults:', error);
+    next(new AppError('שגיאה בשליפת תקלות חוזרות', 500));
   }
 };
 
-exports.getAllFaultsBySite = async (req, res, next) => {
+// Get critical faults for dashboard
+exports.getCriticalFaults = async (req, res, next) => {
   try {
-    const { siteId } = req.params;
+    const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
+
     const faults = await db.Fault.findAll({
-      where: { siteId },
-      include: [{ model: db.Site, as: 'site', where: { entrepreneurId: req.user.id } }],
+      where: {
+        isCritical: true,
+        status: { [Op.ne]: 'סגור' },
+        siteId: { [Op.in]: siteIds }
+      },
+      include: [{
+        model: db.Site,
+        as: 'site',
+        attributes: ['name']
+      }],
       order: [['reportedTime', 'DESC']]
     });
-    res.json(faults);
-  } catch (error) {
-    logger.error('Error fetching all faults by site:', error);
-    next(new AppError('Error fetching all faults', 500));
-  }
-};
 
-
-exports.getOpenFaultsBySite = async (req, res, next) => {
-  try {
-    const { siteId } = req.params;
-    const { role } = req.user;
-
-    const site = await db.Site.findByPk(siteId);
-    if (!site) {
-      throw new AppError('Site not found', 404);
-    }
-
-    if (!['entrepreneur', 'security_officer', 'admin'].includes(role)) {
-      throw new AppError('Unauthorized access', 403);
-    }
-
-    const faults = await db.Fault.findAll({
-      where: {
-        status: 'פתוח',
-        siteId: siteId
-      },
-      order: [['reportedTime', 'DESC']],
-      limit: 10
-    });
-
-    const formattedFaults = faults.map(fault => ({
-      id: fault.id,
-      description: fault.description,
-      location: fault.location,
-      status: fault.status,
-      reportedTime: fault.reportedTime,
-      disabling: fault.disabling
+    const formattedFaults = faults.map((fault, index) => ({
+      site: fault.site.name,
+      fault: fault.type === 'אחר' ? fault.description : fault.type,
+      serialNumber: index + 1
     }));
 
-    logger.info('Formatted open faults for site:', formattedFaults);
     res.json(formattedFaults);
   } catch (error) {
-    logger.error('Error fetching open faults for site:', error);
-    next(new AppError(error.message || 'Error fetching open faults for site', error.status || 500));
+    logger.error('Error fetching critical faults:', error);
+    next(new AppError('שגיאה בשליפת תקלות משביתות', 500));
   }
 };
 
-exports.getRecentFaultsBySite = async (req, res, next) => {
+// Create new fault
+exports.createFault = async (req, res, next) => {
   try {
-    const { siteId } = req.params;
-    const site = await db.Site.findOne({
-      where: { id: siteId, entrepreneurId: req.user.id }
-    });
+    const { siteId, type, description, isCritical } = req.body;
 
-    if (!site) {
-      throw new AppError('Site not found or you do not have permission to access this site', 404);
+    if (!req.user.hasPermission('new_fault')) {
+      return next(new AppError('אין הרשאה ליצירת תקלה', 403));
     }
 
-    const faults = await db.Fault.findAll({
-      where: {
-        siteId: siteId
-      },
-      order: [['reportedTime', 'DESC']],
-      limit: 10
-    });
-
-    const formattedFaults = faults.map(fault => ({
-      id: fault.id,
-      description: fault.description,
-      location: fault.location,
-      status: fault.status,
-      reportedTime: fault.reportedTime,
-      disabling: fault.disabling
-    }));
-
-    logger.info('Formatted recent faults for site:', formattedFaults);
-    res.json(formattedFaults);
-  } catch (error) {
-    logger.error('Error fetching recent faults for site:', error);
-    next(new AppError(error.message || 'Error fetching recent faults for site', error.status || 500));
-  }
-};
-
-exports.getRecurringFaultsBySite = async (req, res, next) => {
-  try {
-    const { siteId } = req.params;
-    const site = await db.Site.findOne({
-      where: { id: siteId, entrepreneurId: req.user.id }
-    });
-
-    if (!site) {
-      throw new AppError('Site not found or you do not have permission to access this site', 404);
-    }
-
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    const faults = await db.Fault.findAll({
-      where: {
-        siteId: siteId,
-        reportedTime: { [Op.gte]: oneMonthAgo }
-      },
-      attributes: [
-        'description',
-        'location',
-        'disabling',
-        [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'occurrences']
-      ],
-      group: ['description', 'location', 'disabling'],
-      having: db.sequelize.literal('COUNT("id") > 1'),
-      order: [[db.sequelize.literal('occurrences'), 'DESC']]
-    });
-
-    const formattedFaults = faults.map(fault => ({
-      description: fault.description,
-      location: fault.location,
-      disabling: fault.disabling,
-      occurrences: parseInt(fault.get('occurrences'))
-    }));
-
-    logger.info('Formatted recurring faults for site:', formattedFaults);
-    res.json(formattedFaults);
-  } catch (error) {
-    logger.error('Error fetching recurring faults for site:', error);
-    next(new AppError(error.message || 'Error fetching recurring faults for site', error.status || 500));
-  }
-};
-
-exports.getStatisticsBySite = async (req, res, next) => {
-  try {
-    const { id: userId, role } = req.user;
-    const { siteId } = req.params;
-
-    let whereClause = {};
-    if (role === 'entrepreneur') {
-      whereClause.entrepreneurId = userId;
-    } else if (role === 'admin') {
-      
-    } else {
-      throw new AppError('Unauthorized: Insufficient permissions', 403);
-    }
-
-    if (siteId) {
-      whereClause.id = siteId;
-    }
-
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    const sites = await db.Site.findAll({
-      where: whereClause,
-      attributes: [
-        'id',
-        'name',
-        [fn('COUNT', col('Faults.id')), 'faultCount'],
-        [fn('AVG', literal('CASE WHEN "Faults"."closedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Faults"."closedTime" - "Faults"."reportedTime")) / 3600 ELSE NULL END')), 'averageRepairTime'],
-        [fn('COUNT', literal('CASE WHEN "Faults"."status" = \'פתוח\' THEN 1 ELSE NULL END')), 'openFaultCount'],
-        [fn('AVG', literal('CASE WHEN "Faults"."acknowledgedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Faults"."acknowledgedTime" - "Faults"."reportedTime")) / 3600 ELSE NULL END')), 'averageResponseTime']
-      ],
+    const site = await db.Site.findByPk(siteId, {
       include: [{
-        model: db.Fault,
-        as: 'Faults',
-        attributes: [],
-        required: false,
+        model: db.User,
+        as: 'entrepreneur',
+        attributes: ['organization']
+      }]
+    });
+    
+    if (!site) {
+      return next(new AppError('אתר לא נמצא', 404));
+    }
+
+    const validTypes = ['גדר', 'מצלמות', 'תקשורת', 'אחר'];
+    if (!validTypes.includes(type)) {
+      return next(new AppError('סוג תקלה לא חוקי', 400));
+    }
+
+    if (type === 'אחר' && (!description || !description.trim())) {
+      return next(new AppError('חובה להזין תיאור לתקלה מסוג אחר', 400));
+    }
+
+    // Get assigned users from site's organization
+    const [maintenanceUser, integratorUser] = await Promise.all([
+      site.maintenanceUserIds?.length > 0 ? db.User.findOne({
         where: {
-          reportedTime: { [Op.gte]: oneMonthAgo }
+          id: site.maintenanceUserIds[0],
+          role: 'maintenance',
+          organization: site.entrepreneur.organization
         }
-      }],
-      group: ['Site.id', 'Site.name'],
-      raw: true
+      }) : null,
+      site.integratorUserIds?.length > 0 ? db.User.findOne({
+        where: {
+          id: site.integratorUserIds[0],
+          role: 'integrator',
+          organization: site.entrepreneur.organization
+        }
+      }) : null
+    ]);
+
+    const fault = await db.Fault.create({
+      siteId,
+      type,
+      description: description ? description.trim() : null,
+      isCritical,
+      status: 'פתוח',
+      reportedBy: req.user.firstName + ' ' + req.user.lastName,
+      reportedTime: new Date(),
+      maintenanceUserId: maintenanceUser?.id || null,
+      integratorUserId: integratorUser?.id || null
     });
 
-    const formattedStats = await Promise.all(sites.map(async site => {
-      const recurringFaults = await db.Fault.count({
-        where: {
-          siteId: site.id,
-          reportedTime: { [Op.gte]: oneMonthAgo }
-        },
-        group: ['description'],
-        having: literal('COUNT(*) > 1')
-      });
-
-      return {
-        id: site.id,
-        name: site.name,
-        faultCount: parseInt(site.faultCount) || 0,
-        averageRepairTime: parseFloat(site.averageRepairTime) || 0,
-        openFaultCount: parseInt(site.openFaultCount) || 0,
-        recurringFaultCount: recurringFaults.length,
-        averageResponseTime: parseFloat(site.averageResponseTime) || 0
-      };
-    }));
-
-    res.json(formattedStats);
-  } catch (error) {
-    logger.error('Error fetching statistics by site:', error);
-    next(new AppError(error.message || 'Error fetching statistics by site', error.status || 500));
-  }
-};
-
-exports.getStatisticsByLocation = async (req, res, next) => {
-  try {
-    const { id: userId, role } = req.user;
-    const { siteId } = req.params;
-
-    let whereClause = {};
-    if (role === 'entrepreneur') {
-      whereClause['$site.entrepreneurId$'] = userId;
-    } else if (role === 'admin') {
-
-    } else {
-      throw new AppError('Unauthorized: Insufficient permissions', 403);
-    }
-
-    if (siteId) {
-      whereClause.siteId = siteId;
-    }
-
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    whereClause.reportedTime = { [Op.gte]: oneMonthAgo };
-
-    const locationStats = await db.Fault.findAll({
-      attributes: [
-        'location',
-        [fn('COUNT', col('Fault.id')), 'faultCount'],
-        [fn('AVG', literal('CASE WHEN "Fault"."closedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Fault"."closedTime" - "Fault"."reportedTime")) / 3600 ELSE NULL END')), 'averageRepairTime'],
-        [fn('COUNT', literal('CASE WHEN "Fault"."status" = \'פתוח\' THEN 1 ELSE NULL END')), 'openFaultCount'],
-        [fn('AVG', literal('CASE WHEN "Fault"."acknowledgedTime" IS NOT NULL THEN EXTRACT(EPOCH FROM ("Fault"."acknowledgedTime" - "Fault"."reportedTime")) / 3600 ELSE NULL END')), 'averageResponseTime']
-      ],
+    const createdFault = await db.Fault.findByPk(fault.id, {
       include: [{
         model: db.Site,
         as: 'site',
-        attributes: [],
-        required: true
-      }],
-      where: whereClause,
-      group: ['Fault.location', 'site.id'],
-      raw: true
+        attributes: ['name']
+      }]
     });
 
-    const formattedStats = await Promise.all(locationStats.map(async stat => {
-      const recurringFaults = await db.Fault.count({
-        where: {
-          location: stat.location,
-          reportedTime: { [Op.gte]: oneMonthAgo },
-          ...whereClause
-        },
-        include: [{
-          model: db.Site,
-          as: 'site',
-          attributes: [],
-          required: true
-        }],
-        group: ['description'],
-        having: literal('COUNT(*) > 1')
-      });
+    const formattedFault = {
+      id: createdFault.id,
+      site: {
+        name: createdFault.site.name
+      },
+      type: createdFault.type,
+      description: createdFault.description,
+      isCritical: createdFault.isCritical,
+      reportedTime: createdFault.reportedTime,
+      closedTime: createdFault.closedTime,
+      status: createdFault.status,
+      lastUpdatedTime: createdFault.lastUpdatedTime,
+      maintenanceUser: maintenanceUser ? {
+        id: maintenanceUser.id,
+        name: `${maintenanceUser.firstName} ${maintenanceUser.lastName}`
+      } : null,
+      integratorUser: integratorUser ? {
+        id: integratorUser.id,
+        name: `${integratorUser.firstName} ${integratorUser.lastName}`
+      } : null,
+      controlCenterUser: null
+    };
 
-      return {
-        name: stat.location,
-        faultCount: parseInt(stat.faultCount) || 0,
-        averageRepairTime: parseFloat(stat.averageRepairTime) || 0,
-        openFaultCount: parseInt(stat.openFaultCount) || 0,
-        recurringFaultCount: recurringFaults.length,
-        averageResponseTime: parseFloat(stat.averageResponseTime) || 0
-      };
-    }));
-
-    res.json(formattedStats);
+    logger.info(`New fault created for site ${siteId}`);
+    res.status(201).json(formattedFault);
   } catch (error) {
-    logger.error('Error fetching statistics by location:', error);
-    next(new AppError(error.message || 'Error fetching statistics by location', error.status || 500));
+    logger.error('Error creating fault:', error);
+    next(new AppError('שגיאה ביצירת תקלה', 500));
   }
 };
 
-module.exports = exports;
+// Update fault status
+exports.updateFaultStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const fault = await db.Fault.findByPk(id, {
+      include: [{
+        model: db.Site,
+        as: 'site',
+        include: [{
+          model: db.User,
+          as: 'entrepreneur',
+          attributes: ['organization']
+        }]
+      }]
+    });
+
+    if (!fault) {
+      return next(new AppError('תקלה לא נמצאה', 404));
+    }
+
+    // Check if user has permission to update this fault
+    if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
+      // Check only organization match
+      const isSameOrg = req.user.organization === fault.site.entrepreneur.organization;
+      if (!isSameOrg) {
+        return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
+      }
+    }
+
+    fault.status = status;
+    fault.lastUpdatedBy = req.user.firstName + ' ' + req.user.lastName;
+    fault.lastUpdatedTime = new Date();
+
+    if (status === 'סגור') {
+      fault.closedTime = new Date();
+      fault.closedBy = req.user.firstName + ' ' + req.user.lastName;
+    }
+
+    await fault.save();
+
+    logger.info(`Fault ${id} status updated to ${status}`);
+    res.json(fault);
+  } catch (error) {
+    logger.error('Error updating fault status:', error);
+    next(new AppError('שגיאה בעדכון סטטוס תקלה', 500));
+  }
+};
+
+// Update fault details
+exports.updateFaultDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { technician, maintenanceUserId, integratorUserId } = req.body;
+
+    const fault = await db.Fault.findByPk(id, {
+      include: [{
+        model: db.Site,
+        as: 'site',
+        include: [{
+          model: db.User,
+          as: 'entrepreneur',
+          attributes: ['organization']
+        }]
+      }]
+    });
+
+    if (!fault) {
+      return next(new AppError('תקלה לא נמצאה', 404));
+    }
+
+    // Check if user has permission to update this fault
+    if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
+      // Check only organization match
+      const isSameOrg = req.user.organization === fault.site.entrepreneur.organization;
+      if (!isSameOrg) {
+        return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
+      }
+    }
+
+    if (technician !== undefined) {
+      fault.technician = technician;
+    }
+
+    // Update maintenance user if provided
+    if (maintenanceUserId !== undefined) {
+      // Verify user exists and has maintenance role in the organization
+      const maintenanceUser = await db.User.findOne({
+        where: {
+          id: maintenanceUserId,
+          role: 'maintenance',
+          organization: fault.site.entrepreneur.organization
+        }
+      });
+      
+      if (maintenanceUserId && !maintenanceUser) {
+        return next(new AppError('משתמש אחזקה לא נמצא או אינו שייך לארגון', 404));
+      }
+
+      fault.maintenanceUserId = maintenanceUserId || null;
+    }
+
+    // Update integrator user if provided
+    if (integratorUserId !== undefined) {
+      // Verify user exists and has integrator role in the organization
+      const integratorUser = await db.User.findOne({
+        where: {
+          id: integratorUserId,
+          role: 'integrator',
+          organization: fault.site.entrepreneur.organization
+        }
+      });
+      
+      if (integratorUserId && !integratorUser) {
+        return next(new AppError('משתמש אינטגרטור לא נמצא או אינו שייך לארגון', 404));
+      }
+
+      fault.integratorUserId = integratorUserId || null;
+    }
+
+    fault.lastUpdatedBy = req.user.firstName + ' ' + req.user.lastName;
+    fault.lastUpdatedTime = new Date();
+
+    await fault.save();
+
+    const updatedFault = await db.Fault.findByPk(id, {
+      include: [
+        {
+          model: db.Site,
+          as: 'site',
+          attributes: ['name']
+        },
+        {
+          model: db.User,
+          as: 'maintenanceUser',
+          attributes: ['firstName', 'lastName']
+        },
+        {
+          model: db.User,
+          as: 'integratorUser',
+          attributes: ['firstName', 'lastName']
+        }
+      ]
+    });
+
+    logger.info(`Fault ${id} details updated`);
+    res.json(updatedFault);
+  } catch (error) {
+    logger.error('Error updating fault details:', error);
+    next(new AppError('שגיאה בעדכון פרטי תקלה', 500));
+  }
+};
+
+// Delete fault
+exports.deleteFault = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.role !== 'admin') {
+      return next(new AppError('אין הרשאה למחיקת תקלה', 403));
+    }
+
+    const fault = await db.Fault.findByPk(id);
+    if (!fault) {
+      return next(new AppError('תקלה לא נמצאה', 404));
+    }
+
+    await fault.destroy();
+
+    logger.info(`Fault ${id} deleted by admin`);
+    res.status(204).json();
+  } catch (error) {
+    logger.error('Error deleting fault:', error);
+    next(new AppError('שגיאה במחיקת תקלה', 500));
+  }
+};
+
+// Get fault by ID
+exports.getFaultById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const fault = await db.Fault.findByPk(id, {
+      include: [{
+        model: db.Site,
+        as: 'site',
+        attributes: ['name']
+      }]
+    });
+
+    if (!fault) {
+      return next(new AppError('תקלה לא נמצאה', 404));
+    }
+
+    res.json(fault);
+  } catch (error) {
+    logger.error('Error fetching fault:', error);
+    next(new AppError('שגיאה בשליפת תקלה', 500));
+  }
+};
+
+// Get all faults with filters
+exports.getAllFaults = async (req, res, next) => {
+  try {
+    const { role, id: userId, organization } = req.user;
+    const { startDate, endDate, site, isCritical, maintenance, integrator } = req.query;
+
+    // Base query
+    let whereClause = {};
+
+    // Date range
+    if (startDate && endDate) {
+      whereClause.reportedTime = {
+        [Op.between]: [new Date(startDate), new Date(endDate)]
+      };
+    } else if (startDate) {
+      whereClause.reportedTime = {
+        [Op.gte]: new Date(startDate)
+      };
+    } else if (endDate) {
+      whereClause.reportedTime = {
+        [Op.lte]: new Date(endDate)
+      };
+    }
+
+    // isCritical filter
+    if (isCritical !== undefined) {
+      whereClause.isCritical = isCritical === 'true';
+    }
+
+    // Role-based site access
+    let siteWhere = {};
+    let entrepreneurWhere = {};
+    
+    if (role === 'entrepreneur') {
+      siteWhere.entrepreneurId = userId;
+    } else if (role === 'integrator' || role === 'maintenance') {
+      entrepreneurWhere.organization = organization;
+    }
+    if (site) {
+      siteWhere.id = site;
+    }
+
+    // Build include array
+    let includeArray = [{
+      model: db.Site,
+      as: 'site',
+      where: Object.keys(siteWhere).length > 0 ? siteWhere : undefined,
+      attributes: ['id', 'name'],
+      include: [{
+        model: db.User,
+        as: 'entrepreneur',
+        where: Object.keys(entrepreneurWhere).length > 0 ? entrepreneurWhere : undefined,
+        attributes: ['organization']
+      }]
+    }];
+
+    // Add maintenance user
+    if (maintenance) {
+      includeArray.push({
+        model: db.User,
+        as: 'maintenanceUser',
+        where: { id: maintenance },
+        attributes: ['firstName', 'lastName'],
+        required: true
+      });
+    } else {
+      includeArray.push({
+        model: db.User,
+        as: 'maintenanceUser',
+        attributes: ['firstName', 'lastName'],
+        required: false
+      });
+    }
+
+    // Add integrator user
+    if (integrator) {
+      includeArray.push({
+        model: db.User,
+        as: 'integratorUser',
+        where: { id: integrator },
+        attributes: ['firstName', 'lastName'],
+        required: true
+      });
+    } else {
+      includeArray.push({
+        model: db.User,
+        as: 'integratorUser',
+        attributes: ['firstName', 'lastName'],
+        required: false
+      });
+    }
+
+    // Add control center user
+    includeArray.push({
+      model: db.User,
+      as: 'controlCenterUser',
+      attributes: ['firstName', 'lastName'],
+      required: false
+    });
+
+    // Execute query
+    const faults = await db.Fault.findAll({
+      where: whereClause,
+      include: includeArray,
+      order: [['reportedTime', 'DESC']]
+    });
+
+    // Format response
+    const formattedFaults = faults.map(fault => ({
+      id: fault.id,
+      site: {
+        id: fault.site.id,
+        name: fault.site.name,
+        organization: fault.site.entrepreneur.organization
+      },
+      maintenanceUser: fault.maintenanceUser ? {
+        id: fault.maintenanceUser.id,
+        name: `${fault.maintenanceUser.firstName} ${fault.maintenanceUser.lastName}`
+      } : null,
+      integratorUser: fault.integratorUser ? {
+        id: fault.integratorUser.id,
+        name: `${fault.integratorUser.firstName} ${fault.integratorUser.lastName}`
+      } : null,
+      controlCenterUser: fault.controlCenterUser ? {
+        name: `${fault.controlCenterUser.firstName} ${fault.controlCenterUser.lastName}`
+      } : null,
+      type: fault.type,
+      description: fault.description,
+      technician: fault.technician,
+      isCritical: fault.isCritical,
+      reportedTime: fault.reportedTime,
+      closedTime: fault.closedTime,
+      status: fault.status,
+      lastUpdatedTime: fault.lastUpdatedTime
+    }));
+
+    res.json(formattedFaults);
+  } catch (error) {
+    logger.error('Error fetching faults:', error);
+    next(new AppError('שגיאה בשליפת תקלות', 500));
+  }
+};

@@ -18,53 +18,76 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      description: {
-        type: Sequelize.TEXT,
+      maintenanceUserId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
+      },
+      integratorUserId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
+      },
+      controlCenterUserId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
+      },
+      type: {
+        type: Sequelize.ENUM('גדר', 'מצלמות', 'תקשורת', 'אחר'),
         allowNull: false
       },
-      location: {
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      technician: {
         type: Sequelize.STRING,
+        allowNull: true
+      },
+      isCritical: {
+        type: Sequelize.BOOLEAN,
         allowNull: false,
-        defaultValue: 'לא צוין'
+        defaultValue: false
       },
       status: {
-        type: Sequelize.ENUM('פתוח', 'סגור'),
+        type: Sequelize.ENUM('פתוח', 'בטיפול', 'סגור'),
         defaultValue: 'פתוח'
       },
       reportedBy: {
         type: Sequelize.STRING,
-        allowNull: false,
-        defaultValue: 'אימייל'
+        allowNull: false
       },
       reportedTime: {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.NOW
       },
-      entrepreneurName: {
-        type: Sequelize.STRING,
-        allowNull: false
+      lastEmailTime: {
+        type: Sequelize.DATE,
+        allowNull: true
       },
-      siteName: {
-        type: Sequelize.STRING,
-        allowNull: false
-      },
-      reporterName: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        defaultValue: 'לא ידוע'
-      },
-      contactNumber: {
-        type: Sequelize.STRING,
-        allowNull: true,
-        defaultValue: 'לא זמין'
-      },
-      emailSubject: {
+      lastUpdatedBy: {
         type: Sequelize.STRING,
         allowNull: true
       },
-      emailSender: {
-        type: Sequelize.STRING,
+      lastUpdatedTime: {
+        type: Sequelize.DATE,
         allowNull: true
       },
       closedTime: {
@@ -74,27 +97,6 @@ module.exports = {
       closedBy: {
         type: Sequelize.STRING,
         allowNull: true
-      },
-      closureNotes: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },
-      acknowledgedTime: {
-        type: Sequelize.DATE,
-        allowNull: true
-      },
-      disabling: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
-      },
-      createdByInspectionId: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'Inspections',
-          key: 'id'
-        }
       },
       createdAt: {
         allowNull: false,
