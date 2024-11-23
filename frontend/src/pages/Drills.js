@@ -14,10 +14,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getDrillsBySite } from '../services/api';
 import FilterBar from '../components/FilterBar';
+import Sidebar from '../components/Sidebar';
 import { colors } from '../styles/colors';
+import { useAuth } from '../context/AuthContext';
 
 const Drills = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [drills, setDrills] = useState([]);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -131,10 +134,10 @@ const Drills = () => {
       if (!filters.site) return;
 
       try {
+        // Only send site and date filters to backend
         const response = await getDrillsBySite(filters.site, {
           startDate: filters.startDate.toISOString(),
           endDate: filters.endDate.toISOString(),
-          drillType: filters.drillType,
           securityOfficer: filters.securityOfficer
         });
 
@@ -145,7 +148,12 @@ const Drills = () => {
           return dateB - dateA;
         });
 
-        setDrills(sortedDrills);
+        // Filter by drill type on the frontend
+        const filteredDrills = filters.drillType
+          ? sortedDrills.filter(drill => drill.formData?.drill_type === filters.drillType)
+          : sortedDrills;
+
+        setDrills(filteredDrills);
         setError(null);
       } catch (error) {
         console.error('Error fetching drills:', error);
@@ -249,19 +257,29 @@ const Drills = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <FilterBar
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        variant="drills"
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar 
+        activeSection="drills"
+        userInfo={{ name: user.firstName }}
       />
-      {error ? (
-        <Typography color="error" align="center" sx={{ mt: 2 }}>
-          {error}
+      <Box sx={{ flexGrow: 1, p: 3 }}>
+        <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
+          תרגילים
         </Typography>
-      ) : (
-        renderTable()
-      )}
+
+        <FilterBar
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          variant="drills"
+        />
+        {error ? (
+          <Typography color="error" align="center" sx={{ mt: 2 }}>
+            {error}
+          </Typography>
+        ) : (
+          renderTable()
+        )}
+      </Box>
     </Box>
   );
 };

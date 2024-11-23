@@ -16,9 +16,12 @@ import {
   Alert,
   Snackbar,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  IconButton
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
+import { dialogStyles } from '../styles/components';
 import { createInspectionType } from '../services/api';
 
 const InspectionTypeForm = ({ onSuccess, onCancel }) => {
@@ -165,7 +168,7 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
   // Get visible fields (non-auto fields)
   const visibleFields = formData.formStructure.filter(field => !field.autoFill);
 
-  return (
+return (
     <Box>
       <Paper sx={{ p: 2, backgroundColor: colors.background.black }}>
         <Typography variant="h6" sx={{ color: colors.text.white, mb: 2 }}>
@@ -181,12 +184,8 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
             required
             sx={{
               mb: 2,
-              '& .MuiOutlinedInput-root': {
-                color: colors.text.white
-              },
-              '& .MuiInputLabel-root': {
-                color: colors.text.grey
-              }
+              '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+              '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
             }}
           />
 
@@ -196,9 +195,9 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
               value={formData.type}
               onChange={(e) => handleInputChange('type', e.target.value)}
               sx={{
-                color: colors.text.white,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: colors.text.grey
+                ...dialogStyles.dialogContent['& .MuiInputBase-root'],
+                '& .MuiSelect-icon': {
+                  color: colors.text.grey
                 }
               }}
             >
@@ -238,19 +237,14 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             <Button
               onClick={onCancel}
-              sx={{ color: colors.text.white }}
+              sx={dialogStyles.cancelButton}
             >
               ביטול
             </Button>
             <Button
               type="submit"
               variant="contained"
-              sx={{
-                backgroundColor: colors.background.orange,
-                '&:hover': {
-                  backgroundColor: colors.background.darkOrange
-                }
-              }}
+              sx={dialogStyles.submitButton}
             >
               צור
             </Button>
@@ -262,43 +256,41 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
       <Dialog
         open={showFieldDialog}
         onClose={() => setShowFieldDialog(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.black,
-            color: colors.text.white
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle>הוסף שדה חדש</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
+          הוסף שדה חדש
+          <IconButton
+            onClick={() => setShowFieldDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <Box sx={{ mt: 2 }}>
             <TextField
               fullWidth
               label="שם השדה"
               value={newField.label}
               onChange={(e) => handleNewFieldChange('label', e.target.value)}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  color: colors.text.white
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.text.grey
-                }
-              }}
+              sx={{ mb: 2 }}
             />
 
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel sx={{ color: colors.text.grey }}>סוג שדה</InputLabel>
+              <InputLabel>סוג שדה</InputLabel>
               <Select
                 value={newField.type}
                 onChange={(e) => handleNewFieldChange('type', e.target.value)}
-                sx={{
-                  color: colors.text.white,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: colors.text.grey
-                  }
-                }}
               >
                 {formData.type === 'drill' ? (
                   <>
@@ -357,14 +349,6 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
                     label="אפשרות חדשה"
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        color: colors.text.white
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: colors.text.grey
-                      }
-                    }}
                   />
                   <Button
                     onClick={handleAddOption}
@@ -382,22 +366,17 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogStyles.dialogActions}>
           <Button
             onClick={() => setShowFieldDialog(false)}
-            sx={{ color: colors.text.white }}
+            sx={dialogStyles.cancelButton}
           >
             ביטול
           </Button>
           <Button
             onClick={handleAddField}
             variant="contained"
-            sx={{
-              backgroundColor: colors.background.orange,
-              '&:hover': {
-                backgroundColor: colors.background.darkOrange
-              }
-            }}
+            sx={dialogStyles.submitButton}
           >
             הוסף
           </Button>

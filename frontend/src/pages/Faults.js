@@ -9,8 +9,10 @@ import {
   DialogActions,
   Button,
   Snackbar,
-  Typography
+  Typography,
+  IconButton
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
 import { 
   getAllFaults, 
@@ -25,8 +27,8 @@ import FilterBar from '../components/FilterBar';
 import NewFaultForm from '../components/NewFaultForm';
 import Sidebar from '../components/Sidebar';
 import FaultList from '../components/FaultList';
-import Logout from '../components/Logout';
 import { colors } from '../styles/colors';
+import { dialogStyles } from '../styles/components';
 import { PERMISSIONS } from '../constants/roles';
 
 const getInitialDateRange = () => {
@@ -359,7 +361,6 @@ const Faults = () => {
         userInfo={{ name: `${user.firstName} ${user.lastName}` }}
         onNewFault={canCreateFault ? () => setNewFaultDialog(true) : null}
       />
-      <Logout />
 
       <Box sx={{ flexGrow: 1, p: 3 }}>
         <FilterBar 
@@ -414,35 +415,40 @@ const Faults = () => {
           onClose={() => setNewFaultDialog(false)}
           maxWidth="sm"
           fullWidth
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.background.darkGrey,
-              border: `1px solid ${colors.border.orange}`
-            }
-          }}
+          sx={dialogStyles.dialog}
         >
-          <DialogTitle sx={{ color: colors.text.white }}>
+          <DialogTitle sx={dialogStyles.dialogTitle}>
             תקלה חדשה
+            <IconButton
+              onClick={() => setNewFaultDialog(false)}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: colors.text.grey,
+                '&:hover': {
+                  color: colors.text.white,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
           </DialogTitle>
-          <DialogContent>
+          <DialogContent sx={dialogStyles.dialogContent}>
             <NewFaultForm onFaultDataChange={setNewFault} />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={dialogStyles.dialogActions}>
             <Button
               onClick={() => setNewFaultDialog(false)}
-              sx={{ color: colors.text.grey }}
+              sx={dialogStyles.cancelButton}
             >
               ביטול
             </Button>
             <Button
               onClick={handleCreateFault}
               variant="contained"
-              sx={{
-                backgroundColor: colors.primary.orange,
-                '&:hover': {
-                  backgroundColor: colors.primary.orangeHover
-                }
-              }}
+              sx={dialogStyles.submitButton}
             >
               צור
             </Button>

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { sidebarStyles } from '../styles/components';
 import SidebarItem from './SidebarItem';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import HomeIcon from '@mui/icons-material/Home';
+import LogoutIcon from '@mui/icons-material/Logout';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -26,13 +26,22 @@ const Sidebar = ({
 }) => {
   const navigate = useNavigate();
   const [openSubmenu, setOpenSubmenu] = useState(null);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   const currentDate = new Intl.DateTimeFormat('he-IL', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
   }).format(new Date());
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
 
   const handleMenuClick = (itemId, onClick) => {
     // Only toggle submenu for items that have subItems
@@ -56,7 +65,14 @@ const Sidebar = ({
     if (!userInfo) return null;
 
     return (
-      <Box sx={sidebarStyles.userInfo}>
+      <Box 
+        sx={{
+          ...sidebarStyles.userInfo,
+          cursor: 'pointer',
+          '&:hover': { opacity: 0.8 }
+        }}
+        onClick={() => navigate('/')}
+      >
         <Avatar sx={{ bgcolor: 'primary.main' }}>
           <PersonOutlineIcon />
         </Avatar>
@@ -70,13 +86,16 @@ const Sidebar = ({
         </Box>
         <Box sx={{ marginLeft: 'auto' }}>
           <IconButton 
-            onClick={() => navigate('/')} 
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent navigation to home
+              handleLogout();
+            }} 
             sx={{ 
               color: 'inherit',
               '&:hover': { opacity: 0.8 }
             }}
           >
-            <HomeIcon />
+            <LogoutIcon />
           </IconButton>
         </Box>
       </Box>

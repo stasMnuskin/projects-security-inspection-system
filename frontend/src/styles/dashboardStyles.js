@@ -4,28 +4,29 @@ export const dashboardStyles = {
   filterBar: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
+    gap: { xs: '8px', sm: '12px' },
+    padding: { xs: '8px', sm: '12px 16px' },
     backgroundColor: colors.background.darkGrey,
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
-    marginBottom: '20px',
-    flexDirection: 'row-reverse', // For RTL layout
-    justifyContent: 'flex-start'
+    marginBottom: { xs: '12px', sm: '20px' },
+    flexDirection: { xs: 'column', sm: 'row-reverse' }, // Stack on mobile, row-reverse for RTL on larger screens
+    justifyContent: 'flex-start',
+    width: '100%',
   },
   filterIcon: {
     color: colors.text.white,
-    marginLeft: '8px'
+    marginLeft: { xs: '0', sm: '8px' }
   },
   filterText: {
     color: colors.text.white,
-    fontSize: '1rem',
+    fontSize: { xs: '0.875rem', sm: '1rem' },
     fontWeight: 'normal'
   },
   filterSelect: {
     backgroundColor: colors.background.darkGrey,
     color: colors.text.white,
-    minWidth: '120px',
+    minWidth: { xs: '100%', sm: '120px' },
     '& .MuiOutlinedInput-root': {
       color: colors.text.white,
       backgroundColor: colors.background.darkGrey,
@@ -41,7 +42,7 @@ export const dashboardStyles = {
       }
     },
     '& .MuiSelect-select': {
-      padding: '8px 12px'
+      padding: { xs: '12px', sm: '8px 12px' }, // Larger touch target on mobile
     },
     '& .MuiSvgIcon-root': {
       color: colors.text.grey
@@ -49,7 +50,7 @@ export const dashboardStyles = {
   },
   datePicker: {
     backgroundColor: colors.background.darkGrey,
-    minWidth: '120px',
+    minWidth: { xs: '100%', sm: '120px' },
     '& .MuiOutlinedInput-root': {
       color: colors.text.white,
       backgroundColor: colors.background.darkGrey,
@@ -65,7 +66,7 @@ export const dashboardStyles = {
       }
     },
     '& .MuiInputBase-input': {
-      padding: '8px 12px',
+      padding: { xs: '12px', sm: '8px 12px' }, // Larger touch target on mobile
       color: colors.text.white
     },
     '& .MuiSvgIcon-root': {
@@ -74,44 +75,49 @@ export const dashboardStyles = {
   },
   overviewContainer: {
     display: 'flex',
-    gap: '20px',
-    marginBottom: '20px',
+    flexDirection: { xs: 'column', sm: 'row' },
+    gap: { xs: '12px', sm: '20px' },
+    marginBottom: { xs: '12px', sm: '20px' },
     backgroundColor: colors.background.darkGrey,
-    padding: '16px',
+    padding: { xs: '12px', sm: '16px' },
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`
   },
   overviewBox: {
     flex: 1,
     backgroundColor: colors.background.black,
-    padding: '16px',
+    padding: { xs: '12px', sm: '16px' },
     borderRadius: '4px',
     '& h6': {
       color: colors.text.grey,
-      marginBottom: '8px',
-      fontSize: '1rem',
+      marginBottom: { xs: '4px', sm: '8px' },
+      fontSize: { xs: '0.875rem', sm: '1rem' },
       fontWeight: 'normal'
     },
     '& h3': {
       color: colors.text.white,
-      fontSize: '2.5rem',
+      fontSize: { xs: '2rem', sm: '2.5rem' },
       fontWeight: 'bold'
     }
   },
   faultTablesContainer: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '20px'
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, 1fr)',
+      md: 'repeat(3, 1fr)'
+    },
+    gap: { xs: '12px', sm: '20px' }
   },
   faultTable: {
     backgroundColor: colors.background.darkGrey,
-    padding: '16px',
+    padding: { xs: '12px', sm: '16px' },
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     '& h6': {
       color: colors.text.white,
-      marginBottom: '12px',
-      fontSize: '1rem',
+      marginBottom: { xs: '8px', sm: '12px' },
+      fontSize: { xs: '0.875rem', sm: '1rem' },
       fontWeight: 'normal'
     },
     '& table': {
@@ -120,17 +126,17 @@ export const dashboardStyles = {
       '& th': {
         color: colors.text.grey,
         textAlign: 'right',
-        padding: '8px',
+        padding: { xs: '6px', sm: '8px' },
         borderBottom: `1px solid ${colors.border.grey}`,
         fontWeight: 'normal',
-        fontSize: '0.9rem'
+        fontSize: { xs: '0.8rem', sm: '0.9rem' }
       },
       '& td': {
         color: colors.text.white,
         textAlign: 'right',
-        padding: '8px',
+        padding: { xs: '6px', sm: '8px' },
         borderBottom: `1px solid ${colors.border.grey}`,
-        fontSize: '0.9rem'
+        fontSize: { xs: '0.8rem', sm: '0.9rem' }
       },
       '& tr:last-child td': {
         borderBottom: 'none'

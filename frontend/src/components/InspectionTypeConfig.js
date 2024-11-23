@@ -25,7 +25,9 @@ import {
   Divider
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
+import { dialogStyles } from '../styles/components';
 import { 
   getInspectionTypes, 
   updateInspectionType, 
@@ -328,7 +330,7 @@ const InspectionTypeConfig = () => {
     }
   };
 
-  return (
+return (
     <Box>
       <Typography variant="h5" gutterBottom sx={{ color: colors.text.white }}>
         איפיון ביקורת/תרגיל
@@ -544,15 +546,27 @@ const InspectionTypeConfig = () => {
       <Dialog
         open={showNewDrillTypeDialog}
         onClose={() => !isLoading && setShowNewDrillTypeDialog(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.black,
-            color: colors.text.white
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle>הוסף סוג תרגיל</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
+          הוסף סוג תרגיל
+          <IconButton
+            onClick={() => !isLoading && setShowNewDrillTypeDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <Box sx={{ mt: 2 }}>
             <TextField
               fullWidth
@@ -560,22 +574,14 @@ const InspectionTypeConfig = () => {
               value={newDrillType}
               onChange={(e) => setNewDrillType(e.target.value)}
               disabled={isLoading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: colors.text.white
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.text.grey
-                }
-              }}
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogStyles.dialogActions}>
           <Button
             onClick={() => setShowNewDrillTypeDialog(false)}
             disabled={isLoading}
-            sx={{ color: colors.text.white }}
+            sx={dialogStyles.cancelButton}
           >
             ביטול
           </Button>
@@ -583,12 +589,7 @@ const InspectionTypeConfig = () => {
             onClick={handleAddDrillType}
             disabled={isLoading || !newDrillType?.trim()}
             variant="contained"
-            sx={{
-              backgroundColor: colors.background.orange,
-              '&:hover': {
-                backgroundColor: colors.background.darkOrange
-              }
-            }}
+            sx={dialogStyles.submitButton}
           >
             {isLoading ? <CircularProgress size={24} /> : 'הוסף'}
           </Button>
@@ -599,15 +600,27 @@ const InspectionTypeConfig = () => {
       <Dialog
         open={showNewFieldDialog}
         onClose={() => !isLoading && setShowNewFieldDialog(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.black,
-            color: colors.text.white
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle>הוסף שדה חדש</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
+          הוסף שדה חדש
+          <IconButton
+            onClick={() => !isLoading && setShowNewFieldDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <Box sx={{ mt: 2 }}>
             <TextField
               fullWidth
@@ -615,28 +628,14 @@ const InspectionTypeConfig = () => {
               value={newField.label}
               onChange={(e) => setNewField(prev => ({ ...prev, label: e.target.value }))}
               disabled={isLoading}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  color: colors.text.white
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.text.grey
-                }
-              }}
+              sx={{ mb: 2 }}
             />
             <FormControl fullWidth>
-              <InputLabel sx={{ color: colors.text.grey }}>סוג שדה</InputLabel>
+              <InputLabel>סוג שדה</InputLabel>
               <Select
                 value={newField.type}
                 onChange={(e) => setNewField(prev => ({ ...prev, type: e.target.value }))}
                 disabled={isLoading}
-                sx={{
-                  color: colors.text.white,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: colors.text.grey
-                  }
-                }}
               >
                 <MenuItem value="boolean">תקין/לא תקין</MenuItem>
                 <MenuItem value="textarea">טקסט</MenuItem>
@@ -644,11 +643,11 @@ const InspectionTypeConfig = () => {
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogStyles.dialogActions}>
           <Button
             onClick={() => setShowNewFieldDialog(false)}
             disabled={isLoading}
-            sx={{ color: colors.text.white }}
+            sx={dialogStyles.cancelButton}
           >
             ביטול
           </Button>
@@ -656,12 +655,7 @@ const InspectionTypeConfig = () => {
             onClick={handleAddField}
             disabled={isLoading || !newField.label?.trim()}
             variant="contained"
-            sx={{
-              backgroundColor: colors.background.orange,
-              '&:hover': {
-                backgroundColor: colors.background.darkOrange
-              }
-            }}
+            sx={dialogStyles.submitButton}
           >
             {isLoading ? <CircularProgress size={24} /> : 'הוסף'}
           </Button>

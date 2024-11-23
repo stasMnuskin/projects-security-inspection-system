@@ -22,9 +22,9 @@ const Logout = () => {
     <IconButton
       onClick={handleLogout}
       sx={{
-        position: 'absolute',
+        position: 'fixed',
         top: '1rem',
-        left: '1rem',
+        right: '1rem',
         color: colors.text.white,
         '&:hover': { opacity: 0.8 },
         zIndex: 1000

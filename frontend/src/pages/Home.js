@@ -9,6 +9,7 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { colors } from '../styles/colors';
 
 const MenuItem = ({ icon: Icon, label, onClick }) => (
   <Box sx={homeStyles.menuItem} onClick={onClick}>
@@ -46,9 +47,7 @@ const menuItems = [
 
 function Home() {
   const navigate = useNavigate();
-  // const { user, logout } = useAuth();
   const { logout } = useAuth();
-
 
   const handleMenuClick = (path) => {
     // Navigation will be handled by ProtectedRoute component's role check
@@ -66,25 +65,31 @@ function Home() {
 
   return (
     <Box sx={layoutStyles.root}>
-      <Box sx={{ 
-        position: 'absolute', 
-        top: '1rem', 
-        left: '1rem',
-        zIndex: 1000
-      }}>
-        <IconButton
-          onClick={handleLogout}
-          sx={{
-            color: 'white',
-            '&:hover': { opacity: 0.8 }
-          }}
-        >
-          <LogoutIcon />
-        </IconButton>
-      </Box>
-      <Box component="img" sx={layoutStyles.logo} />
+      {/* <Box component="img" sx={layoutStyles.logo} /> */}
       <Box sx={homeStyles.container}>
         <Box sx={homeStyles.menuContainer}>
+          {/* Logout Button */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            marginBottom: '1rem',
+            marginTop: '-0.5rem',
+            marginRight: '-0.5rem'
+          }}>
+            <IconButton
+              onClick={handleLogout}
+              sx={{
+                color: colors.text.white,
+                '&:hover': { 
+                  color: colors.primary.orange,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <LogoutIcon />
+            </IconButton>
+          </Box>
+
           <Typography sx={homeStyles.title} color="error">
              ברוכים הבאים לסול-טן, לאן תרצו לגשת? 
           </Typography>

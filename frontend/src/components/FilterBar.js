@@ -28,6 +28,7 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
   const timeoutRef = useRef(null);
   const filterValuesRef = useRef({});
 
+  // Fetch all options including drill types
   useEffect(() => {
     const fetchOptions = async () => {
       try {
@@ -36,12 +37,14 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
           sitesData,
           securityOfficersData,
           maintenanceData,
-          integratorsData
+          integratorsData,
+          inspectionTypesData
         ] = await Promise.all([
           getSites(),
           getSecurityOfficers().catch(() => []),
           getMaintenanceStaff().catch(() => []),
-          getIntegrators().catch(() => [])
+          getIntegrators().catch(() => []),
+          variant === 'drills' ? getInspectionTypes() : Promise.resolve(null)
         ]);
 
         // Filter sites based on user role and organization
@@ -63,16 +66,15 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
           filteredIntegrators = integratorsData.filter(u => u.organization === user.organization);
         }
 
-        // Get drill types if in drills variant and no drillTypes prop provided
+        // Get drill types from inspection types
         let fetchedDrillTypes = [];
-        if (variant === 'drills' && drillTypes.length === 0) {
-          try {
-            const inspectionTypesData = await getInspectionTypes();
-            fetchedDrillTypes = inspectionTypesData?.data
-              ?.filter(type => type.type === 'drill')
-              ?.map(type => type.name) || [];
-          } catch (error) {
-            console.error('Error fetching drill types:', error);
+        if (variant === 'drills' && inspectionTypesData?.data) {
+          const drillType = inspectionTypesData.data.find(type => type.type === 'drill');
+          if (drillType) {
+            const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
+            if (drillTypeField?.options) {
+              fetchedDrillTypes = drillTypeField.options;
+            }
           }
         }
 

@@ -6,6 +6,7 @@ export const colors = {
   background: {
     black: 'rgb(13, 13, 13)',
     darkGrey: 'rgba(13, 13, 13, 0.19)',
+    darkGreyOpaque: 'rgb(25, 25, 25)', // New opaque dark grey for dialogs
     hover: 'rgba(166, 166, 166, 0.1)',
     active: 'rgba(166, 166, 166, 0.2)',
     activeHover: 'rgba(166, 166, 166, 0.3)'

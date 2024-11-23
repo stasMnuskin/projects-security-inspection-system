@@ -10,15 +10,18 @@ import {
   FormControlLabel,
   Switch,
   Autocomplete,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Typography
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
-import { dashboardStyles } from '../styles/dashboardStyles';
+import { dialogStyles } from '../styles/components';
 import { getUsers, getSites } from '../services/api';
 
 const FAULT_TYPES = ['גדר', 'מצלמות', 'תקשורת', 'אחר'];
 
-const NewFaultForm = ({ onFaultDataChange }) => {
+const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [entrepreneurs, setEntrepreneurs] = useState([]);
   const [allSites, setAllSites] = useState([]);
@@ -29,7 +32,7 @@ const NewFaultForm = ({ onFaultDataChange }) => {
     type: '',
     description: '',
     siteId: '',
-    site: null, // Add site object to store full site information
+    site: null,
     isCritical: false
   });
 
@@ -41,7 +44,6 @@ const NewFaultForm = ({ onFaultDataChange }) => {
           getSites()
         ]);
 
-        // Filter entrepreneurs from users and add their sites
         const entrepreneursList = usersData.filter(user => user.role === 'entrepreneur');
         const sitesWithEntrepreneurs = sitesData.map(site => {
           const entrepreneur = entrepreneursList.find(e => e.id === site.entrepreneurId);
@@ -79,11 +81,9 @@ const NewFaultForm = ({ onFaultDataChange }) => {
   const handleSiteChange = (_, value) => {
     setSelectedSite(value);
     if (value) {
-      // Find the entrepreneur for this site
       const siteWithEntrepreneur = allSites.find(site => site.id === value.id);
       if (siteWithEntrepreneur?.entrepreneur) {
         setSelectedEntrepreneur(siteWithEntrepreneur.entrepreneur);
-        // Update filtered sites to show only this entrepreneur's sites
         const entrepreneurSites = allSites.filter(
           site => site.entrepreneurId === siteWithEntrepreneur.entrepreneur.id
         );
@@ -91,10 +91,9 @@ const NewFaultForm = ({ onFaultDataChange }) => {
       }
       updateFaultData({ 
         siteId: value.id,
-        site: value // Store the full site object
+        site: value
       });
     } else {
-      // Clear both site and entrepreneur when site is cleared
       setSelectedEntrepreneur(null);
       setFilteredSites(allSites);
       updateFaultData({ siteId: '', site: null });
@@ -111,7 +110,29 @@ const NewFaultForm = ({ onFaultDataChange }) => {
   };
 
   return (
-    <Box sx={{ display: 'grid', gap: 2, mt: 2 }}>
+    <Box sx={{ display: 'grid', gap: 2, mt: 2, position: 'relative' }}>
+      {onClose && (
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            right: -12,
+            top: -12,
+            color: colors.text.grey,
+            '&:hover': {
+              color: colors.text.white,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      )}
+
+      <Typography variant="h6" sx={{ color: colors.text.white, mb: 2 }}>
+        פרטי התקלה
+      </Typography>
+
       {/* Entrepreneur Selection */}
       <Autocomplete
         loading={loading}
@@ -124,7 +145,11 @@ const NewFaultForm = ({ onFaultDataChange }) => {
           <TextField
             {...params}
             label="יזם"
-            sx={dashboardStyles.filterSelect}
+            sx={{
+              ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+              '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+              '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
+            }}
             InputProps={{
               ...params.InputProps,
               endAdornment: (
@@ -150,7 +175,11 @@ const NewFaultForm = ({ onFaultDataChange }) => {
           <TextField
             {...params}
             label="אתר"
-            sx={dashboardStyles.filterSelect}
+            sx={{
+              ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+              '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+              '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
+            }}
             InputProps={{
               ...params.InputProps,
               endAdornment: (
@@ -170,7 +199,12 @@ const NewFaultForm = ({ onFaultDataChange }) => {
         <Select
           value={faultData.type}
           onChange={(e) => updateFaultData({ type: e.target.value })}
-          sx={dashboardStyles.filterSelect}
+          sx={{
+            ...dialogStyles.dialogContent['& .MuiInputBase-root'],
+            '& .MuiSelect-icon': {
+              color: colors.text.grey
+            }
+          }}
         >
           {FAULT_TYPES.map(type => (
             <MenuItem key={type} value={type}>{type}</MenuItem>
@@ -188,13 +222,9 @@ const NewFaultForm = ({ onFaultDataChange }) => {
           onChange={(e) => updateFaultData({ description: e.target.value })}
           required={faultData.type === 'אחר'}
           sx={{
-            '& .MuiOutlinedInput-root': {
-              color: colors.text.white,
-              backgroundColor: colors.background.darkGrey
-            },
-            '& .MuiInputLabel-root': {
-              color: colors.text.grey
-            }
+            ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+            '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+            '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
           }}
         />
       )}
@@ -207,20 +237,29 @@ const NewFaultForm = ({ onFaultDataChange }) => {
             onChange={(e) => updateFaultData({ isCritical: e.target.checked })}
             sx={{
               '& .MuiSwitch-switchBase.Mui-checked': {
-                color: colors.primary.orange
+                color: colors.primary.orange,
+                '& + .MuiSwitch-track': {
+                  backgroundColor: colors.primary.orange
+                }
               }
             }}
           />
         }
         label="תקלה משביתה"
-        sx={{ color: colors.text.white }}
+        sx={{ 
+          color: colors.text.white,
+          '& .MuiFormControlLabel-label': {
+            color: colors.text.white
+          }
+        }}
       />
     </Box>
   );
 };
 
 NewFaultForm.propTypes = {
-  onFaultDataChange: PropTypes.func.isRequired
+  onFaultDataChange: PropTypes.func.isRequired,
+  onClose: PropTypes.func
 };
 
 export default NewFaultForm;

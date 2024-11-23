@@ -20,13 +20,15 @@ import {
   Menu,
   MenuItem,
   Snackbar,
-  Alert
+  Alert,
+  IconButton
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
 import { getSites, createSite, updateSite, deleteSite } from '../services/api';
 import { colors } from '../styles/colors';
-import { formStyles } from '../styles/components';
+import { formStyles, dialogStyles } from '../styles/components';
 import { PERMISSIONS } from '../constants/roles';
 import SiteForm from '../components/SiteForm';
 import InspectionTypeConfig from '../components/InspectionTypeConfig';
@@ -289,17 +291,27 @@ function Sites({ mode = 'list', onModeChange }) {
         onClose={handleFormClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.black,
-            color: colors.text.white
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
           {selectedSite ? 'עריכת אתר' : 'הוספת אתר'}
+          <IconButton
+            onClick={handleFormClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <SiteForm
             initialData={selectedSite}
             onSubmit={handleFormSubmit}
@@ -313,30 +325,42 @@ function Sites({ mode = 'list', onModeChange }) {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.black,
-            color: colors.text.white
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle>האם למחוק את האתר?</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
+          האם למחוק את האתר?
+          <IconButton
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <Typography>
             {selectedSite && `האם אתה בטוח שברצונך למחוק את האתר "${selectedSite.name}"?`}
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogStyles.dialogActions}>
           <Button 
             onClick={() => setDeleteDialogOpen(false)}
-            sx={{ color: colors.text.white }}
+            sx={dialogStyles.cancelButton}
           >
             ביטול
           </Button>
           <Button 
             onClick={handleDeleteConfirm}
-            color="error"
             disabled={loading}
+            sx={dialogStyles.submitButton}
           >
             {loading ? 'מוחק...' : 'מחק'}
           </Button>

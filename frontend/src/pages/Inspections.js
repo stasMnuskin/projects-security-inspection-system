@@ -185,7 +185,7 @@ const Inspections = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
         activeSection="inspections"
         userInfo={{ name: user.firstName }}

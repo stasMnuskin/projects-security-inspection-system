@@ -8,11 +8,13 @@ import {
   Grid,
   Autocomplete,
   IconButton,
-  Chip
+  Chip,
+  Typography
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { getUsers } from '../services/api';
 import { colors } from '../styles/colors';
+import { dialogStyles } from '../styles/components';
 
 const SITE_TYPES = [
   { value: 'radar', label: 'מכ"מ' },
@@ -85,6 +87,10 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
 
   return (
     <Box sx={{ p: 2 }}>
+      <Typography variant="h6" sx={{ color: colors.text.white, mb: 2 }}>
+        {initialData ? 'עריכת אתר' : 'הוספת אתר'}
+      </Typography>
+      
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <FormControl fullWidth>
@@ -94,13 +100,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
               value={siteDetails.name}
               onChange={(e) => setSiteDetails(prev => ({ ...prev, name: e.target.value }))}
               sx={{
-                backgroundColor: colors.background.darkGrey,
-                '& .MuiOutlinedInput-root': {
-                  color: colors.text.white
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.text.grey
-                }
+                ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
               }}
             />
           </FormControl>
@@ -126,13 +128,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   label="יזם"
                   required
                   sx={{
-                    backgroundColor: colors.background.darkGrey,
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
+                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                   }}
                 />
               )}
@@ -158,13 +156,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   label="סוג האתר"
                   required
                   sx={{
-                    backgroundColor: colors.background.darkGrey,
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
+                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                   }}
                 />
               )}
@@ -204,13 +198,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   {...params} 
                   label="אינטגרטור"
                   sx={{
-                    backgroundColor: colors.background.darkGrey,
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
+                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                   }}
                 />
               )}
@@ -250,13 +240,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   {...params} 
                   label="אחזקה"
                   sx={{
-                    backgroundColor: colors.background.darkGrey,
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
+                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                   }}
                 />
               )}
@@ -283,13 +269,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   {...params} 
                   label="מוקד"
                   sx={{
-                    backgroundColor: colors.background.darkGrey,
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
+                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                   }}
                 />
               )}
@@ -298,6 +280,14 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
         </Grid>
 
         {/* Custom Fields */}
+        {customFields.length > 0 && (
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ color: colors.text.white, mb: 1 }}>
+              שדות נוספים
+            </Typography>
+          </Grid>
+        )}
+        
         {customFields.map((field, index) => (
           <Grid item xs={12} key={index} container spacing={2}>
             <Grid item xs={6}>
@@ -307,13 +297,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 value={field.name}
                 onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
                 sx={{
-                  backgroundColor: colors.background.darkGrey,
-                  '& .MuiOutlinedInput-root': {
-                    color: colors.text.white
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: colors.text.grey
-                  }
+                  ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                  '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                  '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                 }}
               />
             </Grid>
@@ -324,13 +310,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 value={field.value}
                 onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
                 sx={{
-                  backgroundColor: colors.background.darkGrey,
-                  '& .MuiOutlinedInput-root': {
-                    color: colors.text.white
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: colors.text.grey
-                  }
+                  ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+                  '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
+                  '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
                 }}
               />
             </Grid>
@@ -356,12 +338,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
             <Button
               variant="contained"
               onClick={handleSubmit}
-              sx={{
-                backgroundColor: colors.background.orange,
-                '&:hover': {
-                  backgroundColor: colors.background.darkOrange
-                }
-              }}
+              sx={dialogStyles.submitButton}
             >
               {submitLabel}
             </Button>
@@ -370,13 +347,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
             <Button
               variant="outlined"
               onClick={onCancel}
-              sx={{
-                color: colors.text.white,
-                borderColor: colors.text.white,
-                '&:hover': {
-                  borderColor: colors.text.grey
-                }
-              }}
+              sx={dialogStyles.cancelButton}
             >
               ביטול
             </Button>

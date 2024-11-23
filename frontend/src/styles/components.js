@@ -1,8 +1,8 @@
 import { colors } from './colors';
-import { createTheme } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
-// Create and export the theme
-export const theme = createTheme({
+// Create base theme
+let theme = createTheme({
   direction: 'rtl',
   palette: {
     mode: 'dark',
@@ -11,7 +11,7 @@ export const theme = createTheme({
     },
     background: {
       default: colors.background.black,
-      paper: colors.background.darkGrey,
+      paper: colors.background.darkGreyOpaque,
     },
     text: {
       primary: colors.text.white,
@@ -20,6 +20,24 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: 'Assistant, sans-serif',
+    h4: {
+      fontSize: '1.5rem',
+      '@media (min-width:600px)': {
+        fontSize: '1.75rem',
+      },
+      '@media (min-width:960px)': {
+        fontSize: '2rem',
+      },
+    },
+    h6: {
+      fontSize: '1rem',
+      '@media (min-width:600px)': {
+        fontSize: '1.15rem',
+      },
+      '@media (min-width:960px)': {
+        fontSize: '1.25rem',
+      },
+    },
   },
   components: {
     MuiCssBaseline: {
@@ -27,30 +45,191 @@ export const theme = createTheme({
         body: {
           backgroundColor: colors.background.black,
           color: colors.text.white,
+          '@media (max-width:600px)': {
+            fontSize: '14px',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: colors.background.darkGreyOpaque,
+          borderRadius: '8px',
+          border: `1px solid ${colors.border.orangeLight}`,
+          maxWidth: '600px',
+          width: '100%',
+          margin: '16px',
+          position: 'relative',
+          '@media (max-width:600px)': {
+            margin: '8px',
+            width: 'calc(100% - 16px)',
+          },
+          '& .MuiDialogTitle-root': {
+            padding: '20px 24px',
+            '@media (max-width:600px)': {
+              padding: '16px',
+            },
+            borderBottom: `1px solid ${colors.border.grey}`,
+            marginBottom: '0',
+            '& .MuiTypography-root': {
+              fontSize: '1.25rem',
+              fontWeight: 500,
+              color: colors.text.white,
+            },
+            '& .MuiIconButton-root': {
+              position: 'absolute',
+              right: '8px',
+              top: '8px',
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            },
+          },
+          '& .MuiDialogContent-root': {
+            padding: '24px',
+            '@media (max-width:600px)': {
+              padding: '16px',
+            },
+            backgroundColor: colors.background.darkGreyOpaque,
+          },
+          '& .MuiDialogActions-root': {
+            padding: '16px 24px',
+            '@media (max-width:600px)': {
+              padding: '12px 16px',
+            },
+            borderTop: `1px solid ${colors.border.grey}`,
+            backgroundColor: colors.background.darkGreyOpaque,
+          },
         },
       },
     },
     MuiSelect: {
       styleOverrides: {
         root: {
-          backgroundColor: colors.background.darkGrey,
-          '&:hover': {
-            backgroundColor: colors.background.darkGrey,
+          backgroundColor: colors.background.darkGreyOpaque,
+          color: colors.text.white,
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: colors.border.grey,
           },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: colors.border.orange,
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: colors.primary.orange,
+          },
+          '& .MuiSelect-icon': {
+            color: colors.text.grey,
+          },
+          '@media (max-width:600px)': {
+            minHeight: '44px',
+          },
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          color: colors.text.white,
+          '&:hover': {
+            backgroundColor: colors.background.hover,
+          },
+          '&.Mui-selected': {
+            backgroundColor: colors.background.active,
+            '&:hover': {
+              backgroundColor: colors.background.activeHover,
+            },
+          },
+          '@media (max-width:600px)': {
+            minHeight: '40px',
+          },
+        },
+      },
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: colors.background.darkGreyOpaque,
+          border: `1px solid ${colors.border.grey}`,
+          '& .MuiAutocomplete-option': {
+            color: colors.text.white,
+            '&[aria-selected="true"]': {
+              backgroundColor: colors.background.active,
+            },
+            '&:hover': {
+              backgroundColor: colors.background.hover,
+            },
+          },
+        },
+        popupIndicator: {
+          color: colors.text.grey,
+        },
+        clearIndicator: {
+          color: colors.text.grey,
         },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
+          backgroundColor: colors.background.darkGreyOpaque,
+          color: colors.text.white,
           '& .MuiOutlinedInput-notchedOutline': {
             borderColor: colors.border.grey,
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: colors.primary.orange,
+            borderColor: colors.border.orange,
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: colors.primary.orange,
+          },
+          '& .MuiInputAdornment-root': {
+            color: colors.text.grey,
+          },
+          '@media (max-width:600px)': {
+            minHeight: '44px',
+          },
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 500,
+          padding: '8px 16px',
+          borderRadius: '4px',
+          '@media (max-width:600px)': {
+            minHeight: '44px',
+            fontSize: '1rem',
+          },
+        },
+        contained: {
+          backgroundColor: colors.primary.orange,
+          color: colors.text.white,
+          '&:hover': {
+            backgroundColor: colors.primary.orangeHover,
+          },
+        },
+        outlined: {
+          borderColor: colors.border.grey,
+          color: colors.text.white,
+          '&:hover': {
+            borderColor: colors.text.white,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          },
+        },
+      },
+    },
+    MuiTable: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            '& .MuiTableCell-root': {
+              padding: '8px',
+            },
           },
         },
       },
@@ -58,21 +237,152 @@ export const theme = createTheme({
   },
 });
 
+// Make typography responsive
+theme = responsiveFontSizes(theme);
+
+// Export the theme
+export { theme };
+
+// Unified dialog styles
+export const dialogStyles = {
+  dialog: {
+    '& .MuiDialog-paper': {
+      backgroundColor: colors.background.darkGreyOpaque,
+      borderRadius: '8px',
+      border: `1px solid ${colors.border.orangeLight}`,
+      maxWidth: '600px',
+      width: '100%',
+      margin: '16px',
+      '@media (max-width:600px)': {
+        margin: '8px',
+        width: 'calc(100% - 16px)',
+      },
+    }
+  },
+  dialogTitle: {
+    backgroundColor: colors.background.darkGreyOpaque,
+    color: colors.text.white,
+    borderBottom: `1px solid ${colors.border.grey}`,
+    padding: '20px 24px',
+    '@media (max-width:600px)': {
+      padding: '16px',
+    },
+    position: 'relative',
+    '& .MuiTypography-root': {
+      fontSize: '1.25rem',
+      fontWeight: 500
+    },
+    '& .MuiIconButton-root': {
+      position: 'absolute',
+      right: '8px',
+      top: '8px',
+      color: colors.text.grey,
+      '&:hover': {
+        color: colors.text.white,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+      }
+    }
+  },
+  dialogContent: {
+    backgroundColor: colors.background.darkGreyOpaque,
+    padding: '24px',
+    '@media (max-width:600px)': {
+      padding: '16px',
+    },
+    '& .MuiFormControl-root': {
+      marginBottom: '16px',
+      width: '100%'
+    },
+    '& .MuiInputBase-root': {
+      backgroundColor: colors.background.darkGreyOpaque,
+      color: colors.text.white,
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: colors.border.grey
+      },
+      '&:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: colors.border.orange
+      },
+      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: colors.primary.orange
+      }
+    },
+    '& .MuiInputLabel-root': {
+      color: colors.text.grey,
+      '&.Mui-focused': {
+        color: colors.primary.orange
+      }
+    },
+    '& .MuiSelect-icon': {
+      color: colors.text.grey
+    },
+    '& .MuiMenuItem-root': {
+      color: colors.text.white,
+      '&:hover': {
+        backgroundColor: colors.background.hover
+      },
+      '&.Mui-selected': {
+        backgroundColor: colors.background.active,
+        '&:hover': {
+          backgroundColor: colors.background.activeHover
+        }
+      }
+    }
+  },
+  dialogActions: {
+    backgroundColor: colors.background.darkGreyOpaque,
+    borderTop: `1px solid ${colors.border.grey}`,
+    padding: '16px 24px',
+    '@media (max-width:600px)': {
+      padding: '12px 16px',
+    },
+    '& .MuiButton-root': {
+      minWidth: '100px',
+      margin: '0 8px',
+      '&:last-child': {
+        marginRight: 0
+      }
+    }
+  },
+  submitButton: {
+    backgroundColor: colors.primary.orange,
+    color: colors.text.white,
+    '&:hover': {
+      backgroundColor: colors.primary.orangeHover
+    }
+  },
+  cancelButton: {
+    color: colors.text.grey,
+    borderColor: colors.border.grey,
+    '&:hover': {
+      borderColor: colors.text.white,
+      color: colors.text.white,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)'
+    }
+  }
+};
+
 export const layoutStyles = {
   root: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
-    backgroundColor: colors.background.black
+    backgroundColor: colors.background.black,
   },
   logo: {
-    height: '50px',
+    height: '40px',
+    '@media (min-width:600px)': {
+      height: '50px',
+    },
     margin: '1rem'
   },
   pageContainer: {
     display: 'flex',
     flex: 1,
-    gap: 2
+    gap: 2,
+    flexDirection: 'column',
+    '@media (min-width:960px)': {
+      flexDirection: 'row',
+    },
   }
 };
 
@@ -83,10 +393,16 @@ export const pageStyles = {
     alignItems: 'center',
     minHeight: '100vh',
     backgroundColor: colors.background.black,
-    padding: '2rem'
+    padding: '1rem',
+    '@media (min-width:600px)': {
+      padding: '2rem',
+    },
   },
   logo: {
-    height: '60px',
+    height: '50px',
+    '@media (min-width:600px)': {
+      height: '60px',
+    },
     marginBottom: '2rem',
     filter: 'brightness(0) invert(1)'
   }
@@ -94,33 +410,51 @@ export const pageStyles = {
 
 export const sidebarStyles = {
   sidebar: {
-    width: '240px',
+    width: '100%',
+    '@media (min-width:960px)': {
+      width: '240px',
+    },
     backgroundColor: colors.background.darkGrey,
     display: 'flex',
     flexDirection: 'column',
     borderRadius: '8px',
-    margin: '0 1rem',
+    margin: '0.5rem',
+    '@media (min-width:600px)': {
+      margin: '1rem',
+    },
     height: 'fit-content'
   },
   userInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '1rem',
+    gap: '0.5rem',
+    '@media (min-width:600px)': {
+      gap: '1rem',
+    },
     padding: '1rem',
-    borderBottom: `1px solid ${colors.border.main}`,
+    borderBottom: `1px solid ${colors.border.grey}`,
     marginBottom: '1rem'
   },
   userName: {
     color: colors.text.white,
-    fontSize: '1rem',
+    fontSize: '0.875rem',
+    '@media (min-width:600px)': {
+      fontSize: '1rem',
+    },
     fontWeight: 500
   },
   userDate: {
     color: colors.text.lightGrey,
-    fontSize: '0.875rem'
+    fontSize: '0.75rem',
+    '@media (min-width:600px)': {
+      fontSize: '0.875rem',
+    },
   },
   menuContainer: {
-    padding: '1rem',
+    padding: '0.5rem',
+    '@media (min-width:600px)': {
+      padding: '1rem',
+    },
     display: 'flex',
     flexDirection: 'column',
     gap: '0.5rem'
@@ -145,11 +479,17 @@ export const sidebarStyles = {
   },
   sidebarIcon: {
     color: colors.primary.orange,
-    fontSize: '1.5rem'
+    fontSize: '1.25rem',
+    '@media (min-width:600px)': {
+      fontSize: '1.5rem',
+    },
   },
   sidebarText: {
     color: colors.text.white,
-    fontSize: '1rem'
+    fontSize: '0.875rem',
+    '@media (min-width:600px)': {
+      fontSize: '1rem',
+    },
   },
   subItemsContainer: {
     display: 'flex',
@@ -173,7 +513,11 @@ export const formStyles = {
   container: {
     width: '100%',
     maxWidth: '400px',
-    margin: '0 auto'
+    margin: '0 auto',
+    padding: '1rem',
+    '@media (min-width:600px)': {
+      padding: 0,
+    },
   },
   paper: {
     backgroundColor: colors.background.darkGrey,
@@ -181,7 +525,10 @@ export const formStyles = {
     border: `1px solid ${colors.border.orangeLight}`
   },
   formBox: {
-    padding: '2rem',
+    padding: '1rem',
+    '@media (min-width:600px)': {
+      padding: '2rem',
+    },
     display: 'flex',
     flexDirection: 'column',
     gap: '1.5rem'
@@ -189,7 +536,10 @@ export const formStyles = {
   title: {
     color: colors.text.white,
     textAlign: 'center',
-    fontSize: '1.75rem',
+    fontSize: '1.5rem',
+    '@media (min-width:600px)': {
+      fontSize: '1.75rem',
+    },
     fontWeight: 500
   },
   textField: {
@@ -233,11 +583,17 @@ export const formStyles = {
 export const contentStyles = {
   mainContent: {
     flex: 1,
-    padding: '1rem'
+    padding: '0.5rem',
+    '@media (min-width:600px)': {
+      padding: '1rem',
+    },
   },
   pageTitle: {
     color: colors.text.white,
-    marginBottom: '2rem'
+    marginBottom: '1rem',
+    '@media (min-width:600px)': {
+      marginBottom: '2rem',
+    },
   },
   searchField: {
     backgroundColor: colors.background.darkGrey,
@@ -262,10 +618,18 @@ export const contentStyles = {
   },
   listItemText: {
     '& .MuiListItemText-primary': {
-      color: colors.text.white
+      color: colors.text.white,
+      fontSize: '0.875rem',
+      '@media (min-width:600px)': {
+        fontSize: '1rem',
+      },
     },
     '& .MuiListItemText-secondary': {
-      color: colors.text.grey
+      color: colors.text.grey,
+      fontSize: '0.75rem',
+      '@media (min-width:600px)': {
+        fontSize: '0.875rem',
+      },
     }
   }
 };

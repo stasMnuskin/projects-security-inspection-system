@@ -23,9 +23,11 @@ import {
 } from '@mui/material';
 import { 
   Delete as DeleteIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { colors } from '../styles/colors';
+import { dialogStyles } from '../styles/components';
 import { useAuth } from '../context/AuthContext';
 
 const FAULT_STATUSES = ['פתוח', 'בטיפול', 'סגור'];
@@ -323,32 +325,42 @@ const FaultList = ({
       <Dialog
         open={deleteDialog}
         onClose={() => setDeleteDialog(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.darkGrey,
-            border: `1px solid ${colors.border.orange}`
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle sx={{ color: colors.text.white }}>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
           מחיקת תקלה
+          <IconButton
+            onClick={() => setDeleteDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: colors.text.grey,
+              '&:hover': {
+                color: colors.text.white,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <DialogContentText sx={{ color: colors.text.white }}>
             האם אתה בטוח שברצונך למחוק את התקלה?
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogStyles.dialogActions}>
           <Button 
             onClick={() => setDeleteDialog(false)}
-            sx={{ color: colors.text.grey }}
+            sx={dialogStyles.cancelButton}
           >
             ביטול
           </Button>
           <Button 
             onClick={handleDeleteConfirm}
             variant="contained"
-            color="error"
+            sx={dialogStyles.submitButton}
           >
             מחק
           </Button>
