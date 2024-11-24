@@ -1,16 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Paper, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { 
+  Container, 
+  Typography, 
+  Paper, 
+  Box, 
+  CircularProgress, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
-import { getInspectionsBySite, getEnabledFields } from '../services/api';
+import { getInspectionsBySite, getEnabledFields, deleteInspection } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { subMonths } from 'date-fns';
 import { colors } from '../styles/colors';
+import { PERMISSIONS } from '../constants/roles';
 
 const Inspections = () => {
   const [loading, setLoading] = useState(true);
   const [inspections, setInspections] = useState([]);
   const [columns, setColumns] = useState([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [inspectionToDelete, setInspectionToDelete] = useState(null);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     site: '',
     startDate: subMonths(new Date(), 6),
@@ -51,7 +74,9 @@ const Inspections = () => {
             .map(field => ({
               id: field.id,
               label: field.label
-            }))
+            })),
+          // Add actions column for admin users
+          ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
         ];
 
         setColumns(orderedColumns);
@@ -62,7 +87,36 @@ const Inspections = () => {
     };
 
     loadEnabledFields();
-  }, [filters.site]);
+  }, [filters.site, user]);
+
+  // Handle delete click
+  const handleDeleteClick = (inspection, event) => {
+    event.stopPropagation(); // Prevent event bubbling
+    setInspectionToDelete(inspection);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteInspection(inspectionToDelete.id);
+      // Refresh inspections list
+      const response = await getInspectionsBySite(filters.site, {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        type: 'inspection',
+        maintenanceOrg: filters.maintenance,
+        integratorOrg: filters.integrator
+      });
+      const filteredInspections = (response || []).filter(item => item.type === 'inspection');
+      setInspections(filteredInspections);
+      setDeleteDialogOpen(false);
+      setInspectionToDelete(null);
+    } catch (error) {
+      console.error('Error deleting inspection:', error);
+      setError('שגיאה במחיקת הביקורת');
+    }
+  };
 
   // Fetch inspections when filters change
   useEffect(() => {
@@ -85,9 +139,11 @@ const Inspections = () => {
         // Filter out any drills that might have slipped through
         const filteredInspections = (response || []).filter(item => item.type === 'inspection');
         setInspections(filteredInspections);
+        setError(null);
       } catch (error) {
         console.error('Error fetching inspections:', error);
         setInspections([]);
+        setError('שגיאה בטעינת ביקורות');
       } finally {
         setLoading(false);
       }
@@ -182,7 +238,21 @@ const Inspections = () => {
               <TableRow key={inspection.id || rowIndex}>
                 {columns.map((column, colIndex) => (
                   <TableCell key={`${column.id}-${rowIndex}-${colIndex}`} sx={{ color: colors.text.white }}>
-                    {formatValue(getValue(inspection, column), column.id)}
+                    {column.id === 'actions' && user.hasPermission(PERMISSIONS.ADMIN) ? (
+                      <IconButton
+                        onClick={(e) => handleDeleteClick(inspection, e)}
+                        sx={{ 
+                          color: colors.text.error,
+                          '&:hover': {
+                            color: colors.text.errorHover
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    ) : (
+                      formatValue(getValue(inspection, column), column.id)
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -211,7 +281,51 @@ const Inspections = () => {
           userRole={user.role}
         />
 
-        {renderTable()}
+        {error ? (
+          <Typography color="error" align="center" sx={{ mt: 2 }}>
+            {error}
+          </Typography>
+        ) : (
+          renderTable()
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.background.black,
+              color: colors.text.white
+            }
+          }}
+        >
+          <DialogTitle>אישור מחיקה</DialogTitle>
+          <DialogContent>
+            <Typography>
+              האם אתה בטוח שברצונך למחוק את הביקורת?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setDeleteDialogOpen(false)}
+              sx={{ color: colors.text.white }}
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={handleDeleteConfirm}
+              sx={{ 
+                color: colors.text.error,
+                '&:hover': {
+                  color: colors.text.errorHover
+                }
+              }}
+            >
+              מחק
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </Box>
   );

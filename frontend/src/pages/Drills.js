@@ -10,18 +10,28 @@ import {
   TableRow, 
   Paper,
   Tooltip,
-  Container
+  Container,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button
 } from '@mui/material';
-import { getDrillsBySite } from '../services/api';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { getDrillsBySite, deleteInspection } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
 import { colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
+import { PERMISSIONS } from '../constants/roles';
 
 const Drills = () => {
   const { user } = useAuth();
   const [drills, setDrills] = useState([]);
   const [error, setError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [drillToDelete, setDrillToDelete] = useState(null);
   const [filters, setFilters] = useState({
     site: '',
     startDate: (() => {
@@ -46,7 +56,8 @@ const Drills = () => {
     { id: 'date', label: 'תאריך', getValue: drill => drill.formData?.date },
     { id: 'drill_type', label: 'סוג תרגיל', getValue: drill => drill.formData?.drill_type },
     { id: 'status', label: 'סטטוס', getValue: drill => drill.formData?.status },
-    { id: 'notes', label: 'הערות', getValue: drill => drill.formData?.notes }
+    { id: 'notes', label: 'הערות', getValue: drill => drill.formData?.notes },
+    ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
   ];
 
   // Format date for display
@@ -61,7 +72,7 @@ const Drills = () => {
   };
 
   // Truncate text for display
-  const truncateText = (text, maxLength = 15) => {  // Reduced from 30 to 20
+  const truncateText = (text, maxLength = 15) => {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
@@ -134,6 +145,33 @@ const Drills = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  // Handle delete click
+  const handleDeleteClick = (drill, event) => {
+    event.stopPropagation(); // Prevent event bubbling
+    setDrillToDelete(drill);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteInspection(drillToDelete.id);
+      // Refresh drills list
+      const response = await getDrillsBySite(filters.site, {
+        startDate: filters.startDate.toISOString(),
+        endDate: filters.endDate.toISOString(),
+        type: 'drill',
+        securityOfficer: filters.securityOfficer
+      });
+      setDrills(response || []);
+      setDeleteDialogOpen(false);
+      setDrillToDelete(null);
+    } catch (error) {
+      console.error('Error deleting drill:', error);
+      setError('שגיאה במחיקת התרגיל');
+    }
   };
 
   // Fetch drills when filters change
@@ -233,7 +271,8 @@ const Drills = () => {
           <TableBody>
             {drills.map((drill) => (
               <TableRow 
-                key={drill.id}      
+                key={drill.id}
+                
               >
                 {columns.map((column) => (
                   <TableCell 
@@ -245,7 +284,21 @@ const Drills = () => {
                         : 'inherit'
                     }}
                   >
-                    {formatValue(getValue(drill, column), column.id)}
+                    {column.id === 'actions' && user.hasPermission(PERMISSIONS.ADMIN) ? (
+                      <IconButton
+                        onClick={(e) => handleDeleteClick(drill, e)}
+                        sx={{ 
+                          color: colors.text.error,
+                          '&:hover': {
+                            color: colors.text.errorHover
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    ) : (
+                      formatValue(getValue(drill, column), column.id)
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -279,6 +332,44 @@ const Drills = () => {
         ) : (
           renderTable()
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.background.black,
+              color: colors.text.white
+            }
+          }}
+        >
+          <DialogTitle>אישור מחיקה</DialogTitle>
+          <DialogContent>
+            <Typography>
+              האם אתה בטוח שברצונך למחוק את התרגיל?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setDeleteDialogOpen(false)}
+              sx={{ color: colors.text.white }}
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={handleDeleteConfirm}
+              sx={{ 
+                color: colors.text.error,
+                '&:hover': {
+                  color: colors.text.errorHover
+                }
+              }}
+            >
+              מחק
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </Box>
   );
