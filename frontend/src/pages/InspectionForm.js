@@ -43,7 +43,7 @@ const InspectionForm = () => {
 
   // State for form data and validation
   const [formData, setFormData] = useState({
-    securityOfficer: user.name,  // Changed from firstName to name
+    securityOfficer: user.name,
     date: new Date().toISOString().split('T')[0],
     time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
   });
@@ -147,7 +147,7 @@ const InspectionForm = () => {
             // Initialize form data with auto fields
             setFormData(prev => ({
               ...prev,
-              securityOfficer: user.name,  // Changed from firstName to name
+              securityOfficer: user.name,
               site: selectedSite.name,
               date: new Date().toISOString().split('T')[0],
               time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
@@ -167,7 +167,7 @@ const InspectionForm = () => {
     };
 
     fetchFormStructure();
-  }, [selectedSite, selectedType, isDrill, user.name]);  // Changed dependency from firstName to name
+  }, [selectedSite, selectedType, isDrill, user.name]);
 
   const handleTypeChange = (_, value) => {
     setSelectedType(value);
@@ -175,7 +175,7 @@ const InspectionForm = () => {
     // Keep existing form data and update auto fields
     setFormData(prev => ({
       ...prev,
-      securityOfficer: user.name,  // Changed from firstName to name
+      securityOfficer: user.name,
       site: selectedSite.name,
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
@@ -188,7 +188,7 @@ const InspectionForm = () => {
     setSelectedType(null);
     setFormStructure(null);
     setFormData({
-      securityOfficer: user.name,  // Changed from firstName to name
+      securityOfficer: user.name,
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     });
@@ -202,14 +202,14 @@ const InspectionForm = () => {
     // Initialize form data with site name
     if (value) {
       setFormData({
-        securityOfficer: user.name,  // Changed from firstName to name
+        securityOfficer: user.name,
         site: value.name,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       });
     } else {
       setFormData({
-        securityOfficer: user.name,  // Changed from firstName to name
+        securityOfficer: user.name,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       });
@@ -278,10 +278,19 @@ const InspectionForm = () => {
     // For drills, submit directly
     if (isDrill) {
       try {
+        // Update formData with site name before submitting
+        const updatedFormData = {
+          ...formData,
+          site: selectedSite.name,
+          securityOfficer: user.name,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+        };
+
         const inspectionData = {
           siteId: selectedSite.id,
-          inspectionTypeId: selectedType.id,  // We already have the drill type from fetchInspectionTypes
-          formData,
+          inspectionTypeId: selectedType.id,
+          formData: updatedFormData,
           type: 'drill'
         };
 
@@ -389,10 +398,19 @@ const InspectionForm = () => {
     }
 
     try {
+      // Update formData with site name before submitting
+      const updatedFormData = {
+        ...formData,
+        site: selectedSite.name,
+        securityOfficer: user.name,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+      };
+
       const inspectionData = {
         siteId: selectedSite.id,
         inspectionTypeId: selectedType.id,
-        formData,
+        formData: updatedFormData,
         type: isDrill ? 'drill' : 'inspection'
       };
 

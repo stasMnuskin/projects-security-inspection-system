@@ -9,9 +9,9 @@ import {
   TableHead, 
   TableRow, 
   Paper,
-  Tooltip
+  Tooltip,
+  Container
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { getDrillsBySite } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
@@ -19,7 +19,6 @@ import { colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
 
 const Drills = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [drills, setDrills] = useState([]);
   const [error, setError] = useState(null);
@@ -62,7 +61,7 @@ const Drills = () => {
   };
 
   // Truncate text for display
-  const truncateText = (text, maxLength = 50) => {
+  const truncateText = (text, maxLength = 30) => {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
@@ -82,28 +81,37 @@ const Drills = () => {
         if (!value.trim()) return '-';
         return (
           <Tooltip 
-            title={value}
+            title={
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                {value}
+              </Typography>
+            }
             placement="top"
             arrow
             enterDelay={200}
-            leaveDelay={0}
-            enterNextDelay={200}
-            sx={{
-              '& .MuiTooltip-tooltip': {
-                backgroundColor: colors.background.black,
-                color: colors.text.white,
-                fontSize: '0.875rem',
-                padding: '8px 12px',
-                maxWidth: 300,
-                whiteSpace: 'pre-wrap'
-              },
-              '& .MuiTooltip-arrow': {
-                color: colors.background.black
+            leaveDelay={200}
+            PopperProps={{
+              sx: {
+                '& .MuiTooltip-tooltip': {
+                  backgroundColor: colors.background.black,
+                  border: `1px solid ${colors.border.grey}`,
+                  borderRadius: '4px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  maxWidth: 400,
+                  p: 1
+                },
+                '& .MuiTooltip-arrow': {
+                  color: colors.background.black,
+                  '&::before': {
+                    border: `1px solid ${colors.border.grey}`,
+                    backgroundColor: colors.background.black
+                  }
+                }
               }
             }}
           >
             <span style={{ 
-              cursor: 'default',
+              cursor: 'help',
               borderBottom: `1px dotted ${colors.text.grey}`
             }}>
               {truncateText(value)}
@@ -134,10 +142,10 @@ const Drills = () => {
       if (!filters.site) return;
 
       try {
-        // Only send site and date filters to backend
         const response = await getDrillsBySite(filters.site, {
           startDate: filters.startDate.toISOString(),
           endDate: filters.endDate.toISOString(),
+          type: 'drill',
           securityOfficer: filters.securityOfficer
         });
 
@@ -226,14 +234,6 @@ const Drills = () => {
             {drills.map((drill) => (
               <TableRow 
                 key={drill.id}
-                hover
-                sx={{
-                  cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: `${colors.background.darkGrey}20`
-                  }
-                }}
-                onClick={() => navigate(`/inspections/${drill.id}`)}
               >
                 {columns.map((column) => (
                   <TableCell 
@@ -259,10 +259,10 @@ const Drills = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
-        activeSection="drills"
-        userInfo={{ name: user.firstName }}
+        activeSection="inspections"
+        userInfo={{ name: user.name }}
       />
-      <Box sx={{ flexGrow: 1, p: 3 }}>
+      <Container maxWidth="lg">
         <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
           תרגילים
         </Typography>
@@ -279,7 +279,7 @@ const Drills = () => {
         ) : (
           renderTable()
         )}
-      </Box>
+      </Container>
     </Box>
   );
 };

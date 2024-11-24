@@ -40,7 +40,14 @@ const Inspections = () => {
           { id: 'date', label: 'תאריך' },
           { id: 'time', label: 'שעה' },
           ...fields
-            .filter(field => !['site', 'securityOfficer', 'date', 'time'].includes(field.id))
+            .filter(field => !['site', 'securityOfficer', 'date', 'time', 'notes'].includes(field.id))
+            .map(field => ({
+              id: field.id,
+              label: field.label
+            })),
+          // Always add notes column last
+          ...fields
+            .filter(field => field.id === 'notes')
             .map(field => ({
               id: field.id,
               label: field.label
@@ -70,7 +77,9 @@ const Inspections = () => {
         const response = await getInspectionsBySite(filters.site, {
           startDate: filters.startDate,
           endDate: filters.endDate,
-          type: 'inspection'
+          type: 'inspection',
+          maintenanceOrg: filters.maintenance,
+          integratorOrg: filters.integrator
         });
 
         // Filter out any drills that might have slipped through
@@ -188,7 +197,7 @@ const Inspections = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
         activeSection="inspections"
-        userInfo={{ name: user.firstName }}
+        userInfo={{ name: user.name }}
       />
       <Container maxWidth="lg">
         <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>

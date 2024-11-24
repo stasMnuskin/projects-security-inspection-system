@@ -48,42 +48,48 @@ exports.createInspection = async (req, res, next) => {
       return next(new AppError('Inspection type not found', 400));
     }
 
-    // Create inspection with the type from request
-    const inspection = await db.Inspection.create({
-      siteId,
-      inspectionTypeId,
-      formData,
-      type,  // Use type from request instead of inspectionType.type
-      userId: req.user.id
-    }, { transaction });
+    try {
+      // Create inspection with the type from request
+      const inspection = await db.Inspection.create({
+        siteId,
+        inspectionTypeId,
+        formData,
+        type,  // Use type from request instead of inspectionType.type
+        userId: req.user.id
+      }, { transaction });
 
-    await transaction.commit();
+      // Fetch the created inspection with all necessary associations within the transaction
+      const createdInspection = await db.Inspection.findByPk(inspection.id, {
+        include: [
+          { 
+            model: db.Site, 
+            attributes: ['id', 'name', 'entrepreneurId']
+          },
+          { 
+            model: db.InspectionType, 
+            attributes: ['id', 'name', 'type', 'formStructure']
+          }
+        ],
+        transaction
+      });
 
-    // Fetch the created inspection with all necessary associations
-    const createdInspection = await db.Inspection.findByPk(inspection.id, {
-      include: [
-        { 
-          model: db.Site, 
-          attributes: ['id', 'name', 'entrepreneurId'],
-          include: [{
-            model: db.User,
-            as: 'entrepreneur',
-            attributes: ['id', 'firstName', 'lastName', 'organization']
-          }]
-        },
-        { 
-          model: db.InspectionType, 
-          attributes: ['id', 'name', 'type', 'formStructure']
-        }
-      ]
-    });
+      await transaction.commit();
 
-    res.status(201).json(createdInspection);
-    logger.info(`New ${type} created: ${inspection.id}`);
+      // Return the inspection data without trying to fetch entrepreneur details
+      res.status(201).json(createdInspection);
+      logger.info(`New ${type} created: ${inspection.id}`);
+    } catch (error) {
+      await transaction.rollback();
+      // Check if it's a validation error
+      if (error.name === 'SequelizeValidationError') {
+        return next(new AppError(error.message, 400));
+      }
+      throw error; // Re-throw other errors to be caught by the outer catch block
+    }
   } catch (error) {
     await transaction.rollback();
     logger.error('Error creating inspection:', error);
-    next(error);  // Pass the original error for better debugging
+    next(new AppError(error.message || 'Error creating inspection', 500));
   }
 };
 
@@ -467,7 +473,7 @@ exports.getLatestInspections = async (req, res, next) => {
 exports.getInspectionsBySite = async (req, res, next) => {
   try {
     const { siteId } = req.params;
-    const { type, startDate, endDate, drillType } = req.query;
+    const { type, startDate, endDate, drillType, maintenanceOrg, integratorOrg } = req.query;
 
     // Validate siteId
     if (!siteId) {
@@ -498,19 +504,42 @@ exports.getInspectionsBySite = async (req, res, next) => {
       whereClause['$InspectionType.name$'] = drillType;
     }
 
+    // Build site include with organization filters
+    const siteInclude = {
+      model: db.Site,
+      attributes: ['id', 'name', 'entrepreneurId'],
+      include: [{
+        model: db.User,
+        as: 'entrepreneur',
+        attributes: ['id', 'name'],
+        include: [{
+          model: db.Organization,
+          as: 'organization',
+          attributes: ['id', 'name', 'type']
+        }]
+      }]
+    };
+
+    // Add organization filters if provided
+    if (maintenanceOrg || integratorOrg) {
+      siteInclude.include.push({
+        model: db.Organization,
+        as: 'serviceOrganizations',  // Changed from 'organizations' to 'serviceOrganizations'
+        where: {
+          [db.Sequelize.Op.or]: [
+            maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
+            integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
+          ].filter(Boolean)
+        },
+        required: true
+      });
+    }
+
     // Fetch inspections with associations
     const inspections = await db.Inspection.findAll({
       where: whereClause,
       include: [
-        { 
-          model: db.Site, 
-          attributes: ['id', 'name', 'entrepreneurId'],
-          include: [{
-            model: db.User,
-            as: 'entrepreneur',
-            attributes: ['id', 'firstName', 'lastName', 'organization']
-          }]
-        },
+        siteInclude,
         { 
           model: db.InspectionType, 
           attributes: ['id', 'name', 'type', 'formStructure']
@@ -518,7 +547,12 @@ exports.getInspectionsBySite = async (req, res, next) => {
         {
           model: db.User,
           as: 'inspector',
-          attributes: ['id', 'firstName', 'lastName']
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.Organization,
+            as: 'organization',
+            attributes: ['id', 'name', 'type']
+          }]
         }
       ],
       order: [['createdAt', 'DESC']]

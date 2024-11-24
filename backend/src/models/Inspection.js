@@ -59,8 +59,8 @@ module.exports = (sequelize, DataTypes) => {
         throw new Error('סוג תרגיל לא נמצא');
       }
 
-      // Get enabled fields
-      const fields = inspectionType.formStructure.filter(field => field.enabled);
+      // Get enabled fields that are not autoFill
+      const fields = inspectionType.formStructure.filter(field => field.enabled && !field.autoFill);
       
       // First validate drill_type as it affects other validations
       if (!data.drill_type) {
@@ -163,8 +163,10 @@ module.exports = (sequelize, DataTypes) => {
           if (this.type === 'drill') {
             await this.validateDrillFields(data);
           } else {
-            // Get enabled fields from inspection type
-            const enabledFields = inspectionType.formStructure.filter(field => field.enabled);
+            // Get enabled fields from inspection type, excluding autoFill fields
+            const enabledFields = inspectionType.formStructure.filter(field => 
+              field.enabled && !field.autoFill
+            );
 
             // Validate required fields
             enabledFields.forEach(field => {
