@@ -61,7 +61,7 @@ const Drills = () => {
   };
 
   // Truncate text for display
-  const truncateText = (text, maxLength = 30) => {
+  const truncateText = (text, maxLength = 15) => {  // Reduced from 30 to 20
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
@@ -233,7 +233,7 @@ const Drills = () => {
           <TableBody>
             {drills.map((drill) => (
               <TableRow 
-                key={drill.id}
+                key={drill.id}      
               >
                 {columns.map((column) => (
                   <TableCell 

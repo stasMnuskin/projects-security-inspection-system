@@ -14,6 +14,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
+import logo from '../assets/logo-black.svg';
 
 const Sidebar = ({ 
   activeSection, 
@@ -290,6 +291,19 @@ const Sidebar = ({
 
   return (
     <Box sx={sidebarStyles.sidebar}>
+      {/* Logo */}
+      <Box sx={{ padding: '1rem' }}>
+        <Box 
+          component="img" 
+          src={logo} 
+          alt="Logo"
+          sx={{ 
+            height: '40px',
+            filter: 'brightness(0) invert(1)'
+          }} 
+        />
+      </Box>
+
       {renderUserInfo()}
       
       <Box sx={sidebarStyles.menuContainer}>

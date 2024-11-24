@@ -9,7 +9,6 @@ import Sites from './Sites';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
-import logo from '../assets/logo-black.svg';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -103,17 +102,7 @@ const AdminPage = () => {
 
   return (
     <Box sx={layoutStyles.root} dir="rtl">
-      <Box sx={{ padding: '1rem' }}>
-        <Box 
-          component="img" 
-          src={logo} 
-          alt="Logo"
-          sx={{ 
-            height: '40px',
-            filter: 'brightness(0) invert(1)'
-          }} 
-        />
-      </Box>
+      
       <Box sx={layoutStyles.pageContainer}>
         <Sidebar 
           activeSection="admin"

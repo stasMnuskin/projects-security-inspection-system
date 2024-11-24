@@ -19,7 +19,7 @@ import {
   InputLabel,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
-import { getUsers, updateUser } from '../services/api';
+import { getUsers, updateUser, getOrganizations, createOrganization } from '../services/api';
 import { colors } from '../styles/colors';
 import { formStyles } from '../styles/components';
 import { ROLE_OPTIONS } from '../constants/roles';
@@ -34,6 +34,10 @@ function Users() {
   const [loading, setLoading] = useState(false);
   const [editedUser, setEditedUser] = useState(null);
   const [errors, setErrors] = useState({});
+  const [organizations, setOrganizations] = useState({
+    maintenance: [],
+    integrator: []
+  });
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -48,18 +52,34 @@ function Users() {
     }
   }, []);
 
+  // Fetch organizations when needed
+  const fetchOrganizations = useCallback(async (type) => {
+    try {
+      const data = await getOrganizations(type);
+      setOrganizations(prev => ({
+        ...prev,
+        [type]: data
+      }));
+    } catch (error) {
+      console.error(`Error fetching ${type} organizations:`, error);
+    }
+  }, []);
+
   useEffect(() => {
     if (user.role === 'admin') {
       fetchUsers();
+      // Fetch both types of organizations
+      fetchOrganizations('maintenance');
+      fetchOrganizations('integrator');
     }
-  }, [fetchUsers, user.role]);
+  }, [fetchUsers, fetchOrganizations, user.role]);
 
   useEffect(() => {
     if (searchTerm) {
       const filtered = users.filter(user => 
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.organization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.organization?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ROLE_OPTIONS.find(role => role.value === user.role)?.label?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
@@ -78,7 +98,8 @@ function Users() {
       ...selectedUser,
       name: selectedUser.name || '',
       email: selectedUser.email || '',
-      organization: selectedUser.organization || '',
+      organization: selectedUser.organization?.name || '',
+      organizationId: selectedUser.organizationId,
       role: selectedUser.role || ''
     });
     setErrors({});
@@ -105,6 +126,9 @@ function Users() {
     if (!editedUser.role) {
       newErrors.role = 'תפקיד נדרש';
     }
+    if (['maintenance', 'integrator'].includes(editedUser.role) && !editedUser.organization) {
+      newErrors.organization = 'ארגון נדרש';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -117,9 +141,58 @@ function Users() {
 
     try {
       setLoading(true);
-      await updateUser(editedUser);
+
+      // If organization is new, create it first
+      let organizationId = editedUser.organizationId;
+      let organizationName = editedUser.organization;
+      if (['maintenance', 'integrator'].includes(editedUser.role) && editedUser.organization) {
+        const orgType = editedUser.role;
+        const existingOrg = organizations[orgType].find(org => org.name === editedUser.organization);
+        
+        if (existingOrg) {
+          organizationId = existingOrg.id;
+          organizationName = existingOrg.name;
+        } else {
+          // Create new organization
+          const newOrg = await createOrganization({
+            name: editedUser.organization,
+            type: orgType
+          });
+          organizationId = newOrg.id;
+          organizationName = newOrg.name;
+          // Refresh organizations list
+          await fetchOrganizations(orgType);
+        }
+      } else {
+        // Clear organization if role is not maintenance/integrator
+        organizationId = null;
+        organizationName = null;
+      }
+
+      // Update user with organizationId
+      const updatedUser = {
+        ...editedUser,
+        organizationId
+      };
+      delete updatedUser.organization; // Remove organization name since we're sending ID
+
+      const result = await updateUser(updatedUser);
+
+      // Update the users list with the new data
+      setUsers(prevUsers => prevUsers.map(u => {
+        if (u.id === result.user.id) {
+          return {
+            ...result.user,
+            organization: organizationId ? {
+              id: organizationId,
+              name: organizationName
+            } : null
+          };
+        }
+        return u;
+      }));
+
       showNotification('המשתמש נשמר בהצלחה');
-      fetchUsers();
       setSelectedUser(null);
       setEditedUser(null);
     } catch (error) {
@@ -134,7 +207,7 @@ function Users() {
     users.forEach(user => {
       if (user.name) suggestions.add(user.name);
       if (user.email) suggestions.add(user.email);
-      if (user.organization) suggestions.add(user.organization);
+      if (user.organization?.name) suggestions.add(user.organization.name);
       if (user.role) {
         const roleLabel = ROLE_OPTIONS.find(role => role.value === user.role)?.label;
         if (roleLabel) suggestions.add(roleLabel);
@@ -212,10 +285,10 @@ function Users() {
                           {userItem.email}
                           <br />
                           {ROLE_OPTIONS.find(role => role.value === userItem.role)?.label || ''}
-                          {userItem.organization && (
+                          {userItem.organization?.name && (
                             <>
                               <br />
-                              {userItem.organization}
+                              {userItem.organization.name}
                             </>
                           )}
                         </>
@@ -269,22 +342,22 @@ function Users() {
                     />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="ארגון"
-                      value={editedUser.organization || ''}
-                      onChange={(e) => setEditedUser(prev => ({ ...prev, organization: e.target.value }))}
-                      sx={formStyles.textField}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
                     <FormControl fullWidth error={!!errors.role} sx={formStyles.textField}>
                       <InputLabel id="role-select-label" sx={{ color: colors.text.white }}>תפקיד</InputLabel>
                       <Select
                         labelId="role-select-label"
                         value={editedUser.role || ''}
                         label="תפקיד"
-                        onChange={(e) => setEditedUser(prev => ({ ...prev, role: e.target.value }))}
+                        onChange={(e) => {
+                          const newRole = e.target.value;
+                          setEditedUser(prev => ({
+                            ...prev,
+                            role: newRole,
+                            // Clear organization if switching away from maintenance/integrator
+                            organization: ['maintenance', 'integrator'].includes(newRole) ? prev.organization : '',
+                            organizationId: ['maintenance', 'integrator'].includes(newRole) ? prev.organizationId : null
+                          }));
+                        }}
                         sx={{
                           color: colors.text.white,
                           '& .MuiOutlinedInput-notchedOutline': {
@@ -311,6 +384,40 @@ function Users() {
                       )}
                     </FormControl>
                   </Grid>
+
+                  {/* Organization field - only show for maintenance/integrator roles */}
+                  {['maintenance', 'integrator'].includes(editedUser.role) && (
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        freeSolo
+                        value={editedUser.organization || ''}
+                        onChange={(_, newValue) => setEditedUser(prev => ({ 
+                          ...prev, 
+                          organization: newValue,
+                          // Clear organizationId when selecting new organization
+                          organizationId: organizations[prev.role]?.find(org => org.name === newValue)?.id || null
+                        }))}
+                        onInputChange={(_, newValue) => setEditedUser(prev => ({ 
+                          ...prev, 
+                          organization: newValue,
+                          // Clear organizationId when typing new organization
+                          organizationId: organizations[prev.role]?.find(org => org.name === newValue)?.id || null
+                        }))}
+                        options={organizations[editedUser.role]?.map(org => org.name) || []}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="ארגון"
+                            error={!!errors.organization}
+                            helperText={errors.organization}
+                            required
+                            sx={formStyles.textField}
+                          />
+                        )}
+                      />
+                    </Grid>
+                  )}
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
                       <Button
