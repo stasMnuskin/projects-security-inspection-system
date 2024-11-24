@@ -126,9 +126,9 @@ function InitialRegistration() {
   return (
     <Container maxWidth="sm">
       <Paper elevation={3} sx={formStyles.paper}>
-        <Typography variant="h5" component="h1" sx={formStyles.title}>
+        {/* <Typography variant="h5" component="h1" sx={formStyles.title}>
           רישום ראשוני
-        </Typography>
+        </Typography> */}
         <Box component="form" onSubmit={handleSubmit} sx={formStyles.form}>
           <Grid container spacing={2}>
             <Grid item xs={12}>

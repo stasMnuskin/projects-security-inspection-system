@@ -332,9 +332,9 @@ const InspectionTypeConfig = () => {
 
 return (
     <Box>
-      <Typography variant="h5" gutterBottom sx={{ color: colors.text.white }}>
+      {/* <Typography variant="h5" gutterBottom sx={{ color: colors.text.white }}>
         איפיון ביקורת/תרגיל
-      </Typography>
+      </Typography> */}
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {/* Types List */}
@@ -342,7 +342,7 @@ return (
           {/* Add New Type */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" sx={{ color: colors.text.white, mb: 1 }}>
-              הוספת סוג ביקורת חדש
+             ביקורות
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
@@ -417,9 +417,9 @@ return (
           <Divider sx={{ backgroundColor: colors.background.darkGrey, my: 2 }} />
 
           {/* Drill Types */}
-          <Typography variant="subtitle2" sx={{ color: colors.text.white, mb: 1 }}>
+          {/* <Typography variant="subtitle2" sx={{ color: colors.text.white, mb: 1 }}>
             תרגילים
-          </Typography>
+          </Typography> */}
           <List>
             {inspectionTypes
               .filter(type => type.type === 'drill')

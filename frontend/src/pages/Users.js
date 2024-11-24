@@ -17,9 +17,15 @@ import {
   Select,
   MenuItem,
   InputLabel,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../context/AuthContext';
-import { getUsers, updateUser, getOrganizations, createOrganization } from '../services/api';
+import { getUsers, updateUser, getOrganizations, createOrganization, deleteUser } from '../services/api';
 import { colors } from '../styles/colors';
 import { formStyles } from '../styles/components';
 import { ROLE_OPTIONS } from '../constants/roles';
@@ -38,6 +44,8 @@ function Users() {
     maintenance: [],
     integrator: []
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -134,6 +142,31 @@ function Users() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle delete click
+  const handleDeleteClick = (userItem, event) => {
+    event.stopPropagation(); // Prevent event bubbling
+    setUserToDelete(userItem);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteUser(userToDelete.id);
+      showNotification('המשתמש נמחק בהצלחה');
+      await fetchUsers(); // Refresh users list
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      // If the deleted user was selected, clear the selection
+      if (selectedUser?.id === userToDelete.id) {
+        setSelectedUser(null);
+        setEditedUser(null);
+      }
+    } catch (error) {
+      showNotification(error.message || 'שגיאה במחיקת המשתמש', 'error');
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       return;
@@ -144,14 +177,12 @@ function Users() {
 
       // If organization is new, create it first
       let organizationId = editedUser.organizationId;
-      let organizationName = editedUser.organization;
       if (['maintenance', 'integrator'].includes(editedUser.role) && editedUser.organization) {
         const orgType = editedUser.role;
         const existingOrg = organizations[orgType].find(org => org.name === editedUser.organization);
         
         if (existingOrg) {
           organizationId = existingOrg.id;
-          organizationName = existingOrg.name;
         } else {
           // Create new organization
           const newOrg = await createOrganization({
@@ -159,14 +190,12 @@ function Users() {
             type: orgType
           });
           organizationId = newOrg.id;
-          organizationName = newOrg.name;
           // Refresh organizations list
           await fetchOrganizations(orgType);
         }
       } else {
-        // Clear organization if role is not maintenance/integrator
+        // Clear organizationId if role is not maintenance/integrator
         organizationId = null;
-        organizationName = null;
       }
 
       // Update user with organizationId
@@ -176,22 +205,8 @@ function Users() {
       };
       delete updatedUser.organization; // Remove organization name since we're sending ID
 
-      const result = await updateUser(updatedUser);
-
-      // Update the users list with the new data
-      setUsers(prevUsers => prevUsers.map(u => {
-        if (u.id === result.user.id) {
-          return {
-            ...result.user,
-            organization: organizationId ? {
-              id: organizationId,
-              name: organizationName
-            } : null
-          };
-        }
-        return u;
-      }));
-
+      await updateUser(updatedUser);
+      await fetchUsers(); // Refresh users list
       showNotification('המשתמש נשמר בהצלחה');
       setSelectedUser(null);
       setEditedUser(null);
@@ -231,9 +246,9 @@ function Users() {
         <Grid item xs={12} md={4}>
           <Paper elevation={3} sx={formStyles.paper}>
             <Box sx={formStyles.formBox}>
-              <Typography variant="h6" gutterBottom sx={formStyles.title}>
+              {/* <Typography variant="h6" gutterBottom sx={formStyles.title}>
                 רשימת משתמשים
-              </Typography>
+              </Typography> */}
 
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <Autocomplete
@@ -277,6 +292,22 @@ function Users() {
                         }
                       }
                     }}
+                    secondaryAction={
+                      userItem.role !== 'admin' && (
+                        <IconButton
+                          edge="end"
+                          onClick={(e) => handleDeleteClick(userItem, e)}
+                          sx={{ 
+                            color: colors.text.error,
+                            '&:hover': {
+                              color: colors.text.errorHover
+                            }
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )
+                    }
                   >
                     <ListItemText 
                       primary={userItem.name}
@@ -453,6 +484,44 @@ function Users() {
           )}
         </Grid>
       </Grid>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.background.black,
+            color: colors.text.white
+          }
+        }}
+      >
+        <DialogTitle>אישור מחיקה</DialogTitle>
+        <DialogContent>
+          <Typography>
+            האם אתה בטוח שברצונך למחוק את המשתמש {userToDelete?.name}?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{ color: colors.text.white }}
+          >
+            ביטול
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            sx={{ 
+              color: colors.text.error,
+              '&:hover': {
+                color: colors.text.errorHover
+              }
+            }}
+          >
+            מחק
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={notification.open}
