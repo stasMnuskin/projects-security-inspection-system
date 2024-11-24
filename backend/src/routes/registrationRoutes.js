@@ -14,10 +14,22 @@ router.post(
     auth,
     roleAuth(PERMISSIONS.ADMIN),
     check('email', 'נא להזין כתובת אימייל תקינה').isEmail(),
-    check('firstName', 'שם פרטי נדרש').not().isEmpty(),
-    check('organization', 'ארגון נדרש').not().isEmpty(),
+    check('name', 'שם נדרש').not().isEmpty(),
     check('role', 'יש לבחור תפקיד')
-      .isIn(['admin', 'security_officer', 'entrepreneur', 'integrator', 'maintenance', 'control_center'])
+      .isIn(['admin', 'security_officer', 'entrepreneur', 'integrator', 'maintenance', 'control_center']),
+    // Validate organizationName only for integrator and maintenance roles
+    check('organizationName')
+      .custom((value, { req }) => {
+        if (['integrator', 'maintenance'].includes(req.body.role)) {
+          if (!value) {
+            throw new Error('נדרש שם ארגון למשתמש מסוג אינטגרטור או אחזקה');
+          }
+          if (value.trim().length === 0) {
+            throw new Error('שם הארגון לא יכול להיות ריק');
+          }
+        }
+        return true;
+      })
   ],
   registrationController.generateRegistrationLink
 );
@@ -36,8 +48,7 @@ router.get(
 router.post(
   '/complete',
   [
-    check('firstName', 'שם פרטי נדרש').not().isEmpty(),
-    check('lastName', 'שם משפחה נדרש').not().isEmpty(),
+    check('name', 'שם נדרש').not().isEmpty(),
     check('email', 'נא להזין כתובת אימייל תקינה').isEmail(),
     check('password', 'הסיסמה חייבת להכיל לפחות 6 תווים, כולל אותיות באנגלית ומספרים')
       .isLength({ min: 6 })
@@ -47,10 +58,22 @@ router.post(
   registrationController.registerUser
 );
 
-// Get organizations for autocomplete (auth required)
+// Get organizations for registration (no auth required)
 router.get(
   '/organizations',
+  [
+    check('type')
+      .isIn(['integrator', 'maintenance'])
+      .withMessage('סוג ארגון לא תקין')
+  ],
+  registrationController.getOrganizations
+);
+
+// Get organizations for admin (auth required)
+router.get(
+  '/organizations/admin',
   auth,
+  roleAuth(PERMISSIONS.ADMIN),
   registrationController.getOrganizations
 );
 

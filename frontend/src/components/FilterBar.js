@@ -4,7 +4,7 @@ import { Box, Autocomplete, TextField, CircularProgress } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { dashboardStyles } from '../styles/dashboardStyles';
 import { colors } from '../styles/colors';
-import { getSites, getSecurityOfficers, getMaintenanceStaff, getIntegrators, getInspectionTypes } from '../services/api';
+import { getSites, getSecurityOfficers, getOrganizations, getInspectionTypes } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import DateRangeSelector from './DateRangeSelector';
 
@@ -27,6 +27,31 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
 
   const timeoutRef = useRef(null);
   const filterValuesRef = useRef({});
+  const initialFilterSetRef = useRef(false);
+
+  const handleFilterChange = useCallback((field, value) => {
+    filterValuesRef.current[field] = value;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      onFilterChange(field, filterValuesRef.current[field]);
+    }, 300);
+  }, [onFilterChange]);
+
+  // Set initial organization filter based on user role
+  useEffect(() => {
+    if (!initialFilterSetRef.current) {
+      if (user.role === 'maintenance' && user.organizationId) {
+        handleFilterChange('maintenance', user.organizationId);
+      } else if (user.role === 'integrator' && user.organizationId) {
+        handleFilterChange('integrator', user.organizationId);
+      }
+      initialFilterSetRef.current = true;
+    }
+  }, [user.role, user.organizationId, handleFilterChange]);
 
   // Fetch all options including drill types
   useEffect(() => {
@@ -36,34 +61,21 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
         const [
           sitesData,
           securityOfficersData,
-          maintenanceData,
-          integratorsData,
+          maintenanceOrgs,
+          integratorOrgs,
           inspectionTypesData
         ] = await Promise.all([
           getSites(),
-          getSecurityOfficers().catch(() => []),
-          getMaintenanceStaff().catch(() => []),
-          getIntegrators().catch(() => []),
+          getSecurityOfficers(),
+          getOrganizations('maintenance'),
+          getOrganizations('integrator'),
           variant === 'drills' ? getInspectionTypes() : Promise.resolve(null)
         ]);
 
-        // Filter sites based on user role and organization
+        // Filter sites for entrepreneurs only
         let filteredSites = sitesData;
         if (user.role === 'entrepreneur') {
           filteredSites = sitesData.filter(site => site.entrepreneurId === user.id);
-        } else if (user.role === 'integrator' || user.role === 'maintenance') {
-          filteredSites = sitesData.filter(site => site.entrepreneur?.organization === user.organization);
-        }
-
-        // Ensure unique sites by ID
-        const uniqueSites = Array.from(new Map(filteredSites.map(site => [site.id, site])).values());
-
-        // Filter users based on organization for integrator/maintenance
-        let filteredMaintenance = maintenanceData;
-        let filteredIntegrators = integratorsData;
-        if (user.role === 'integrator' || user.role === 'maintenance' || user.role === 'entrepreneur') {
-          filteredMaintenance = maintenanceData.filter(u => u.organization === user.organization);
-          filteredIntegrators = integratorsData.filter(u => u.organization === user.organization);
         }
 
         // Get drill types from inspection types
@@ -79,10 +91,10 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
         }
 
         setOptions({
-          sites: uniqueSites,
+          sites: filteredSites,
           securityOfficers: securityOfficersData || [],
-          maintenance: filteredMaintenance || [],
-          integrators: filteredIntegrators || [],
+          maintenance: maintenanceOrgs || [],
+          integrators: integratorOrgs || [],
           drillTypes: drillTypes.length > 0 ? drillTypes : fetchedDrillTypes
         });
       } catch (error) {
@@ -94,21 +106,7 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
     };
 
     fetchOptions();
-  }, [user, variant, drillTypes]);
-
-  const formatUserName = (user) => user ? `${user.firstName} ${user.lastName}` : '';
-
-  const handleFilterChange = useCallback((field, value) => {
-    filterValuesRef.current[field] = value;
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      onFilterChange(field, filterValuesRef.current[field]);
-    }, 300);
-  }, [onFilterChange]);
+  }, [user.role, user.id, variant, drillTypes]);
 
   useEffect(() => {
     return () => {
@@ -117,6 +115,8 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
       }
     };
   }, []);
+
+  const formatOrganizationName = (org) => org ? org.name : '';
 
   const preventSubmit = useCallback((event) => {
     if (event.key === 'Enter') {
@@ -183,10 +183,11 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
           {...commonAutocompleteProps}
           loading={loading}
           options={options.integrators}
-          getOptionLabel={formatUserName}
-          value={options.integrators.find(user => user.id === filters.integrator) || null}
+          getOptionLabel={formatOrganizationName}
+          value={options.integrators.find(org => org.id === (user.role === 'integrator' ? user.organizationId : filters.integrator)) || null}
           onChange={(_, newValue) => handleFilterChange('integrator', newValue?.id || '')}
           isOptionEqualToValue={(option, value) => option.id === value.id}
+          disabled={user.role === 'integrator'}
           renderInput={(params) => renderTextField(params, "אינטגרטור", loading)}
         />
       )}
@@ -196,10 +197,11 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
           {...commonAutocompleteProps}
           loading={loading}
           options={options.maintenance}
-          getOptionLabel={formatUserName}
-          value={options.maintenance.find(user => user.id === filters.maintenance) || null}
+          getOptionLabel={formatOrganizationName}
+          value={options.maintenance.find(org => org.id === (user.role === 'maintenance' ? user.organizationId : filters.maintenance)) || null}
           onChange={(_, newValue) => handleFilterChange('maintenance', newValue?.id || '')}
           isOptionEqualToValue={(option, value) => option.id === value.id}
+          disabled={user.role === 'maintenance'}
           renderInput={(params) => renderTextField(params, "אחזקה", loading)}
         />
       )}
@@ -229,7 +231,7 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
             {...commonAutocompleteProps}
             loading={loading}
             options={options.securityOfficers}
-            getOptionLabel={formatUserName}
+            getOptionLabel={(user) => user?.name || ''}
             value={options.securityOfficers.find(user => user.id === filters.securityOfficer) || null}
             onChange={(_, newValue) => handleFilterChange('securityOfficer', newValue?.id || '')}
             isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -241,7 +243,7 @@ const FilterBar = ({ filters, onFilterChange, variant = 'faults', drillTypes = [
           {...commonAutocompleteProps}
           loading={loading}
           options={options.securityOfficers}
-          getOptionLabel={formatUserName}
+          getOptionLabel={(user) => user?.name || ''}
           value={options.securityOfficers.find(user => user.id === filters.securityOfficer) || null}
           onChange={(_, newValue) => handleFilterChange('securityOfficer', newValue?.id || '')}
           isOptionEqualToValue={(option, value) => option.id === value.id}

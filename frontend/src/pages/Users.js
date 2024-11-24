@@ -57,8 +57,7 @@ function Users() {
   useEffect(() => {
     if (searchTerm) {
       const filtered = users.filter(user => 
-        user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.organization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ROLE_OPTIONS.find(role => role.value === user.role)?.label?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,8 +76,7 @@ function Users() {
     setSelectedUser(selectedUser);
     setEditedUser({
       ...selectedUser,
-      firstName: selectedUser.firstName || '',
-      lastName: selectedUser.lastName || '',
+      name: selectedUser.name || '',
       email: selectedUser.email || '',
       organization: selectedUser.organization || '',
       role: selectedUser.role || ''
@@ -96,8 +94,8 @@ function Users() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!editedUser.firstName?.trim()) {
-      newErrors.firstName = 'שם פרטי נדרש';
+    if (!editedUser.name?.trim()) {
+      newErrors.name = 'שם נדרש';
     }
     if (!editedUser.email?.trim()) {
       newErrors.email = 'אימייל נדרש';
@@ -134,8 +132,7 @@ function Users() {
   const getSearchSuggestions = () => {
     const suggestions = new Set();
     users.forEach(user => {
-      if (user.firstName) suggestions.add(user.firstName);
-      if (user.lastName) suggestions.add(user.lastName);
+      if (user.name) suggestions.add(user.name);
       if (user.email) suggestions.add(user.email);
       if (user.organization) suggestions.add(user.organization);
       if (user.role) {
@@ -209,7 +206,7 @@ function Users() {
                     }}
                   >
                     <ListItemText 
-                      primary={`${userItem.firstName}`}
+                      primary={userItem.name}
                       secondary={
                         <>
                           {userItem.email}
@@ -249,23 +246,14 @@ function Users() {
                 </Typography>
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="שם פרטי"
-                      value={editedUser.firstName}
-                      onChange={(e) => setEditedUser(prev => ({ ...prev, firstName: e.target.value }))}
-                      error={!!errors.firstName}
-                      helperText={errors.firstName}
-                      sx={formStyles.textField}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="שם משפחה"
-                      value={editedUser.lastName || ''}
-                      onChange={(e) => setEditedUser(prev => ({ ...prev, lastName: e.target.value }))}
+                      label="שם"
+                      value={editedUser.name}
+                      onChange={(e) => setEditedUser(prev => ({ ...prev, name: e.target.value }))}
+                      error={!!errors.name}
+                      helperText={errors.name}
                       sx={formStyles.textField}
                     />
                   </Grid>

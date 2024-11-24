@@ -57,11 +57,8 @@ router.get('/integrators',
   userController.getIntegrators
 );
 
-router.get('/entrepreneurs', 
-  auth, 
-  roleAuth([PERMISSIONS.ADMIN, PERMISSIONS.NEW_INSPECTION, PERMISSIONS.NEW_DRILL, PERMISSIONS.VIEW_FAULTS]), 
-  userController.getEntrepreneurs
-);
+// Allow access to entrepreneurs list for site management
+router.get('/entrepreneurs', auth, userController.getEntrepreneurs);
 
 // Admin routes (requires admin permission)
 router.get('/', 
@@ -73,7 +70,7 @@ router.get('/',
 router.put('/:id', [
   auth,
   roleAuth([PERMISSIONS.ADMIN]),
-  check('firstName', 'שם פרטי נדרש').not().isEmpty(),
+  check('name', 'שם נדרש').not().isEmpty(),
   check('email', 'נא להזין כתובת אימייל תקינה').isEmail(),
   check('role', 'תפקיד נדרש').not().isEmpty()
 ], userController.updateUserDetails);

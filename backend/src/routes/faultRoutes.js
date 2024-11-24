@@ -8,6 +8,12 @@ const { PERMISSIONS } = require('../constants/roles');
 
 const router = express.Router();
 
+// Helper function to validate organization IDs
+const validateOrganizationId = (value) => {
+  if (!value) return true;
+  return Number.isInteger(Number(value));
+};
+
 // Dashboard routes - requires VIEW_FAULTS permission
 router.get('/status/open', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultController.getOpenFaults);
 router.get('/recurring', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultController.getRecurringFaults);
@@ -22,8 +28,14 @@ router.get('/', [
   query('startDate').optional().isISO8601().withMessage('תאריך התחלה לא חוקי'),
   query('endDate').optional().isISO8601().withMessage('תאריך סיום לא חוקי'),
   query('site').optional().isString().withMessage('מזהה אתר לא חוקי'),
-  query('maintenance').optional().isString().withMessage('מזהה איש אחזקה לא חוקי'),
-  query('integrator').optional().isString().withMessage('מזהה אינטגרטור לא חוקי'),
+  query('maintenanceOrg')
+    .optional()
+    .custom(validateOrganizationId)
+    .withMessage('מזהה ארגון אחזקה לא חוקי'),
+  query('integratorOrg')
+    .optional()
+    .custom(validateOrganizationId)
+    .withMessage('מזהה ארגון אינטגרציה לא חוקי'),
   validate
 ], faultController.getAllFaults);
 
@@ -59,7 +71,18 @@ router.put('/:id/status', [
 router.put('/:id/details', [
   auth,
   roleAuth(PERMISSIONS.UPDATE_FAULT_DETAILS),
-  check('technician').notEmpty().withMessage('נדרש שם טכנאי'),
+  check('technician')
+    .optional()
+    .notEmpty()
+    .withMessage('שם טכנאי לא יכול להיות ריק'),
+  check('maintenanceOrganizationId')
+    .optional()
+    .custom(validateOrganizationId)
+    .withMessage('מזהה ארגון אחזקה לא חוקי'),
+  check('integratorOrganizationId')
+    .optional()
+    .custom(validateOrganizationId)
+    .withMessage('מזהה ארגון אינטגרציה לא חוקי'),
   validate
 ], faultController.updateFaultDetails);
 

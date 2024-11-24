@@ -38,10 +38,10 @@ const SITE_TYPES = [
   { value: 'inductive_fence', label: 'גדר אינדוקטיבית' }
 ];
 
-// Helper function to format user names list
-const formatUsersList = (users) => {
-  if (!users || users.length === 0) return '-';
-  return users.map(user => `${user.firstName} ${user.lastName}`).join(', ');
+// Helper function to format organization names list
+const formatOrganizationsList = (organizations) => {
+  if (!organizations || organizations.length === 0) return '-';
+  return organizations.map(org => org.name).join(', ');
 };
 
 function Sites({ mode = 'list', onModeChange }) {
@@ -70,17 +70,16 @@ function Sites({ mode = 'list', onModeChange }) {
   }, []);
 
   useEffect(() => {
-    if (user.hasPermission(PERMISSIONS.ADMIN)) {
-      fetchSites();
-    }
-  }, [fetchSites, user]);
+    // Fetch sites for all users
+    fetchSites();
+  }, [fetchSites]);
 
   useEffect(() => {
     const filtered = sites.filter(site => 
       site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      site.entrepreneur?.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      site.entrepreneur?.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      site.type.toLowerCase().includes(searchTerm.toLowerCase())
+      site.entrepreneur?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      site.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      site.serviceOrganizations?.some(org => org.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredSites(filtered);
   }, [searchTerm, sites]);
@@ -204,8 +203,8 @@ function Sites({ mode = 'list', onModeChange }) {
               <TableCell sx={{ color: colors.text.white }}>שם האתר</TableCell>
               <TableCell sx={{ color: colors.text.white }}>יזם</TableCell>
               <TableCell sx={{ color: colors.text.white }}>סוג</TableCell>
-              <TableCell sx={{ color: colors.text.white }}>אינטגרטור</TableCell>
-              <TableCell sx={{ color: colors.text.white }}>אחזקה</TableCell>
+              <TableCell sx={{ color: colors.text.white }}>חברות אינטגרציה</TableCell>
+              <TableCell sx={{ color: colors.text.white }}>חברות אחזקה</TableCell>
               <TableCell sx={{ color: colors.text.white }}>מוקד</TableCell>
               {user.hasPermission(PERMISSIONS.ADMIN) && (
                 <TableCell sx={{ color: colors.text.white }}>פעולות</TableCell>
@@ -217,19 +216,19 @@ function Sites({ mode = 'list', onModeChange }) {
               <TableRow key={site.id}>
                 <TableCell sx={{ color: colors.text.white }}>{site.name}</TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
-                  {`${site.entrepreneur?.firstName}`}
+                  {site.entrepreneur?.name || '-'}
                 </TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
                   {SITE_TYPES.find(t => t.value === site.type)?.label}
                 </TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
-                  {formatUsersList(site.integrators)}
+                  {formatOrganizationsList(site.serviceOrganizations?.filter(org => org.type === 'integrator'))}
                 </TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
-                  {formatUsersList(site.maintenanceStaff)}
+                  {formatOrganizationsList(site.serviceOrganizations?.filter(org => org.type === 'maintenance'))}
                 </TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
-                  {site.controlCenter ? `${site.controlCenter.firstName} ${site.controlCenter.lastName}` : '-'}
+                  {site.controlCenter?.name || '-'}
                 </TableCell>
                 {user.hasPermission(PERMISSIONS.ADMIN) && (
                   <TableCell>
@@ -249,18 +248,15 @@ function Sites({ mode = 'list', onModeChange }) {
     </>
   );
 
-  if (!user.hasPermission(PERMISSIONS.ADMIN)) {
-    return (
-      <Container>
-        <Typography>אין לך הרשאה לצפות בדף זה</Typography>
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="lg" sx={formStyles.container}>
       {mode === 'inspection-config' ? (
-        <InspectionTypeConfig />
+        // Only admin can access inspection config
+        user.hasPermission(PERMISSIONS.ADMIN) ? (
+          <InspectionTypeConfig />
+        ) : (
+          <Typography>אין לך הרשאה לצפות בדף זה</Typography>
+        )
       ) : (
         renderSitesList()
       )}

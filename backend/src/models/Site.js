@@ -17,30 +17,6 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    integratorUserIds: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: [],
-      validate: {
-        isValidUserIds(value) {
-          if (!Array.isArray(value)) {
-            throw new Error('Integrator user IDs must be an array');
-          }
-        }
-      }
-    },
-    maintenanceUserIds: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: [],
-      validate: {
-        isValidUserIds(value) {
-          if (!Array.isArray(value)) {
-            throw new Error('Maintenance user IDs must be an array');
-          }
-        }
-      }
-    },
     controlCenterUserId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -71,24 +47,35 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Site.associate = function(models) {
+    // Site belongs to an entrepreneur
     Site.belongsTo(models.User, {
       foreignKey: 'entrepreneurId',
       as: 'entrepreneur'
     });
 
+    // Site belongs to a control center user
     Site.belongsTo(models.User, {
       foreignKey: 'controlCenterUserId',
       as: 'controlCenter'
     });
     
+    // Site has many inspections
     Site.hasMany(models.Inspection, {
       foreignKey: 'siteId',
       as: 'inspections'
     });
 
+    // Site has many faults
     Site.hasMany(models.Fault, {
       foreignKey: 'siteId',
       as: 'faults'
+    });
+
+    // Site can be serviced by many organizations (integrator/maintenance companies)
+    Site.belongsToMany(models.Organization, {
+      through: 'OrganizationSites',
+      foreignKey: 'siteId',
+      as: 'serviceOrganizations'
     });
   };
 

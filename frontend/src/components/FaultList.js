@@ -36,12 +36,8 @@ const FaultList = ({
   faults, 
   onSiteClick, 
   onStatusChange, 
-  onMaintenanceChange,
-  onIntegratorChange,
-  onDeleteFault,
   onTechnicianChange,
-  maintenanceUsers,
-  integratorUsers,
+  onDeleteFault,
   onFaultUpdated
 }) => {
   const { user } = useAuth();
@@ -49,7 +45,6 @@ const FaultList = ({
   const [selectedFault, setSelectedFault] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
 
-  const canEditMaintenanceIntegrator = user.role === 'admin';
   const canEditTechnicianAndStatus = ['admin', 'integrator', 'maintenance'].includes(user.role);
 
   const handleDeleteClick = (fault) => {
@@ -68,20 +63,6 @@ const FaultList = ({
   const handleStatusChange = async (event, faultId) => {
     if (onStatusChange) {
       onStatusChange(faultId, event.target.value);
-    }
-    setEditingCell(null);
-  };
-
-  const handleMaintenanceChange = async (event, faultId) => {
-    if (onMaintenanceChange) {
-      onMaintenanceChange(faultId, event.target.value);
-    }
-    setEditingCell(null);
-  };
-
-  const handleIntegratorChange = async (event, faultId) => {
-    if (onIntegratorChange) {
-      onIntegratorChange(faultId, event.target.value);
     }
     setEditingCell(null);
   };
@@ -117,6 +98,11 @@ const FaultList = ({
     return `${hours} שעות`;
   };
 
+  const getOrganizationByType = (organizations, type) => {
+    if (!organizations) return null;
+    return organizations.find(org => org.type === type);
+  };
+
   return (
     <>
       <TableContainer component={Paper} sx={{ 
@@ -130,8 +116,8 @@ const FaultList = ({
               <TableCell>אחזקה</TableCell>
               <TableCell>אינטגרטור</TableCell>
               <TableCell>שם הטכנאי</TableCell>
+              <TableCell>רכיב</TableCell>
               <TableCell>סוג התקלה</TableCell>
-              <TableCell>תיאור התקלה</TableCell>
               <TableCell>תאריך פתיחה</TableCell>
               <TableCell>תאריך סגירה</TableCell>
               <TableCell>זמן טיפול</TableCell>
@@ -148,175 +134,114 @@ const FaultList = ({
                 </TableCell>
               </TableRow>
             ) : (
-              faults.map((fault) => (
-                <TableRow key={fault.id}>
-                  <TableCell>
-                    <span
-                      onClick={(e) => handleSiteClick(e, fault.site)}
-                      style={{ 
-                        color: colors.text.white,
-                        textDecoration: 'underline',
-                        cursor: 'pointer'
+              faults.map((fault) => {
+                const maintenanceOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'maintenance');
+                const integratorOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'integrator');
+
+                return (
+                  <TableRow key={fault.id}>
+                    <TableCell>
+                      <span
+                        onClick={(e) => handleSiteClick(e, fault.site)}
+                        style={{ 
+                          color: colors.text.white,
+                          textDecoration: 'underline',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {fault.site?.name || ''}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span style={{ color: maintenanceOrg?.name ? colors.text.white : colors.text.grey }}>
+                        {maintenanceOrg?.name || ''}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span style={{ color: integratorOrg?.name ? colors.text.white : colors.text.grey }}>
+                        {integratorOrg?.name || ''}
+                      </span>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`)}
+                      sx={{ 
+                        cursor: canEditTechnicianAndStatus && onTechnicianChange ? 'pointer' : 'default',
+                        '&:hover': canEditTechnicianAndStatus && onTechnicianChange ? {
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                        } : {}
                       }}
                     >
-                      {fault.site?.name || ''}
-                    </span>
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => canEditMaintenanceIntegrator && onMaintenanceChange && handleCellClick(`maintenance-${fault.id}`)}
-                    sx={{ 
-                      cursor: canEditMaintenanceIntegrator && onMaintenanceChange ? 'pointer' : 'default',
-                      '&:hover': canEditMaintenanceIntegrator && onMaintenanceChange ? {
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                      } : {}
-                    }}
-                  >
-                    {editingCell === `maintenance-${fault.id}` ? (
-                      <FormControl fullWidth size="small">
-                        <Select
-                          value={fault.maintenanceUser?.id || ''}
-                          onChange={(e) => handleMaintenanceChange(e, fault.id)}
+                      {editingCell === `technician-${fault.id}` ? (
+                        <TextField
+                          size="small"
+                          value={fault.technician || ''}
+                          onChange={(e) => handleTechnicianChange(e, fault.id)}
                           onBlur={() => setEditingCell(null)}
                           autoFocus
-                        >
-                          <MenuItem value="">
-                            <em>ללא</em>
-                          </MenuItem>
-                          {maintenanceUsers.map(user => (
-                            <MenuItem key={user.id} value={user.id}>
-                              {`${user.firstName} ${user.lastName}`}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    ) : (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {!fault.maintenanceUser?.name && canEditMaintenanceIntegrator && onMaintenanceChange && (
-                          <EditIcon sx={{ fontSize: 16, color: colors.text.grey }} />
-                        )}
-                        <span style={{ color: fault.maintenanceUser?.name ? colors.text.white : colors.text.grey }}>
-                          {fault.maintenanceUser?.name || ''}
-                        </span>
-                      </Box>
-                    )}
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => canEditMaintenanceIntegrator && onIntegratorChange && handleCellClick(`integrator-${fault.id}`)}
-                    sx={{ 
-                      cursor: canEditMaintenanceIntegrator && onIntegratorChange ? 'pointer' : 'default',
-                      '&:hover': canEditMaintenanceIntegrator && onIntegratorChange ? {
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                      } : {}
-                    }}
-                  >
-                    {editingCell === `integrator-${fault.id}` ? (
-                      <FormControl fullWidth size="small">
-                        <Select
-                          value={fault.integratorUser?.id || ''}
-                          onChange={(e) => handleIntegratorChange(e, fault.id)}
-                          onBlur={() => setEditingCell(null)}
-                          autoFocus
-                        >
-                          <MenuItem value="">
-                            <em>ללא</em>
-                          </MenuItem>
-                          {integratorUsers.map(user => (
-                            <MenuItem key={user.id} value={user.id}>
-                              {`${user.firstName} ${user.lastName}`}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    ) : (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {!fault.integratorUser?.name && canEditMaintenanceIntegrator && onIntegratorChange && (
-                          <EditIcon sx={{ fontSize: 16, color: colors.text.grey }} />
-                        )}
-                        <span style={{ color: fault.integratorUser?.name ? colors.text.white : colors.text.grey }}>
-                          {fault.integratorUser?.name || ''}
-                        </span>
-                      </Box>
-                    )}
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`)}
-                    sx={{ 
-                      cursor: canEditTechnicianAndStatus && onTechnicianChange ? 'pointer' : 'default',
-                      '&:hover': canEditTechnicianAndStatus && onTechnicianChange ? {
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                      } : {}
-                    }}
-                  >
-                    {editingCell === `technician-${fault.id}` ? (
-                      <TextField
-                        size="small"
-                        value={fault.technician || ''}
-                        onChange={(e) => handleTechnicianChange(e, fault.id)}
-                        onBlur={() => setEditingCell(null)}
-                        autoFocus
-                        fullWidth
-                      />
-                    ) : (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {!fault.technician && canEditTechnicianAndStatus && onTechnicianChange && (
-                          <EditIcon sx={{ fontSize: 16, color: colors.text.grey }} />
-                        )}
-                        <span style={{ color: fault.technician ? colors.text.white : colors.text.grey }}>
-                          {fault.technician || ''}
-                        </span>
-                      </Box>
-                    )}
-                  </TableCell>
-                  <TableCell>{fault.isCritical ? 'משביתה' : 'לא משביתה'}</TableCell>
-                  <TableCell>{fault.type}</TableCell>
-                  <TableCell>
-                    {new Date(fault.reportedTime).toLocaleDateString('he-IL')}
-                  </TableCell>
-                  <TableCell>
-                    {fault.closedTime ? new Date(fault.closedTime).toLocaleDateString('he-IL') : ''}
-                  </TableCell>
-                  <TableCell>
-                    {calculateTreatmentTime(fault)}
-                  </TableCell>
-                  <TableCell 
-                    onClick={() => canEditTechnicianAndStatus && onStatusChange && handleCellClick(`status-${fault.id}`)}
-                    sx={{ 
-                      cursor: canEditTechnicianAndStatus && onStatusChange ? 'pointer' : 'default',
-                      '&:hover': canEditTechnicianAndStatus && onStatusChange ? {
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                      } : {}
-                    }}
-                  >
-                    {editingCell === `status-${fault.id}` ? (
-                      <FormControl fullWidth size="small">
-                        <Select
-                          value={fault.status}
-                          onChange={(e) => handleStatusChange(e, fault.id)}
-                          onBlur={() => setEditingCell(null)}
-                          autoFocus
-                        >
-                          {FAULT_STATUSES.map(status => (
-                            <MenuItem key={status} value={status}>{status}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    ) : (
-                      fault.status
-                    )}
-                  </TableCell>
-                  <TableCell>{fault.type === 'אחר' ? fault.description : ''}</TableCell>
-                  {onDeleteFault && (
-                    <TableCell>
-                      <IconButton
-                        onClick={() => handleDeleteClick(fault)}
-                        sx={{ color: colors.text.white }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                          fullWidth
+                        />
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {!fault.technician && canEditTechnicianAndStatus && onTechnicianChange && (
+                            <EditIcon sx={{ fontSize: 16, color: colors.text.grey }} />
+                          )}
+                          <span style={{ color: fault.technician ? colors.text.white : colors.text.grey }}>
+                            {fault.technician || ''}
+                          </span>
+                        </Box>
+                      )}
                     </TableCell>
-                  )}
-                </TableRow>
-              ))
+                    <TableCell>{fault.type}</TableCell>
+                    <TableCell>{fault.isCritical ? 'משביתה' : 'לא משביתה'}</TableCell>
+                    <TableCell>
+                      {new Date(fault.reportedTime).toLocaleDateString('he-IL')}
+                    </TableCell>
+                    <TableCell>
+                      {fault.closedTime ? new Date(fault.closedTime).toLocaleDateString('he-IL') : ''}
+                    </TableCell>
+                    <TableCell>
+                      {calculateTreatmentTime(fault)}
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => canEditTechnicianAndStatus && onStatusChange && handleCellClick(`status-${fault.id}`)}
+                      sx={{ 
+                        cursor: canEditTechnicianAndStatus && onStatusChange ? 'pointer' : 'default',
+                        '&:hover': canEditTechnicianAndStatus && onStatusChange ? {
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                        } : {}
+                      }}
+                    >
+                      {editingCell === `status-${fault.id}` ? (
+                        <FormControl fullWidth size="small">
+                          <Select
+                            value={fault.status}
+                            onChange={(e) => handleStatusChange(e, fault.id)}
+                            onBlur={() => setEditingCell(null)}
+                            autoFocus
+                          >
+                            {FAULT_STATUSES.map(status => (
+                              <MenuItem key={status} value={status}>{status}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        fault.status
+                      )}
+                    </TableCell>
+                    <TableCell>{fault.type === 'אחר' ? fault.description : ''}</TableCell>
+                    {onDeleteFault && (
+                      <TableCell>
+                        <IconButton
+                          onClick={() => handleDeleteClick(fault)}
+                          sx={{ color: colors.text.white }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -375,15 +300,12 @@ FaultList.propTypes = {
     id: PropTypes.number.isRequired,
     site: PropTypes.shape({
       id: PropTypes.number,
-      name: PropTypes.string
-    }),
-    maintenanceUser: PropTypes.shape({
-      id: PropTypes.number,
-      name: PropTypes.string
-    }),
-    integratorUser: PropTypes.shape({
-      id: PropTypes.number,
-      name: PropTypes.string
+      name: PropTypes.string,
+      serviceOrganizations: PropTypes.arrayOf(PropTypes.shape({
+        id: PropTypes.number,
+        name: PropTypes.string,
+        type: PropTypes.oneOf(['maintenance', 'integrator'])
+      }))
     }),
     type: PropTypes.string.isRequired,
     description: PropTypes.string,
@@ -396,21 +318,9 @@ FaultList.propTypes = {
   })).isRequired,
   onSiteClick: PropTypes.func.isRequired,
   onStatusChange: PropTypes.func,
-  onMaintenanceChange: PropTypes.func,
-  onIntegratorChange: PropTypes.func,
   onTechnicianChange: PropTypes.func,
   onDeleteFault: PropTypes.func,
-  onFaultUpdated: PropTypes.func,
-  maintenanceUsers: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.number.isRequired,
-    firstName: PropTypes.string.isRequired,
-    lastName: PropTypes.string.isRequired
-  })).isRequired,
-  integratorUsers: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.number.isRequired,
-    firstName: PropTypes.string.isRequired,
-    lastName: PropTypes.string.isRequired
-  })).isRequired
+  onFaultUpdated: PropTypes.func
 };
 
 export default FaultList;

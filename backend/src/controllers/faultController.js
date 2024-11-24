@@ -5,20 +5,20 @@ const { Op } = require('sequelize');
 
 // Helper function to get sites based on user role and organization
 const getSitesByUserRole = async (user) => {
-  const { role, id: userId, organization } = user;
+  const { role, id: userId, organizationId } = user;
   
   if (role === 'admin' || role === 'security_officer') {
     return await db.Site.findAll({ attributes: ['id'] });
   }
   
   if (role === 'integrator' || role === 'maintenance') {
-    // Get all sites in their organization
+    // Get all sites serviced by their organization
     return await db.Site.findAll({
       attributes: ['id'],
       include: [{
-        model: db.User,
-        as: 'entrepreneur',
-        where: { organization },
+        model: db.Organization,
+        as: 'serviceOrganizations',
+        where: { id: organizationId },
         attributes: []
       }]
     });
@@ -141,9 +141,9 @@ exports.createFault = async (req, res, next) => {
 
     const site = await db.Site.findByPk(siteId, {
       include: [{
-        model: db.User,
-        as: 'entrepreneur',
-        attributes: ['organization']
+        model: db.Organization,
+        as: 'serviceOrganizations',
+        attributes: ['id', 'type']
       }]
     });
     
@@ -160,23 +160,9 @@ exports.createFault = async (req, res, next) => {
       return next(new AppError('חובה להזין תיאור לתקלה מסוג אחר', 400));
     }
 
-    // Get assigned users from site's organization
-    const [maintenanceUser, integratorUser] = await Promise.all([
-      site.maintenanceUserIds?.length > 0 ? db.User.findOne({
-        where: {
-          id: site.maintenanceUserIds[0],
-          role: 'maintenance',
-          organization: site.entrepreneur.organization
-        }
-      }) : null,
-      site.integratorUserIds?.length > 0 ? db.User.findOne({
-        where: {
-          id: site.integratorUserIds[0],
-          role: 'integrator',
-          organization: site.entrepreneur.organization
-        }
-      }) : null
-    ]);
+    // Get maintenance and integrator organizations from site
+    const maintenanceOrg = site.serviceOrganizations.find(org => org.type === 'maintenance');
+    const integratorOrg = site.serviceOrganizations.find(org => org.type === 'integrator');
 
     const fault = await db.Fault.create({
       siteId,
@@ -184,18 +170,42 @@ exports.createFault = async (req, res, next) => {
       description: description ? description.trim() : null,
       isCritical,
       status: 'פתוח',
-      reportedBy: req.user.firstName + ' ' + req.user.lastName,
+      reportedBy: req.user.name,
       reportedTime: new Date(),
-      maintenanceUserId: maintenanceUser?.id || null,
-      integratorUserId: integratorUser?.id || null
+      maintenanceOrganizationId: maintenanceOrg?.id || null,
+      integratorOrganizationId: integratorOrg?.id || null
     });
 
     const createdFault = await db.Fault.findByPk(fault.id, {
-      include: [{
-        model: db.Site,
-        as: 'site',
-        attributes: ['name']
-      }]
+      include: [
+        {
+          model: db.Site,
+          as: 'site',
+          attributes: ['name']
+        },
+        {
+          model: db.Organization,
+          as: 'maintenanceOrganization',
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'maintenance' }
+          }]
+        },
+        {
+          model: db.Organization,
+          as: 'integratorOrganization',
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'integrator' }
+          }]
+        }
+      ]
     });
 
     const formattedFault = {
@@ -203,22 +213,29 @@ exports.createFault = async (req, res, next) => {
       site: {
         name: createdFault.site.name
       },
+      maintenanceOrganization: {
+        id: createdFault.maintenanceOrganization?.id,
+        name: createdFault.maintenanceOrganization?.name,
+        users: createdFault.maintenanceOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      integratorOrganization: {
+        id: createdFault.integratorOrganization?.id,
+        name: createdFault.integratorOrganization?.name,
+        users: createdFault.integratorOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
       type: createdFault.type,
       description: createdFault.description,
       isCritical: createdFault.isCritical,
       reportedTime: createdFault.reportedTime,
       closedTime: createdFault.closedTime,
       status: createdFault.status,
-      lastUpdatedTime: createdFault.lastUpdatedTime,
-      maintenanceUser: maintenanceUser ? {
-        id: maintenanceUser.id,
-        name: `${maintenanceUser.firstName} ${maintenanceUser.lastName}`
-      } : null,
-      integratorUser: integratorUser ? {
-        id: integratorUser.id,
-        name: `${integratorUser.firstName} ${integratorUser.lastName}`
-      } : null,
-      controlCenterUser: null
+      lastUpdatedTime: createdFault.lastUpdatedTime
     };
 
     logger.info(`New fault created for site ${siteId}`);
@@ -236,15 +253,32 @@ exports.updateFaultStatus = async (req, res, next) => {
     const { status } = req.body;
 
     const fault = await db.Fault.findByPk(id, {
-      include: [{
-        model: db.Site,
-        as: 'site',
-        include: [{
-          model: db.User,
-          as: 'entrepreneur',
-          attributes: ['organization']
-        }]
-      }]
+      include: [
+        {
+          model: db.Site,
+          as: 'site'
+        },
+        {
+          model: db.Organization,
+          as: 'maintenanceOrganization',
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'maintenance' }
+          }]
+        },
+        {
+          model: db.Organization,
+          as: 'integratorOrganization',
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'integrator' }
+          }]
+        }
+      ]
     });
 
     if (!fault) {
@@ -253,26 +287,59 @@ exports.updateFaultStatus = async (req, res, next) => {
 
     // Check if user has permission to update this fault
     if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
-      // Check only organization match
-      const isSameOrg = req.user.organization === fault.site.entrepreneur.organization;
-      if (!isSameOrg) {
+      const userOrgId = req.user.organizationId;
+      const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
+                       fault.integratorOrganizationId === userOrgId;
+      
+      if (!isAllowed) {
         return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
       }
     }
 
     fault.status = status;
-    fault.lastUpdatedBy = req.user.firstName + ' ' + req.user.lastName;
+    fault.lastUpdatedBy = req.user.name;
     fault.lastUpdatedTime = new Date();
 
     if (status === 'סגור') {
       fault.closedTime = new Date();
-      fault.closedBy = req.user.firstName + ' ' + req.user.lastName;
+      fault.closedBy = req.user.name;
     }
 
     await fault.save();
 
+    const formattedFault = {
+      id: fault.id,
+      site: {
+        name: fault.site.name
+      },
+      maintenanceOrganization: {
+        id: fault.maintenanceOrganization?.id,
+        name: fault.maintenanceOrganization?.name,
+        users: fault.maintenanceOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      integratorOrganization: {
+        id: fault.integratorOrganization?.id,
+        name: fault.integratorOrganization?.name,
+        users: fault.integratorOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      type: fault.type,
+      description: fault.description,
+      technician: fault.technician,
+      isCritical: fault.isCritical,
+      reportedTime: fault.reportedTime,
+      closedTime: fault.closedTime,
+      status: fault.status,
+      lastUpdatedTime: fault.lastUpdatedTime
+    };
+
     logger.info(`Fault ${id} status updated to ${status}`);
-    res.json(fault);
+    res.json(formattedFault);
   } catch (error) {
     logger.error('Error updating fault status:', error);
     next(new AppError('שגיאה בעדכון סטטוס תקלה', 500));
@@ -283,18 +350,35 @@ exports.updateFaultStatus = async (req, res, next) => {
 exports.updateFaultDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { technician, maintenanceUserId, integratorUserId } = req.body;
+    const { technician, maintenanceOrganizationId, integratorOrganizationId } = req.body;
 
     const fault = await db.Fault.findByPk(id, {
-      include: [{
-        model: db.Site,
-        as: 'site',
-        include: [{
-          model: db.User,
-          as: 'entrepreneur',
-          attributes: ['organization']
-        }]
-      }]
+      include: [
+        {
+          model: db.Site,
+          as: 'site'
+        },
+        {
+          model: db.Organization,
+          as: 'maintenanceOrganization',
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'maintenance' }
+          }]
+        },
+        {
+          model: db.Organization,
+          as: 'integratorOrganization',
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'integrator' }
+          }]
+        }
+      ]
     });
 
     if (!fault) {
@@ -303,9 +387,11 @@ exports.updateFaultDetails = async (req, res, next) => {
 
     // Check if user has permission to update this fault
     if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
-      // Check only organization match
-      const isSameOrg = req.user.organization === fault.site.entrepreneur.organization;
-      if (!isSameOrg) {
+      const userOrgId = req.user.organizationId;
+      const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
+                       fault.integratorOrganizationId === userOrgId;
+      
+      if (!isAllowed) {
         return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
       }
     }
@@ -314,43 +400,33 @@ exports.updateFaultDetails = async (req, res, next) => {
       fault.technician = technician;
     }
 
-    // Update maintenance user if provided
-    if (maintenanceUserId !== undefined) {
-      // Verify user exists and has maintenance role in the organization
-      const maintenanceUser = await db.User.findOne({
-        where: {
-          id: maintenanceUserId,
-          role: 'maintenance',
-          organization: fault.site.entrepreneur.organization
+    // Update maintenance organization if provided
+    if (maintenanceOrganizationId !== undefined) {
+      if (maintenanceOrganizationId) {
+        const org = await db.Organization.findOne({
+          where: { id: maintenanceOrganizationId, type: 'maintenance' }
+        });
+        if (!org) {
+          return next(new AppError('ארגון אחזקה לא נמצא', 404));
         }
-      });
-      
-      if (maintenanceUserId && !maintenanceUser) {
-        return next(new AppError('משתמש אחזקה לא נמצא או אינו שייך לארגון', 404));
       }
-
-      fault.maintenanceUserId = maintenanceUserId || null;
+      fault.maintenanceOrganizationId = maintenanceOrganizationId;
     }
 
-    // Update integrator user if provided
-    if (integratorUserId !== undefined) {
-      // Verify user exists and has integrator role in the organization
-      const integratorUser = await db.User.findOne({
-        where: {
-          id: integratorUserId,
-          role: 'integrator',
-          organization: fault.site.entrepreneur.organization
+    // Update integrator organization if provided
+    if (integratorOrganizationId !== undefined) {
+      if (integratorOrganizationId) {
+        const org = await db.Organization.findOne({
+          where: { id: integratorOrganizationId, type: 'integrator' }
+        });
+        if (!org) {
+          return next(new AppError('ארגון אינטגרציה לא נמצא', 404));
         }
-      });
-      
-      if (integratorUserId && !integratorUser) {
-        return next(new AppError('משתמש אינטגרטור לא נמצא או אינו שייך לארגון', 404));
       }
-
-      fault.integratorUserId = integratorUserId || null;
+      fault.integratorOrganizationId = integratorOrganizationId;
     }
 
-    fault.lastUpdatedBy = req.user.firstName + ' ' + req.user.lastName;
+    fault.lastUpdatedBy = req.user.name;
     fault.lastUpdatedTime = new Date();
 
     await fault.save();
@@ -363,20 +439,63 @@ exports.updateFaultDetails = async (req, res, next) => {
           attributes: ['name']
         },
         {
-          model: db.User,
-          as: 'maintenanceUser',
-          attributes: ['firstName', 'lastName']
+          model: db.Organization,
+          as: 'maintenanceOrganization',
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'maintenance' }
+          }]
         },
         {
-          model: db.User,
-          as: 'integratorUser',
-          attributes: ['firstName', 'lastName']
+          model: db.Organization,
+          as: 'integratorOrganization',
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'integrator' }
+          }]
         }
       ]
     });
 
+    const formattedFault = {
+      id: updatedFault.id,
+      site: {
+        name: updatedFault.site.name
+      },
+      maintenanceOrganization: {
+        id: updatedFault.maintenanceOrganization?.id,
+        name: updatedFault.maintenanceOrganization?.name,
+        users: updatedFault.maintenanceOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      integratorOrganization: {
+        id: updatedFault.integratorOrganization?.id,
+        name: updatedFault.integratorOrganization?.name,
+        users: updatedFault.integratorOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      type: updatedFault.type,
+      description: updatedFault.description,
+      technician: updatedFault.technician,
+      isCritical: updatedFault.isCritical,
+      reportedTime: updatedFault.reportedTime,
+      closedTime: updatedFault.closedTime,
+      status: updatedFault.status,
+      lastUpdatedTime: updatedFault.lastUpdatedTime
+    };
+
     logger.info(`Fault ${id} details updated`);
-    res.json(updatedFault);
+    res.json(formattedFault);
   } catch (error) {
     logger.error('Error updating fault details:', error);
     next(new AppError('שגיאה בעדכון פרטי תקלה', 500));
@@ -412,18 +531,73 @@ exports.getFaultById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const fault = await db.Fault.findByPk(id, {
-      include: [{
-        model: db.Site,
-        as: 'site',
-        attributes: ['name']
-      }]
+      include: [
+        {
+          model: db.Site,
+          as: 'site',
+          attributes: ['name']
+        },
+        {
+          model: db.Organization,
+          as: 'maintenanceOrganization',
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'maintenance' }
+          }]
+        },
+        {
+          model: db.Organization,
+          as: 'integratorOrganization',
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.User,
+            as: 'employees',
+            attributes: ['id', 'name'],
+            where: { role: 'integrator' }
+          }]
+        }
+      ]
     });
 
     if (!fault) {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
-    res.json(fault);
+    const formattedFault = {
+      id: fault.id,
+      site: {
+        name: fault.site.name
+      },
+      maintenanceOrganization: {
+        id: fault.maintenanceOrganization?.id,
+        name: fault.maintenanceOrganization?.name,
+        users: fault.maintenanceOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      integratorOrganization: {
+        id: fault.integratorOrganization?.id,
+        name: fault.integratorOrganization?.name,
+        users: fault.integratorOrganization?.employees?.map(user => ({
+          id: user.id,
+          name: user.name
+        })) || []
+      },
+      type: fault.type,
+      description: fault.description,
+      technician: fault.technician,
+      isCritical: fault.isCritical,
+      reportedTime: fault.reportedTime,
+      closedTime: fault.closedTime,
+      status: fault.status,
+      lastUpdatedTime: fault.lastUpdatedTime
+    };
+
+    res.json(formattedFault);
   } catch (error) {
     logger.error('Error fetching fault:', error);
     next(new AppError('שגיאה בשליפת תקלה', 500));
@@ -431,10 +605,11 @@ exports.getFaultById = async (req, res, next) => {
 };
 
 // Get all faults with filters
+
 exports.getAllFaults = async (req, res, next) => {
   try {
-    const { role, id: userId, organization } = req.user;
-    const { startDate, endDate, site, isCritical, maintenance, integrator } = req.query;
+    const { role, id: userId, organizationId } = req.user;
+    const { startDate, endDate, site, isCritical, maintenanceOrg, integratorOrg } = req.query;
 
     // Base query
     let whereClause = {};
@@ -461,79 +636,52 @@ exports.getAllFaults = async (req, res, next) => {
 
     // Role-based site access
     let siteWhere = {};
-    let entrepreneurWhere = {};
-    
     if (role === 'entrepreneur') {
       siteWhere.entrepreneurId = userId;
-    } else if (role === 'integrator' || role === 'maintenance') {
-      entrepreneurWhere.organization = organization;
     }
+    
+    // Add specific site filter if provided
     if (site) {
       siteWhere.id = site;
     }
 
-    // Build include array
-    let includeArray = [{
-      model: db.Site,
-      as: 'site',
-      where: Object.keys(siteWhere).length > 0 ? siteWhere : undefined,
-      attributes: ['id', 'name'],
-      include: [{
-        model: db.User,
-        as: 'entrepreneur',
-        where: Object.keys(entrepreneurWhere).length > 0 ? entrepreneurWhere : undefined,
-        attributes: ['organization']
-      }]
-    }];
+    // Include clauses
+    const includes = [
+      {
+        model: db.Site,
+        as: 'site',
+        where: siteWhere,
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: db.Organization,
+            as: 'serviceOrganizations',
+            attributes: ['id', 'name', 'type'],
+            ...(maintenanceOrg || integratorOrg ? {
+              where: {
+                [Op.or]: [
+                  maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
+                  integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
+                ].filter(Boolean)
+              }
+            } : {})
+          }
+        ]
+      }
+    ];
 
-    // Add maintenance user
-    if (maintenance) {
-      includeArray.push({
-        model: db.User,
-        as: 'maintenanceUser',
-        where: { id: maintenance },
-        attributes: ['firstName', 'lastName'],
-        required: true
-      });
-    } else {
-      includeArray.push({
-        model: db.User,
-        as: 'maintenanceUser',
-        attributes: ['firstName', 'lastName'],
-        required: false
-      });
+    // For integrator/maintenance users, add organization filter
+    if (role === 'integrator' || role === 'maintenance') {
+      includes[0].include[0].where = {
+        id: organizationId,
+        type: role === 'integrator' ? 'integrator' : 'maintenance'
+      };
     }
-
-    // Add integrator user
-    if (integrator) {
-      includeArray.push({
-        model: db.User,
-        as: 'integratorUser',
-        where: { id: integrator },
-        attributes: ['firstName', 'lastName'],
-        required: true
-      });
-    } else {
-      includeArray.push({
-        model: db.User,
-        as: 'integratorUser',
-        attributes: ['firstName', 'lastName'],
-        required: false
-      });
-    }
-
-    // Add control center user
-    includeArray.push({
-      model: db.User,
-      as: 'controlCenterUser',
-      attributes: ['firstName', 'lastName'],
-      required: false
-    });
 
     // Execute query
     const faults = await db.Fault.findAll({
       where: whereClause,
-      include: includeArray,
+      include: includes,
       order: [['reportedTime', 'DESC']]
     });
 
@@ -543,19 +691,8 @@ exports.getAllFaults = async (req, res, next) => {
       site: {
         id: fault.site.id,
         name: fault.site.name,
-        organization: fault.site.entrepreneur.organization
+        serviceOrganizations: fault.site.serviceOrganizations
       },
-      maintenanceUser: fault.maintenanceUser ? {
-        id: fault.maintenanceUser.id,
-        name: `${fault.maintenanceUser.firstName} ${fault.maintenanceUser.lastName}`
-      } : null,
-      integratorUser: fault.integratorUser ? {
-        id: fault.integratorUser.id,
-        name: `${fault.integratorUser.firstName} ${fault.integratorUser.lastName}`
-      } : null,
-      controlCenterUser: fault.controlCenterUser ? {
-        name: `${fault.controlCenterUser.firstName} ${fault.controlCenterUser.lastName}`
-      } : null,
       type: fault.type,
       description: fault.description,
       technician: fault.technician,
@@ -572,3 +709,5 @@ exports.getAllFaults = async (req, res, next) => {
     next(new AppError('שגיאה בשליפת תקלות', 500));
   }
 };
+
+// ... (rest of the code remains the same)

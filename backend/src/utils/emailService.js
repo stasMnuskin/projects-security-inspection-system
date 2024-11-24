@@ -77,7 +77,7 @@ ${process.env.GOOGLE_USER}
 
   registrationComplete: (userData) => ({
     subject: 'ההרשמה למערכת הושלמה בהצלחה',
-    text: `שלום ${userData.firstName},
+    text: `שלום ${userData.name},
 
 ההרשמה למערכת הושלמה בהצלחה.
 מעתה תוכלו להיכנס למערכת באמצעות כתובת האימייל והסיסמה שהגדרתם.
@@ -104,7 +104,7 @@ ${resetLink}
 
   passwordResetConfirmation: (userData) => ({
     subject: 'הסיסמה שונתה בהצלחה',
-    text: `שלום ${userData.firstName},
+    text: `שלום ${userData.name},
 
 הסיסמה שלכם למערכת שונתה בהצלחה.
 מעתה תוכלו להיכנס למערכת עם הסיסמה החדשה.

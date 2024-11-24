@@ -1,16 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
-    firstName: {
+    name: {
       type: DataTypes.STRING,
       allowNull: false,
-    },
-    lastName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    organization: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
     email: {
       type: DataTypes.STRING,
@@ -35,6 +27,28 @@ module.exports = (sequelize, DataTypes) => {
       ),
       allowNull: false
     },
+    organizationId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Organizations',
+        key: 'id'
+      },
+      validate: {
+        isValidForRole(value) {
+          // organizationId should only be set for integrator and maintenance roles
+          if (['integrator', 'maintenance'].includes(this.role)) {
+            if (!value) {
+              throw new Error('Organization is required for integrator and maintenance roles');
+            }
+          } else {
+            if (value) {
+              throw new Error('Organization should only be set for integrator and maintenance roles');
+            }
+          }
+        }
+      }
+    },
     permissions: {
       type: DataTypes.JSON,
       allowNull: false,
@@ -54,9 +68,16 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   User.associate = function(models) {
+    // Entrepreneur's sites
     User.hasMany(models.Site, {
       foreignKey: 'entrepreneurId',
       as: 'sites'
+    });
+
+    // User belongs to an organization (only for integrator and maintenance roles)
+    User.belongsTo(models.Organization, {
+      foreignKey: 'organizationId',
+      as: 'organization'
     });
   };
 

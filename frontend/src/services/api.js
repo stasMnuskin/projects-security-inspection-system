@@ -64,7 +64,12 @@ export const getRolePermissionsForRole = (role) => apiCall('get', `/users/roles/
 export const updateRolePermissions = (role, permissions) => apiCall('put', `/users/roles/${role}/permissions`, { permissions });
 
 // Organization Management
-export const getOrganizations = () => apiCall('get', '/users/organizations');
+export const getOrganizations = (type) => apiCall('get', '/organizations', { params: { type } });
+export const getRegistrationOrganizations = (type) => apiCall('get', '/auth/register/organizations', { params: { type } });
+export const createOrganization = (orgData) => apiCall('post', '/organizations', orgData);
+export const updateOrganization = (orgId, orgData) => apiCall('put', `/organizations/${orgId}`, orgData);
+export const deleteOrganization = (orgId) => apiCall('delete', `/organizations/${orgId}`);
+export const getOrganizationById = (orgId) => apiCall('get', `/organizations/${orgId}`);
 
 // Site Management
 export const getSites = () => apiCall('get', '/sites');
@@ -130,6 +135,7 @@ export const deleteCustomField = (id, fieldId) =>
   apiCall('delete', `/inspection-types/${id}/fields/${fieldId}`);
 export const getEnabledFields = (siteId, type) => 
   apiCall('get', `/inspection-types/site/${siteId}/enabled-fields`, { params: { type } });
+
 // Inspection Management
 export const getInspectionTypes = () => apiCall('get', '/inspection-types');
 export const getInspectionFormStructure = (siteId, inspectionTypeId) => 
@@ -167,5 +173,8 @@ export const saveDraftInspection = (draftData) => apiCall('post', '/inspections/
 export const getDraftInspection = (draftId) => apiCall('get', `/inspections/draft/${draftId}`);
 export const deleteDraftInspection = (draftId) => apiCall('delete', `/inspections/draft/${draftId}`);
 export const getUserDraftInspections = () => apiCall('get', '/inspections/user/drafts');
-
+export const getUsersByOrganizationType = async (type) => {
+  const response = await api.get(`/users/by-organization-type/${type}`);
+  return response.data;
+};
 export default api;

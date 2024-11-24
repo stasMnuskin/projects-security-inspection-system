@@ -15,6 +15,10 @@ exports.createInspection = async (req, res, next) => {
       return next(new AppError('Missing required fields', 400));
     }
 
+    // Get the user's name for the security officer field
+    const user = await db.User.findByPk(req.user.id);
+    formData.securityOfficer = user.name;
+
     // For drills, validate based on drill type
     if (type === 'drill') {
       if (!formData.drill_type) {

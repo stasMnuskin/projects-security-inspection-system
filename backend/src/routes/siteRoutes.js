@@ -7,15 +7,10 @@ const { PERMISSIONS } = require('../constants/roles');
 
 const router = express.Router();
 
-// Helper function to validate user IDs (single ID or array of IDs)
-const validateUserIds = (value) => {
+// Helper function to validate organization IDs
+const validateOrganizationId = (value) => {
   if (!value) return true;
-  
-  // Convert single ID to array
-  const ids = Array.isArray(value) ? value : [value];
-  
-  // Validate each ID
-  return ids.every(id => Number.isInteger(Number(id)));
+  return Number.isInteger(Number(value));
 };
 
 // All routes require authentication
@@ -34,14 +29,14 @@ router.post('/',
     check('entrepreneurId')
       .isInt()
       .withMessage('מזהה יזם לא תקין'),
-    check(['integratorUserIds', 'integratorUserId'])
+    check('integratorOrganizationId')
       .optional()
-      .custom(validateUserIds)
-      .withMessage('מזהי אינטגרטורים לא תקינים'),
-    check(['maintenanceUserIds', 'maintenanceUserId'])
+      .custom(validateOrganizationId)
+      .withMessage('מזהה ארגון אינטגרציה לא תקין'),
+    check('maintenanceOrganizationId')
       .optional()
-      .custom(validateUserIds)
-      .withMessage('מזהי אנשי אחזקה לא תקינים'),
+      .custom(validateOrganizationId)
+      .withMessage('מזהה ארגון אחזקה לא תקין'),
     check('controlCenterUserId')
       .optional({ nullable: true })
       .isInt()
@@ -98,14 +93,14 @@ router.put('/:id',
       .optional()
       .isInt()
       .withMessage('מזהה יזם לא תקין'),
-    check(['integratorUserIds', 'integratorUserId'])
+    check('integratorOrganizationId')
       .optional()
-      .custom(validateUserIds)
-      .withMessage('מזהי אינטגרטורים לא תקינים'),
-    check(['maintenanceUserIds', 'maintenanceUserId'])
+      .custom(validateOrganizationId)
+      .withMessage('מזהה ארגון אינטגרציה לא תקין'),
+    check('maintenanceOrganizationId')
       .optional()
-      .custom(validateUserIds)
-      .withMessage('מזהי אנשי אחזקה לא תקינים'),
+      .custom(validateOrganizationId)
+      .withMessage('מזהה ארגון אחזקה לא תקין'),
     check('controlCenterUserId')
       .optional({ nullable: true })
       .isInt()

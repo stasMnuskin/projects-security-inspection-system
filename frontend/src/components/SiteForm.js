@@ -12,7 +12,7 @@ import {
   Typography
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { getUsers } from '../services/api';
+import { getEntrepreneurs, getUsers, getOrganizations } from '../services/api';
 import { colors } from '../styles/colors';
 import { dialogStyles } from '../styles/components';
 
@@ -23,50 +23,69 @@ const SITE_TYPES = [
 
 function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
   const [entrepreneurs, setEntrepreneurs] = useState([]);
-  const [integrators, setIntegrators] = useState([]);
-  const [maintenanceStaff, setMaintenanceStaff] = useState([]);
+  const [integratorOrgs, setIntegratorOrgs] = useState([]);
+  const [maintenanceOrgs, setMaintenanceOrgs] = useState([]);
   const [controlCenterStaff, setControlCenterStaff] = useState([]);
-
-  // Convert single IDs to arrays if needed
-  const getInitialIntegratorIds = () => {
-    if (initialData?.integratorUserIds) return initialData.integratorUserIds;
-    if (initialData?.integratorUserId) return [initialData.integratorUserId];
-    return [];
-  };
-
-  const getInitialMaintenanceIds = () => {
-    if (initialData?.maintenanceUserIds) return initialData.maintenanceUserIds;
-    if (initialData?.maintenanceUserId) return [initialData.maintenanceUserId];
-    return [];
-  };
 
   const [siteDetails, setSiteDetails] = useState({
     name: '',
     type: 'inductive_fence',
     entrepreneurId: '',
-    integratorUserIds: getInitialIntegratorIds(),
-    maintenanceUserIds: getInitialMaintenanceIds(),
-    controlCenterUserId: null,
-    ...initialData
+    integratorOrganizationIds: [],
+    maintenanceOrganizationIds: [],
+    controlCenterUserId: null
   });
 
-  const [customFields, setCustomFields] = useState(initialData?.customFields || []);
+  const [customFields, setCustomFields] = useState([]);
 
   const fetchUsers = useCallback(async () => {
     try {
+      const entrepreneursData = await getEntrepreneurs();
+      setEntrepreneurs(entrepreneursData);
+
       const users = await getUsers();
-      setEntrepreneurs(users.filter(user => user.role === 'entrepreneur'));
-      setIntegrators(users.filter(user => user.role === 'integrator'));
-      setMaintenanceStaff(users.filter(user => user.role === 'maintenance'));
       setControlCenterStaff(users.filter(user => user.role === 'control_center'));
     } catch (error) {
       console.error('Error fetching users:', error);
     }
   }, []);
 
+  const fetchOrganizations = useCallback(async () => {
+    try {
+      const [integratorOrganizations, maintenanceOrganizations] = await Promise.all([
+        getOrganizations('integrator'),
+        getOrganizations('maintenance')
+      ]);
+      setIntegratorOrgs(integratorOrganizations);
+      setMaintenanceOrgs(maintenanceOrganizations);
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchOrganizations();
+  }, [fetchUsers, fetchOrganizations]);
+
+  // Update form when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setSiteDetails({
+        name: initialData.name || '',
+        type: initialData.type || 'inductive_fence',
+        entrepreneurId: initialData.entrepreneurId || '',
+        controlCenterUserId: initialData.controlCenterUserId || null,
+        integratorOrganizationIds: initialData.serviceOrganizations
+          ?.filter(org => org.type === 'integrator')
+          .map(org => org.id) || [],
+        maintenanceOrganizationIds: initialData.serviceOrganizations
+          ?.filter(org => org.type === 'maintenance')
+          .map(org => org.id) || []
+      });
+      setCustomFields(initialData.customFields || []);
+    }
+  }, [initialData]);
 
   const handleAddField = () => {
     setCustomFields([...customFields, { name: '', value: '' }]);
@@ -113,9 +132,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
             <Autocomplete
               value={entrepreneurs.find(e => e.id === siteDetails.entrepreneurId) || null}
               options={entrepreneurs}
-              getOptionLabel={(option) => 
-                `${option.firstName} ${option.lastName}`
-              }
+              getOptionLabel={(option) => option.name}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
@@ -170,21 +187,19 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           <FormControl fullWidth>
             <Autocomplete
               multiple
-              value={integrators.filter(i => siteDetails.integratorUserIds.includes(i.id))}
-              options={integrators}
-              getOptionLabel={(option) => 
-                `${option.firstName} ${option.lastName}`
-              }
+              value={integratorOrgs.filter(org => siteDetails.integratorOrganizationIds.includes(org.id))}
+              options={integratorOrgs}
+              getOptionLabel={(option) => option.name}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
-                  integratorUserIds: newValue.map(v => v.id)
+                  integratorOrganizationIds: newValue.map(v => v.id)
                 }));
               }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip
-                    label={`${option.firstName} ${option.lastName}`}
+                    label={option.name}
                     {...getTagProps({ index })}
                     sx={{
                       backgroundColor: colors.background.darkGrey,
@@ -196,7 +211,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
               renderInput={(params) => (
                 <TextField 
                   {...params} 
-                  label="אינטגרטור"
+                  label="חברות אינטגרציה"
                   sx={{
                     ...dialogStyles.dialogContent['& .MuiFormControl-root'],
                     '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
@@ -212,21 +227,19 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           <FormControl fullWidth>
             <Autocomplete
               multiple
-              value={maintenanceStaff.filter(m => siteDetails.maintenanceUserIds.includes(m.id))}
-              options={maintenanceStaff}
-              getOptionLabel={(option) => 
-                `${option.firstName} ${option.lastName}`
-              }
+              value={maintenanceOrgs.filter(org => siteDetails.maintenanceOrganizationIds.includes(org.id))}
+              options={maintenanceOrgs}
+              getOptionLabel={(option) => option.name}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
-                  maintenanceUserIds: newValue.map(v => v.id)
+                  maintenanceOrganizationIds: newValue.map(v => v.id)
                 }));
               }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip
-                    label={`${option.firstName} ${option.lastName}`}
+                    label={option.name}
                     {...getTagProps({ index })}
                     sx={{
                       backgroundColor: colors.background.darkGrey,
@@ -238,7 +251,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
               renderInput={(params) => (
                 <TextField 
                   {...params} 
-                  label="אחזקה"
+                  label="חברות אחזקה"
                   sx={{
                     ...dialogStyles.dialogContent['& .MuiFormControl-root'],
                     '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
@@ -255,9 +268,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
             <Autocomplete
               value={controlCenterStaff.find(c => c.id === siteDetails.controlCenterUserId) || null}
               options={controlCenterStaff}
-              getOptionLabel={(option) => 
-                `${option.firstName} ${option.lastName}`
-              }
+              getOptionLabel={(option) => option.name}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
@@ -363,10 +374,11 @@ SiteForm.propTypes = {
     name: PropTypes.string,
     type: PropTypes.string,
     entrepreneurId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    integratorUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    integratorUserIds: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
-    maintenanceUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    maintenanceUserIds: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
+    serviceOrganizations: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.number,
+      name: PropTypes.string,
+      type: PropTypes.string
+    })),
     controlCenterUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     customFields: PropTypes.arrayOf(PropTypes.shape({
       name: PropTypes.string,

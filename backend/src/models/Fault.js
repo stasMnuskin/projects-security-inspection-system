@@ -8,6 +8,22 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    maintenanceOrganizationId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Organizations',
+        key: 'id'
+      }
+    },
+    integratorOrganizationId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Organizations',
+        key: 'id'
+      }
+    },
     maintenanceUserId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -123,6 +139,20 @@ module.exports = (sequelize, DataTypes) => {
             fault.entrepreneurId = site.entrepreneurId;
           }
         }
+
+        // If maintenance/integrator user is set, ensure their organization is set
+        if (fault.maintenanceUserId) {
+          const user = await sequelize.models.User.findByPk(fault.maintenanceUserId);
+          if (user && user.organizationId) {
+            fault.maintenanceOrganizationId = user.organizationId;
+          }
+        }
+        if (fault.integratorUserId) {
+          const user = await sequelize.models.User.findByPk(fault.integratorUserId);
+          if (user && user.organizationId) {
+            fault.integratorOrganizationId = user.organizationId;
+          }
+        }
       },
       beforeUpdate: (fault) => {
         if (fault.changed('status')) {
@@ -141,6 +171,18 @@ module.exports = (sequelize, DataTypes) => {
       as: 'site'
     });
     
+    // Organization relationships
+    Fault.belongsTo(models.Organization, {
+      foreignKey: 'maintenanceOrganizationId',
+      as: 'maintenanceOrganization'
+    });
+
+    Fault.belongsTo(models.Organization, {
+      foreignKey: 'integratorOrganizationId',
+      as: 'integratorOrganization'
+    });
+
+    // User relationships
     Fault.belongsTo(models.User, {
       foreignKey: 'maintenanceUserId',
       as: 'maintenanceUser'

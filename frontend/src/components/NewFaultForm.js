@@ -17,7 +17,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
 import { dialogStyles } from '../styles/components';
-import { getUsers, getSites } from '../services/api';
+import { getEntrepreneurs, getSites } from '../services/api';
 
 const FAULT_TYPES = ['גדר', 'מצלמות', 'תקשורת', 'אחר'];
 
@@ -39,21 +39,20 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, sitesData] = await Promise.all([
-          getUsers(),
+        const [entrepreneursData, sitesData] = await Promise.all([
+          getEntrepreneurs(),
           getSites()
         ]);
 
-        const entrepreneursList = usersData.filter(user => user.role === 'entrepreneur');
         const sitesWithEntrepreneurs = sitesData.map(site => {
-          const entrepreneur = entrepreneursList.find(e => e.id === site.entrepreneurId);
+          const entrepreneur = entrepreneursData.find(e => e.id === site.entrepreneurId);
           return {
             ...site,
             entrepreneur
           };
         });
 
-        setEntrepreneurs(entrepreneursList);
+        setEntrepreneurs(entrepreneursData);
         setAllSites(sitesWithEntrepreneurs);
         setFilteredSites(sitesWithEntrepreneurs);
       } catch (error) {
@@ -137,7 +136,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
       <Autocomplete
         loading={loading}
         options={entrepreneurs}
-        getOptionLabel={(option) => option.organization || ''}
+        getOptionLabel={(option) => option?.name || 'בחר יזם'}
         value={selectedEntrepreneur}
         onChange={handleEntrepreneurChange}
         isOptionEqualToValue={(option, value) => option?.id === value?.id}
@@ -167,7 +166,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
       <Autocomplete
         loading={loading}
         options={filteredSites}
-        getOptionLabel={(option) => option.name || ''}
+        getOptionLabel={(option) => option?.name || 'בחר אתר'}
         value={selectedSite}
         onChange={handleSiteChange}
         isOptionEqualToValue={(option, value) => option?.id === value?.id}

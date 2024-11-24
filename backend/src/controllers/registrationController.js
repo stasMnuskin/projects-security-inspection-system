@@ -1,11 +1,10 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, Organization } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { getActiveSecrets } = require('../utils/secretManager');
 const { sendRegistrationLink, sendRegistrationComplete } = require('../utils/emailService');
-const { Op } = require('sequelize');
 
 const activeSecrets = getActiveSecrets();
 
@@ -21,7 +20,7 @@ exports.generateRegistrationLink = async (req, res, next) => {
       return next(new AppError('שגיאת אימות', 400, 'VALIDATION_ERROR', true, errors.array()));
     }
 
-    const { email, firstName, lastName, organization, role } = req.body;
+    const { email, name, organizationName, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -35,23 +34,35 @@ exports.generateRegistrationLink = async (req, res, next) => {
       return next(new AppError('תפקיד לא תקין', 400, 'INVALID_ROLE'));
     }
 
-    // For integrator and maintenance roles, validate organization exists
+    let organizationId = null;
+
+    // For integrator and maintenance roles, handle organization
     if (role === 'integrator' || role === 'maintenance') {
-      if (!organization) {
+      if (!organizationName) {
         return next(new AppError('נדרש שם ארגון למשתמש מסוג אינטגרטור או אחזקה', 400, 'ORGANIZATION_REQUIRED'));
       }
 
-      // Check if organization exists (entrepreneur with this organization name)
-      const entrepreneurExists = await User.findOne({
-        where: {
-          role: 'entrepreneur',
-          organization: organization
-        }
+      // Find or create organization
+      let organization = await Organization.findOne({
+        where: { name: organizationName }
       });
 
-      if (!entrepreneurExists) {
-        return next(new AppError('הארגון שצוין אינו קיים במערכת', 400, 'INVALID_ORGANIZATION'));
+      if (!organization) {
+        // Create new organization with type based on user role
+        organization = await Organization.create({
+          name: organizationName,
+          type: role === 'integrator' ? 'integrator' : 'maintenance'
+        });
+        logger.info(`Created new organization: ${organizationName}, Type: ${organization.type}`);
+      } else {
+        // Validate organization type matches user role
+        if ((role === 'integrator' && organization.type !== 'integrator') ||
+            (role === 'maintenance' && organization.type !== 'maintenance')) {
+          return next(new AppError('סוג הארגון אינו תואם לתפקיד המשתמש', 400, 'ORGANIZATION_TYPE_MISMATCH'));
+        }
       }
+
+      organizationId = organization.id;
     }
 
     // Get default permissions for role
@@ -60,9 +71,8 @@ exports.generateRegistrationLink = async (req, res, next) => {
     // Create user with role and default permissions
     const user = await User.create({
       email,
-      firstName,
-      lastName,
-      organization,
+      name,
+      organizationId,
       role,
       permissions: defaultPermissions,
       password: null
@@ -79,19 +89,19 @@ exports.generateRegistrationLink = async (req, res, next) => {
     // Send registration link via email
     await sendRegistrationLink({
       email: user.email,
-      firstName: user.firstName,
-      organization: user.organization,
+      name: user.name,
       token
     });
 
-    logger.info(`Registration initiated for: ${email}, Role: ${role}, Organization: ${organization}, Permissions: ${defaultPermissions.join(', ')}`);
+    logger.info(`Registration initiated for: ${email}, Role: ${role}, Organization: ${organizationName}, Permissions: ${defaultPermissions.join(', ')}`);
     res.status(200).json({ 
       message: 'קישור הרשמה נשלח בהצלחה',
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        organization: user.organization,
+        name: user.name,
+        organizationId: user.organizationId,
+        organizationName,
         role: role,
         permissions: defaultPermissions
       }
@@ -111,7 +121,15 @@ exports.validateRegistrationToken = async (req, res, next) => {
     }
 
     // Check if user exists
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({
+      where: { email },
+      include: [{
+        model: Organization,
+        as: 'organization',
+        attributes: ['name']
+      }]
+    });
+
     if (!user) {
       return next(new AppError('משתמש לא נמצא', 404, 'USER_NOT_FOUND'));
     }
@@ -135,8 +153,8 @@ exports.validateRegistrationToken = async (req, res, next) => {
       message: 'קישור הרשמה תקין',
       user: {
         email: user.email,
-        firstName: user.firstName,
-        organization: user.organization
+        name: user.name,
+        organizationName: user.organization?.name
       }
     });
   } catch (error) {
@@ -152,7 +170,7 @@ exports.registerUser = async (req, res, next) => {
       return next(new AppError('שגיאת אימות', 400, 'VALIDATION_ERROR', true, errors.array()));
     }
 
-    const { email, firstName, lastName, password, token } = req.body;
+    const { email, name, password, token } = req.body;
 
     // Verify token and get stored data
     let decoded;
@@ -166,7 +184,15 @@ exports.registerUser = async (req, res, next) => {
     }
 
     // Find user
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({
+      where: { email },
+      include: [{
+        model: Organization,
+        as: 'organization',
+        attributes: ['name']
+      }]
+    });
+
     if (!user) {
       return next(new AppError('משתמש לא נמצא', 404, 'USER_NOT_FOUND'));
     }
@@ -177,16 +203,15 @@ exports.registerUser = async (req, res, next) => {
     }
 
     // Update user with password to complete registration
-    user.firstName = firstName;
-    user.lastName = lastName;
+    user.name = name;
     user.password = password;
     await user.save();
 
     // Send registration completion email
     await sendRegistrationComplete({
       email: user.email,
-      firstName: user.firstName,
-      organization: user.organization
+      name: user.name,
+      organizationName: user.organization?.name
     });
 
     logger.info(`Registration completed for user: ${email}`);
@@ -194,9 +219,9 @@ exports.registerUser = async (req, res, next) => {
       message: 'הרשמה הושלמה בהצלחה',
       user: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        organization: user.organization,
+        name: user.name,
+        organizationId: user.organizationId,
+        organizationName: user.organization?.name,
         email: user.email,
         role: user.role,
         permissions: user.permissions
@@ -208,21 +233,25 @@ exports.registerUser = async (req, res, next) => {
   }
 };
 
-// Helper function to get organizations (used by frontend autocomplete)
 exports.getOrganizations = async (req, res, next) => {
   try {
-    const organizations = await User.findAll({
-      attributes: ['organization'],
-      where: {
-        role: 'entrepreneur',
-        organization: {
-          [Op.not]: null
-        }
-      },
-      group: ['organization']
+    const { type } = req.query;
+    const where = {};
+
+    // Filter by type if provided
+    if (type) {
+      if (!['integrator', 'maintenance'].includes(type)) {
+        return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
+      }
+      where.type = type;
+    }
+
+    const organizations = await Organization.findAll({
+      where,
+      attributes: ['id', 'name', 'type']
     });
 
-    res.json(organizations.map(u => u.organization));
+    res.json(organizations);
   } catch (error) {
     logger.error('Error fetching organizations:', error);
     next(new AppError('שגיאה בשליפת ארגונים', 500));

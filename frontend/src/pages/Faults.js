@@ -20,8 +20,7 @@ import {
   updateFaultStatus, 
   updateFaultDetails,
   deleteFault,
-  getMaintenanceStaff,
-  getIntegrators
+  getOrganizations
 } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import NewFaultForm from '../components/NewFaultForm';
@@ -43,8 +42,8 @@ const Faults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [faults, setFaults] = useState([]);
-  const [maintenanceUsers, setMaintenanceUsers] = useState([]);
-  const [integratorUsers, setIntegratorUsers] = useState([]);
+  const [maintenanceOrgs, setMaintenanceOrgs] = useState([]);
+  const [integratorOrgs, setIntegratorOrgs] = useState([]);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
@@ -77,17 +76,17 @@ const Faults = () => {
     isCritical: false
   });
 
-  // Function to fetch users for a specific organization
-  const fetchUsersForOrganization = useCallback(async (organization) => {
+  // Function to fetch organizations
+  const fetchOrganizations = useCallback(async () => {
     try {
       const [maintenance, integrators] = await Promise.all([
-        getMaintenanceStaff({ organization }),
-        getIntegrators({ organization })
+        getOrganizations('maintenance'),
+        getOrganizations('integrator')
       ]);
-      setMaintenanceUsers(maintenance);
-      setIntegratorUsers(integrators);
+      setMaintenanceOrgs(maintenance);
+      setIntegratorOrgs(integrators);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching organizations:', error);
     }
   }, []);
 
@@ -114,10 +113,10 @@ const Faults = () => {
         queryParams.isCritical = filters.isCritical;
       }
       if (filters.maintenance) {
-        queryParams.maintenance = filters.maintenance;
+        queryParams.maintenanceOrg = filters.maintenance;
       }
       if (filters.integrator) {
-        queryParams.integrator = filters.integrator;
+        queryParams.integratorOrg = filters.integrator;
       }
 
       const data = await getAllFaults(queryParams);
@@ -134,7 +133,8 @@ const Faults = () => {
   // Initial data load
   useEffect(() => {
     fetchFaults();
-  }, [fetchFaults]);
+    fetchOrganizations();
+  }, [fetchFaults, fetchOrganizations]);
 
   // Handle filter changes with debouncing
   useEffect(() => {
@@ -246,69 +246,47 @@ const Faults = () => {
     }
   };
 
-  const handleMaintenanceChange = async (faultId, userId) => {
+  const handleMaintenanceChange = async (faultId, organizationId) => {
     if (!canEditMaintenanceIntegrator) {
       showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
       return;
     }
 
     try {
-      const fault = faults.find(f => f.id === faultId);
-      if (!fault?.site?.organization) {
-        showNotification('לא נמצא ארגון לאתר', 'error');
-        return;
-      }
-
-      // Fetch maintenance users for the site's organization if needed
-      if (maintenanceUsers.length === 0) {
-        await fetchUsersForOrganization(fault.site.organization);
-      }
-
-      await updateFaultDetails(faultId, { maintenanceUserId: userId });
-      const maintenanceUser = maintenanceUsers.find(user => user.id === userId);
+      await updateFaultDetails(faultId, { maintenanceOrganizationId: organizationId });
+      const maintenanceOrg = maintenanceOrgs.find(org => org.id === organizationId);
       handleFaultUpdated({
         id: faultId,
-        maintenanceUser: maintenanceUser ? {
-          id: maintenanceUser.id,
-          name: `${maintenanceUser.firstName} ${maintenanceUser.lastName}`
+        maintenanceOrganization: maintenanceOrg ? {
+          id: maintenanceOrg.id,
+          name: maintenanceOrg.name
         } : null
       });
     } catch (error) {
-      showNotification('שגיאה בעדכון איש האחזקה', 'error');
-      console.error('Error updating maintenance:', error);
+      showNotification('שגיאה בעדכון ארגון האחזקה', 'error');
+      console.error('Error updating maintenance organization:', error);
     }
   };
 
-  const handleIntegratorChange = async (faultId, userId) => {
+  const handleIntegratorChange = async (faultId, organizationId) => {
     if (!canEditMaintenanceIntegrator) {
       showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
       return;
     }
 
     try {
-      const fault = faults.find(f => f.id === faultId);
-      if (!fault?.site?.organization) {
-        showNotification('לא נמצא ארגון לאתר', 'error');
-        return;
-      }
-
-      // Fetch integrator users for the site's organization if needed
-      if (integratorUsers.length === 0) {
-        await fetchUsersForOrganization(fault.site.organization);
-      }
-
-      await updateFaultDetails(faultId, { integratorUserId: userId });
-      const integratorUser = integratorUsers.find(user => user.id === userId);
+      await updateFaultDetails(faultId, { integratorOrganizationId: organizationId });
+      const integratorOrg = integratorOrgs.find(org => org.id === organizationId);
       handleFaultUpdated({
         id: faultId,
-        integratorUser: integratorUser ? {
-          id: integratorUser.id,
-          name: `${integratorUser.firstName} ${integratorUser.lastName}`
+        integratorOrganization: integratorOrg ? {
+          id: integratorOrg.id,
+          name: integratorOrg.name
         } : null
       });
     } catch (error) {
-      showNotification('שגיאה בעדכון האינטגרטור', 'error');
-      console.error('Error updating integrator:', error);
+      showNotification('שגיאה בעדכון ארגון האינטגרציה', 'error');
+      console.error('Error updating integrator organization:', error);
     }
   };
 
@@ -358,7 +336,7 @@ const Faults = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar
         activeSection="faults"
-        userInfo={{ name: `${user.firstName} ${user.lastName}` }}
+        userInfo={{ name: user.name }}
         onNewFault={canCreateFault ? () => setNewFaultDialog(true) : null}
       />
 
@@ -399,13 +377,13 @@ const Faults = () => {
               faults={faults}
               onSiteClick={handleSiteClick}
               onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
-              onMaintenanceChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
-              onIntegratorChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
+              onMaintenanceOrgChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
+              onIntegratorOrgChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
               onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
               onDeleteFault={isAdmin ? handleDeleteFault : null}
               onFaultUpdated={handleFaultUpdated}
-              maintenanceUsers={maintenanceUsers}
-              integratorUsers={integratorUsers}
+              maintenanceOrgs={maintenanceOrgs}
+              integratorOrgs={integratorOrgs}
             />
           </Box>
         </Box>

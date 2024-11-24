@@ -25,6 +25,7 @@ const userRoutes = require('./routes/userRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const inspectionTypeRoutes = require('./routes/inspectionTypeRoutes');
 const siteRoutes = require('./routes/siteRoutes');
+const organizationRoutes = require('./routes/organizationRoutes');
 
 const db = require('./models');
 const cache = require('./utils/cache');
@@ -123,6 +124,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/faults', faultRoutes);
 app.use('/api/inspection-types', inspectionTypeRoutes);
 app.use('/api/sites', siteRoutes);
+app.use('/api/organizations', organizationRoutes); // Add organization routes
 
 // Language
 app.use((req, res, next) => {

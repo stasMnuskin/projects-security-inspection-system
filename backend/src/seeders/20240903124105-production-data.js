@@ -4,8 +4,7 @@ const { ROLES, PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } = require('../constants/r
 
 // Admin user data
 const ADMIN_DATA = {
-  firstName: 'מנהל',
-  lastName: 'על',
+  name: 'מנהל על',
   email: 'ssllmm290986@gmail.com',
   password: 'Admin123',
   role: ROLES.admin,
@@ -35,7 +34,7 @@ const INSPECTION_COMMON_FIELDS = [
     enabled: true
   },
   { 
-    id: 'securityOfficer',  // Changed from inspectorName to securityOfficer
+    id: 'securityOfficer',
     label: 'שם הקב"ט', 
     type: 'text', 
     required: true, 
@@ -187,10 +186,8 @@ const INSPECTION_TYPES = [
 
 const ENTREPRENEURS_DATA = [
   {
-    organization: 'EDF',
+    name: 'EDF',
     email: 'edf@example.com',
-    firstName: 'EDF',
-    lastName: 'EDF',
     password: 'EDF123',
     role: ROLES.entrepreneur,
     sites: [
@@ -202,10 +199,8 @@ const ENTREPRENEURS_DATA = [
     ]
   },
   {
-    organization: 'דוראל',
+    name: 'דוראל',
     email: 'doral@example.com',
-    firstName: 'דוראל',
-    lastName: 'דוראל',
     password: 'Doral123',
     role: ROLES.entrepreneur,
     sites: [
@@ -214,10 +209,8 @@ const ENTREPRENEURS_DATA = [
     ]
   },
   {
-    organization: 'שיכון ובינוי',
+    name: 'שיכון ובינוי',
     email: 'shikun@example.com',
-    firstName: 'שיכון ובינוי',
-    lastName: 'שיכון ובינוי',
     password: 'Shikun123',
     role: ROLES.entrepreneur,
     sites: [
@@ -225,55 +218,66 @@ const ENTREPRENEURS_DATA = [
     ]
   },
   {
-    organization: 'טרילט',
+    name: 'טרילט',
     email: 'trilet@example.com',
-    firstName: 'טרילט',
-    lastName: 'טרילט',
     password: 'Trilet123',
     role: ROLES.entrepreneur,
     sites: ['נעמ"ה']
   },
   {
-    organization: 'ביוגז',
+    name: 'ביוגז',
     email: 'biogaz@example.com',
-    firstName: 'ביוגז',
-    lastName: 'ביוגז',
     password: 'Biogaz123',
     role: ROLES.entrepreneur,
     sites: ['ערד']
   },
   {
-    organization: 'טרה',
+    name: 'טרה',
     email: 'terra@example.com',
-    firstName: 'טרה',
-    lastName: 'טרה',
     password: 'Terra123',
     role: ROLES.entrepreneur,
     sites: ['בית נקופה']
   },
   {
-    organization: 'יבולי שער הנגב',
+    name: 'יבולי שער הנגב',
     email: 'yevulei@example.com',
-    firstName: 'יבולי שער הנגב',
-    lastName: 'יבולי שער הנגב',
     password: 'Yevulei123',
     role: ROLES.entrepreneur,
     sites: ['צובה', 'פלמחים']
   },
   {
-    organization: 'צבר',
+    name: 'צבר',
     email: 'tzabar@example.com',
-    firstName: 'צבר',
-    lastName: 'צבר',
     password: 'Tzabar123',
     role: ROLES.entrepreneur,
     sites: ['מעיין צבי']
   }
 ];
 
+// Service organizations data
+const SERVICE_ORGANIZATIONS = [
+  {
+    name: 'חברת אינטגרציה 1',
+    type: 'integrator'
+  },
+  {
+    name: 'חברת אינטגרציה 2',
+    type: 'integrator'
+  },
+  {
+    name: 'חברת אחזקה 1',
+    type: 'maintenance'
+  },
+  {
+    name: 'חברת אחזקה 2',
+    type: 'maintenance'
+  }
+];
+
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
+      // Create role permissions
       const rolePermissions = Object.entries(DEFAULT_ROLE_PERMISSIONS).map(([role, permissions]) => ({
         role,
         permissions: JSON.stringify(permissions),
@@ -281,14 +285,23 @@ module.exports = {
         updatedAt: new Date()
       }));
 
-      // Insert role permissions
       await queryInterface.bulkInsert('RolePermissions', rolePermissions, {});
       console.log('\nCreated Role Permissions');
 
+      // Create service organizations
+      const organizations = SERVICE_ORGANIZATIONS.map(org => ({
+        name: org.name,
+        type: org.type,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }));
+
+      await queryInterface.bulkInsert('Organizations', organizations, {});
+      console.log('\nCreated Service Organizations');
+
       // Create admin user
       const adminUser = {
-        firstName: ADMIN_DATA.firstName,
-        lastName: ADMIN_DATA.lastName,
+        name: ADMIN_DATA.name,
         email: ADMIN_DATA.email,
         password: await bcrypt.hash(ADMIN_DATA.password, 10),
         role: ADMIN_DATA.role,
@@ -297,16 +310,13 @@ module.exports = {
         updatedAt: new Date()
       };
 
-      // Insert admin user
       await queryInterface.bulkInsert('Users', [adminUser], {});
       console.log('\nCreated Admin User:', { email: ADMIN_DATA.email, password: ADMIN_DATA.password });
 
-      // Create entrepreneur users with default permissions
+      // Create entrepreneur users
       const entrepreneurs = await Promise.all(ENTREPRENEURS_DATA.map(async entrepreneur => ({
-        firstName: entrepreneur.firstName,
-        lastName: entrepreneur.lastName,
+        name: entrepreneur.name,
         email: entrepreneur.email,
-        organization: entrepreneur.organization,
         password: await bcrypt.hash(entrepreneur.password, 10),
         role: entrepreneur.role,
         permissions: JSON.stringify(DEFAULT_ROLE_PERMISSIONS[entrepreneur.role]),
@@ -314,10 +324,9 @@ module.exports = {
         updatedAt: new Date()
       })));
 
-      // Insert all entrepreneurs
       await queryInterface.bulkInsert('Users', entrepreneurs, {});
 
-      // Get the inserted entrepreneurs to create their sites
+      // Get the inserted entrepreneurs
       const users = await queryInterface.sequelize.query(
         `SELECT id, email FROM "Users" WHERE role = '${ROLES.entrepreneur}'`,
         { type: Sequelize.QueryTypes.SELECT }
@@ -340,24 +349,30 @@ module.exports = {
         }
       });
 
-      // Insert all sites
       await queryInterface.bulkInsert('Sites', sites, {});
+
+      // Create inspection types
       const inspectionTypes = INSPECTION_TYPES.map(type => ({
         name: type.name,
         type: type.type,
-        formStructure: JSON.stringify(type.formStructure),  // formStructure already has enabled field
+        formStructure: JSON.stringify(type.formStructure),
         createdAt: new Date(),
         updatedAt: new Date()
       }));
 
-      // Insert inspection types
       await queryInterface.bulkInsert('InspectionTypes', inspectionTypes, {});
       console.log('\nCreated Inspection Types');
 
       // Log created entrepreneurs
       console.log('\nCreated Entrepreneurs:');
       ENTREPRENEURS_DATA.forEach(e => {
-        console.log(`${e.organization}:`, { email: e.email, password: e.password });
+        console.log(`${e.name}:`, { email: e.email, password: e.password });
+      });
+
+      // Log created organizations
+      console.log('\nCreated Service Organizations:');
+      SERVICE_ORGANIZATIONS.forEach(org => {
+        console.log(`${org.name} (${org.type})`);
       });
     } catch (error) {
       console.error('Seeding error:', error);
@@ -369,6 +384,7 @@ module.exports = {
     await queryInterface.bulkDelete('InspectionTypes', null, {});
     await queryInterface.bulkDelete('Sites', null, {});
     await queryInterface.bulkDelete('Users', null, {});
+    await queryInterface.bulkDelete('Organizations', null, {});
     await queryInterface.bulkDelete('RolePermissions', null, {});
   }
 };

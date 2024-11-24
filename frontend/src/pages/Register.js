@@ -27,8 +27,7 @@ function Register() {
 
   const [formData, setFormData] = useState({
     email: email || '',
-    firstName: '',
-    lastName: '',
+    name: '',
     password: '',
     token: token || ''
   });
@@ -98,19 +97,9 @@ function Register() {
             <FormControl fullWidth>
               <TextField
                 required
-                label="שם פרטי"
-                value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                sx={formStyles.textField}
-              />
-            </FormControl>
-
-            <FormControl fullWidth>
-              <TextField
-                required
-                label="שם משפחה"
-                value={formData.lastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                label="שם"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 sx={formStyles.textField}
               />
             </FormControl>

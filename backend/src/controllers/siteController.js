@@ -1,15 +1,9 @@
-const { Site, User } = require('../models');
+const { Site, User, Organization } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { validationResult } = require('express-validator');
 
 const VALID_SITE_TYPES = ['radar', 'inductive_fence'];
-
-// Helper function to convert single ID or array of IDs to array
-const normalizeUserIds = (value) => {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-};
 
 const validateUser = async (userId, role, errorPrefix) => {
   if (!userId) return null;
@@ -24,33 +18,25 @@ const validateUser = async (userId, role, errorPrefix) => {
   return user;
 };
 
-const validateUsers = async (userIds, role, errorPrefix, organization) => {
-  const ids = normalizeUserIds(userIds);
-  if (!ids.length) return [];
+const validateOrganizations = async (organizationIds, type, errorPrefix) => {
+  if (!organizationIds || organizationIds.length === 0) return [];
 
-  const users = await User.findAll({
-    where: { id: ids }
+  const organizations = await Organization.findAll({
+    where: { id: organizationIds }
   });
 
-  if (users.length !== ids.length) {
-    throw new AppError(`חלק מה${errorPrefix} לא נמצאו`, 404, 'USERS_NOT_FOUND');
+  // Check if all organizations were found
+  if (organizations.length !== organizationIds.length) {
+    throw new AppError(`חלק מה${errorPrefix} לא נמצאו`, 404, 'ORGANIZATION_NOT_FOUND');
   }
 
-  const invalidUsers = users.filter(user => 
-    user.role !== role || (organization && user.organization !== organization)
-  );
-  
-  if (invalidUsers.length > 0) {
-    throw new AppError(
-      organization 
-        ? `חלק מהמשתמשים שנבחרו אינם ${errorPrefix} או אינם שייכים לארגון`
-        : `חלק מהמשתמשים שנבחרו אינם ${errorPrefix}`,
-      400, 
-      'INVALID_USER_ROLES'
-    );
+  // Check if all organizations are of the correct type
+  const invalidOrgs = organizations.filter(org => org.type !== type);
+  if (invalidOrgs.length > 0) {
+    throw new AppError(`חלק מהארגונים שנבחרו אינם מסוג ${errorPrefix}`, 400, 'INVALID_ORGANIZATION_TYPE');
   }
 
-  return users;
+  return organizations;
 };
 
 exports.createSite = async (req, res, next) => {
@@ -64,10 +50,8 @@ exports.createSite = async (req, res, next) => {
       name, 
       type, 
       entrepreneurId,
-      integratorUserIds,
-      integratorUserId,
-      maintenanceUserIds,
-      maintenanceUserId,
+      integratorOrganizationIds,
+      maintenanceOrganizationIds,
       controlCenterUserId,
       customFields 
     } = req.body;
@@ -80,13 +64,9 @@ exports.createSite = async (req, res, next) => {
     // Validate entrepreneur exists and is of type entrepreneur
     const entrepreneur = await validateUser(entrepreneurId, 'entrepreneur', 'יזם');
 
-    // Normalize and validate arrays of users
-    const normalizedIntegratorIds = normalizeUserIds(integratorUserIds || integratorUserId);
-    const normalizedMaintenanceIds = normalizeUserIds(maintenanceUserIds || maintenanceUserId);
-
-    // Validate users with organization check
-    await validateUsers(normalizedIntegratorIds, 'integrator', 'אינטגרטורים', entrepreneur.organization);
-    await validateUsers(normalizedMaintenanceIds, 'maintenance', 'אנשי אחזקה', entrepreneur.organization);
+    // Validate organizations
+    const integratorOrgs = await validateOrganizations(integratorOrganizationIds, 'integrator', 'ארגוני אינטגרציה');
+    const maintenanceOrgs = await validateOrganizations(maintenanceOrganizationIds, 'maintenance', 'ארגוני אחזקה');
 
     // Validate control center user if provided
     if (controlCenterUserId) {
@@ -109,11 +89,19 @@ exports.createSite = async (req, res, next) => {
       name,
       type,
       entrepreneurId,
-      integratorUserIds: normalizedIntegratorIds,
-      maintenanceUserIds: normalizedMaintenanceIds,
       controlCenterUserId,
       customFields: customFields || []
     });
+
+    // Set up organization relationships
+    const organizationIds = [
+      ...(integratorOrgs.map(org => org.id) || []),
+      ...(maintenanceOrgs.map(org => org.id) || [])
+    ];
+    
+    if (organizationIds.length > 0) {
+      await site.setServiceOrganizations(organizationIds);
+    }
 
     logger.info(`New site created: ${site.name} for entrepreneur: ${entrepreneurId}`);
 
@@ -123,35 +111,24 @@ exports.createSite = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'organization']
+          attributes: ['id', 'name', 'email']
         },
         {
           model: User,
           as: 'controlCenter',
-          attributes: ['id', 'firstName', 'lastName']
+          attributes: ['id', 'name']
+        },
+        {
+          model: Organization,
+          as: 'serviceOrganizations',
+          attributes: ['id', 'name', 'type']
         }
       ]
     });
 
-    // Fetch integrators and maintenance staff
-    const [integrators, maintenanceStaff] = await Promise.all([
-      User.findAll({
-        where: { id: normalizedIntegratorIds },
-        attributes: ['id', 'firstName', 'lastName']
-      }),
-      User.findAll({
-        where: { id: normalizedMaintenanceIds },
-        attributes: ['id', 'firstName', 'lastName']
-      })
-    ]);
-
     res.status(201).json({
       message: 'האתר נוצר בהצלחה',
-      site: {
-        ...createdSite.toJSON(),
-        integrators,
-        maintenanceStaff
-      }
+      site: createdSite
     });
   } catch (error) {
     logger.error('Error creating site:', error);
@@ -162,67 +139,44 @@ exports.createSite = async (req, res, next) => {
 exports.getAllSites = async (req, res, next) => {
   try {
     let where = {};
-    const { role, organization } = req.user;
+    const include = [
+      {
+        model: User,
+        as: 'entrepreneur',
+        attributes: ['id', 'name', 'email']
+      },
+      {
+        model: User,
+        as: 'controlCenter',
+        attributes: ['id', 'name']
+      },
+      {
+        model: Organization,
+        as: 'serviceOrganizations',
+        attributes: ['id', 'name', 'type']
+      }
+    ];
     
-    // Integrators, maintenance staff and entrepreneurs only see sites in their organization
-    if (['integrator', 'maintenance', 'entrepreneur'].includes(role)) {
-      where = {
-        '$entrepreneur.organization$': organization
-      };
+    // Only entrepreneurs are restricted to their own sites
+    if (req.user.role === 'entrepreneur') {
+      where.entrepreneurId = req.user.id;
     }
 
+    // Include entrepreneur data for all sites
     const sites = await Site.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: 'entrepreneur',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'organization']
-        },
-        {
-          model: User,
-          as: 'controlCenter',
-          attributes: ['id', 'firstName', 'lastName']
-        }
-      ],
-      order: [
-        ['name', 'ASC']
-      ]
+      include,
+      order: [['name', 'ASC']]
     });
 
-    // Fetch all users for integrators and maintenance staff
-    const userIds = new Set();
-    sites.forEach(site => {
-      site.integratorUserIds?.forEach(id => userIds.add(id));
-      site.maintenanceUserIds?.forEach(id => userIds.add(id));
-    });
-
-    const users = await User.findAll({
-      where: { id: Array.from(userIds) },
-      attributes: ['id', 'firstName', 'lastName', 'role']
-    });
-
-    const usersMap = new Map(users.map(user => [user.id, user]));
-
-    const sitesWithUsers = sites.map(site => {
-      const siteJson = site.toJSON();
-      return {
-        ...siteJson,
-        integrators: (siteJson.integratorUserIds || [])
-          .map(id => usersMap.get(id))
-          .filter(user => user?.role === 'integrator'),
-        maintenanceStaff: (siteJson.maintenanceUserIds || [])
-          .map(id => usersMap.get(id))
-          .filter(user => user?.role === 'maintenance')
-      };
-    });
-
-    res.json(sitesWithUsers);
+    // Return sites with entrepreneur data
+    res.json(sites);
   } catch (error) {
     logger.error('Error getting all sites:', error);
     next(new AppError('שגיאה בשליפת האתרים', 500, 'SITES_FETCH_ERROR'));
   }
 };
+
 exports.getSitesByEntrepreneur = async (req, res, next) => {
   try {
     const { entrepreneurId } = req.params;
@@ -244,45 +198,23 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'organization']
+          attributes: ['id', 'name', 'email']
         },
         {
           model: User,
           as: 'controlCenter',
-          attributes: ['id', 'firstName', 'lastName']
+          attributes: ['id', 'name']
+        },
+        {
+          model: Organization,
+          as: 'serviceOrganizations',
+          attributes: ['id', 'name', 'type']
         }
       ],
       order: [['name', 'ASC']]
     });
 
-    // Fetch all users for integrators and maintenance staff
-    const userIds = new Set();
-    sites.forEach(site => {
-      site.integratorUserIds?.forEach(id => userIds.add(id));
-      site.maintenanceUserIds?.forEach(id => userIds.add(id));
-    });
-
-    const users = await User.findAll({
-      where: { id: Array.from(userIds) },
-      attributes: ['id', 'firstName', 'lastName', 'role']
-    });
-
-    const usersMap = new Map(users.map(user => [user.id, user]));
-
-    const sitesWithUsers = sites.map(site => {
-      const siteJson = site.toJSON();
-      return {
-        ...siteJson,
-        integrators: (siteJson.integratorUserIds || [])
-          .map(id => usersMap.get(id))
-          .filter(user => user?.role === 'integrator'),
-        maintenanceStaff: (siteJson.maintenanceUserIds || [])
-          .map(id => usersMap.get(id))
-          .filter(user => user?.role === 'maintenance')
-      };
-    });
-
-    res.json(sitesWithUsers);
+    res.json(sites);
   } catch (error) {
     logger.error('Error getting entrepreneur sites:', error);
     next(new AppError('שגיאה בשליפת האתרים', 500, 'SITES_FETCH_ERROR'));
@@ -296,12 +228,17 @@ exports.getSite = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'organization']
+          attributes: ['id', 'name', 'email']
         },
         {
           model: User,
           as: 'controlCenter',
-          attributes: ['id', 'firstName', 'lastName']
+          attributes: ['id', 'name']
+        },
+        {
+          model: Organization,
+          as: 'serviceOrganizations',
+          attributes: ['id', 'name', 'type']
         }
       ]
     });
@@ -315,24 +252,7 @@ exports.getSite = async (req, res, next) => {
       return next(new AppError('אין הרשאה לצפות באתר זה', 403, 'FORBIDDEN'));
     }
 
-    // Fetch integrators and maintenance staff
-    const [integrators, maintenanceStaff] = await Promise.all([
-      User.findAll({
-        where: { id: site.integratorUserIds || [] },
-        attributes: ['id', 'firstName', 'lastName']
-      }),
-      User.findAll({
-        where: { id: site.maintenanceUserIds || [] },
-        attributes: ['id', 'firstName', 'lastName']
-      })
-    ]);
-
-    const siteJson = site.toJSON();
-    res.json({
-      ...siteJson,
-      integrators,
-      maintenanceStaff
-    });
+    res.json(site);
   } catch (error) {
     logger.error('Error getting site:', error);
     next(new AppError('שגיאה בשליפת האתר', 500, 'SITE_FETCH_ERROR'));
@@ -346,14 +266,7 @@ exports.updateSite = async (req, res, next) => {
       return next(new AppError('שגיאת אימות', 400, 'VALIDATION_ERROR', true, errors.array()));
     }
 
-    const site = await Site.findByPk(req.params.id, {
-      include: [{
-        model: User,
-        as: 'entrepreneur',
-        attributes: ['id', 'organization']
-      }]
-    });
-    
+    const site = await Site.findByPk(req.params.id);
     if (!site) {
       return next(new AppError('אתר לא נמצא', 404, 'SITE_NOT_FOUND'));
     }
@@ -362,10 +275,8 @@ exports.updateSite = async (req, res, next) => {
       name, 
       type, 
       entrepreneurId,
-      integratorUserIds,
-      integratorUserId,
-      maintenanceUserIds,
-      maintenanceUserId,
+      integratorOrganizationIds,
+      maintenanceOrganizationIds,
       controlCenterUserId,
       customFields 
     } = req.body;
@@ -382,24 +293,22 @@ exports.updateSite = async (req, res, next) => {
     }
 
     // Update entrepreneur if provided
-    let organization = site.entrepreneur.organization;
     if (entrepreneurId) {
-      const newEntrepreneur = await validateUser(entrepreneurId, 'entrepreneur', 'יזם');
+      await validateUser(entrepreneurId, 'entrepreneur', 'יזם');
       site.entrepreneurId = entrepreneurId;
-      organization = newEntrepreneur.organization;
     }
 
-    // Normalize and validate arrays of users if provided
-    if (integratorUserIds !== undefined || integratorUserId !== undefined) {
-      const normalizedIntegratorIds = normalizeUserIds(integratorUserIds || integratorUserId);
-      await validateUsers(normalizedIntegratorIds, 'integrator', 'אינטגרטורים', organization);
-      site.integratorUserIds = normalizedIntegratorIds;
-    }
+    // Update organizations
+    if (integratorOrganizationIds !== undefined || maintenanceOrganizationIds !== undefined) {
+      const integratorOrgs = await validateOrganizations(integratorOrganizationIds, 'integrator', 'ארגוני אינטגרציה');
+      const maintenanceOrgs = await validateOrganizations(maintenanceOrganizationIds, 'maintenance', 'ארגוני אחזקה');
+      
+      const organizationIds = [
+        ...(integratorOrgs.map(org => org.id) || []),
+        ...(maintenanceOrgs.map(org => org.id) || [])
+      ];
 
-    if (maintenanceUserIds !== undefined || maintenanceUserId !== undefined) {
-      const normalizedMaintenanceIds = normalizeUserIds(maintenanceUserIds || maintenanceUserId);
-      await validateUsers(normalizedMaintenanceIds, 'maintenance', 'אנשי אחזקה', organization);
-      site.maintenanceUserIds = normalizedMaintenanceIds;
+      await site.setServiceOrganizations(organizationIds);
     }
 
     // Update control center user if provided
@@ -431,35 +340,24 @@ exports.updateSite = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'organization']
+          attributes: ['id', 'name', 'email']
         },
         {
           model: User,
           as: 'controlCenter',
-          attributes: ['id', 'firstName', 'lastName']
+          attributes: ['id', 'name']
+        },
+        {
+          model: Organization,
+          as: 'serviceOrganizations',
+          attributes: ['id', 'name', 'type']
         }
       ]
     });
 
-    // Fetch integrators and maintenance staff
-    const [integrators, maintenanceStaff] = await Promise.all([
-      User.findAll({
-        where: { id: site.integratorUserIds || [] },
-        attributes: ['id', 'firstName', 'lastName']
-      }),
-      User.findAll({
-        where: { id: site.maintenanceUserIds || [] },
-        attributes: ['id', 'firstName', 'lastName']
-      })
-    ]);
-
     res.json({ 
       message: 'האתר עודכן בהצלחה', 
-      site: {
-        ...updatedSite.toJSON(),
-        integrators,
-        maintenanceStaff
-      }
+      site: updatedSite
     });
   } catch (error) {
     logger.error('Error updating site:', error);

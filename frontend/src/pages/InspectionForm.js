@@ -20,7 +20,8 @@ import {
   getInspectionFormStructure, 
   createInspection, 
   getSites,
-  getInspectionTypesBySite
+  getInspectionTypesBySite,
+  getEntrepreneurs
 } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
@@ -42,10 +43,11 @@ const InspectionForm = () => {
 
   // State for form data and validation
   const [formData, setFormData] = useState({
-    securityOfficer: user.firstName,
+    securityOfficer: user.name,  // Changed from firstName to name
     date: new Date().toISOString().split('T')[0],
     time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
   });
+
   const [validationErrors, setValidationErrors] = useState({});
   const [formStructure, setFormStructure] = useState(null);
 
@@ -83,19 +85,12 @@ const InspectionForm = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const sitesResponse = await getSites();
+        const [sitesResponse, entrepreneursData] = await Promise.all([
+          getSites(),
+          getEntrepreneurs()
+        ]);
         setSites(sitesResponse || []);
-
-        // Get unique entrepreneurs from sites
-        const uniqueEntrepreneurs = Array.from(
-          new Map(
-            sitesResponse
-              .map(site => site.entrepreneur)
-              .filter(Boolean)
-              .map(e => [e.id, e])
-          ).values()
-        );
-        setEntrepreneurs(uniqueEntrepreneurs);
+        setEntrepreneurs(entrepreneursData || []);
       } catch (error) {
         console.error('Error fetching initial data:', error);
         setError(error instanceof AppError ? error.message : 'Failed to fetch initial data');
@@ -152,7 +147,7 @@ const InspectionForm = () => {
             // Initialize form data with auto fields
             setFormData(prev => ({
               ...prev,
-              securityOfficer: user.firstName,
+              securityOfficer: user.name,  // Changed from firstName to name
               site: selectedSite.name,
               date: new Date().toISOString().split('T')[0],
               time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
@@ -172,7 +167,7 @@ const InspectionForm = () => {
     };
 
     fetchFormStructure();
-  }, [selectedSite, selectedType, isDrill, user.firstName]);
+  }, [selectedSite, selectedType, isDrill, user.name]);  // Changed dependency from firstName to name
 
   const handleTypeChange = (_, value) => {
     setSelectedType(value);
@@ -180,7 +175,7 @@ const InspectionForm = () => {
     // Keep existing form data and update auto fields
     setFormData(prev => ({
       ...prev,
-      securityOfficer: user.firstName,
+      securityOfficer: user.name,  // Changed from firstName to name
       site: selectedSite.name,
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
@@ -193,7 +188,7 @@ const InspectionForm = () => {
     setSelectedType(null);
     setFormStructure(null);
     setFormData({
-      securityOfficer: user.firstName,
+      securityOfficer: user.name,  // Changed from firstName to name
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     });
@@ -207,14 +202,14 @@ const InspectionForm = () => {
     // Initialize form data with site name
     if (value) {
       setFormData({
-        securityOfficer: user.firstName,
+        securityOfficer: user.name,  // Changed from firstName to name
         site: value.name,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       });
     } else {
       setFormData({
-        securityOfficer: user.firstName,
+        securityOfficer: user.name,  // Changed from firstName to name
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       });
@@ -418,7 +413,7 @@ const InspectionForm = () => {
     <Box sx={{ display: 'flex' }}>
       <Sidebar 
         activeSection={isDrill ? "drills" : "inspections"}
-        userInfo={{ name: `${user.firstName} ${user.lastName}` }}
+        userInfo={{ name: user.name }}  
       />
       <Container maxWidth="lg">
         <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
@@ -440,32 +435,33 @@ const InspectionForm = () => {
           </DialogTitle>
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-              {/* Entrepreneur Selection */}
-              <Autocomplete
-                options={entrepreneurs}
-                getOptionLabel={(option) => option?.firstName || ''}
-                value={selectedEntrepreneur}
-                onChange={handleEntrepreneurChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="יזם"
-                    error={!!validationErrors.entrepreneur}
-                    helperText={validationErrors.entrepreneur}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        color: colors.text.white
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: colors.text.grey
-                      }
-                    }}
-                  />
-                )}
-              />
 
-              {/* Site Selection */}
-              <Autocomplete
+  {/* Entrepreneur Selection */}
+  <Autocomplete
+    options={entrepreneurs}
+    getOptionLabel={(option) => option?.name || ''}  
+    value={selectedEntrepreneur}
+    onChange={handleEntrepreneurChange}
+    renderInput={(params) => (
+      <TextField
+        {...params}
+        label="יזם"
+        error={!!validationErrors.entrepreneur}
+        helperText={validationErrors.entrepreneur}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            color: colors.text.white
+          },
+          '& .MuiInputLabel-root': {
+            color: colors.text.grey
+          }
+        }}
+      />
+    )}
+  />
+
+  {/* Site Selection */}
+  <Autocomplete
                 options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
                 getOptionLabel={(option) => option?.name || ''}
                 value={selectedSite}

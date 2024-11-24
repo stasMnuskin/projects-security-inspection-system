@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -15,18 +15,16 @@ import {
   RadioGroup,
   Autocomplete
 } from '@mui/material';
-import { useAuth } from '../context/AuthContext';
-import { generateRegistrationLink, getOrganizations } from '../services/api';
+import { generateRegistrationLink, getRegistrationOrganizations } from '../services/api';
 import { colors } from '../styles/colors';
 import { formStyles } from '../styles/components';
-import { ROLES } from '../constants/permissions';
+import { ROLE_OPTIONS } from '../constants/roles';
 
 function InitialRegistration() {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    firstName: '',
-    organization: '',
+    name: '',
+    organizationName: '',
     role: ''
   });
   const [organizations, setOrganizations] = useState([]);
@@ -34,90 +32,7 @@ function InitialRegistration() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
 
-  const fetchOrganizations = useCallback(async () => {
-    try {
-      const orgs = await getOrganizations();
-      setOrganizations(orgs);
-    } catch (error) {
-      showNotification('שגיאה בטעינת רשימת הארגונים', 'error');
-    }
-  }, []);
-
-  useEffect(() => {
-    if (formData.role === 'integrator' || formData.role === 'maintenance') {
-      fetchOrganizations();
-    }
-  }, [formData.role, fetchOrganizations]);
-
-  const validateForm = () => {
-    const newErrors = {};
-    
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'שדה חובה';
-    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
-      newErrors.email = 'כתובת אימייל לא תקינה';
-    }
-
-    // Name validation
-    if (!formData.firstName) {
-      newErrors.firstName = 'שדה חובה';
-    }
-
-    // Organization validation only for integrator/maintenance
-    if ((formData.role === 'integrator' || formData.role === 'maintenance')) {
-      if (!formData.organization) {
-        newErrors.organization = 'שדה חובה';
-      } else if (!organizations.includes(formData.organization)) {
-        newErrors.organization = 'יש לבחור ארגון קיים מהרשימה';
-      }
-    }
-
-    // Role validation
-    if (!formData.role) {
-      newErrors.role = 'יש לבחור תפקיד';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await generateRegistrationLink(formData);
-      showNotification('נשלח אימייל הרשמה למשתמש', 'success');
-      setFormData({
-        email: '',
-        firstName: '',
-        organization: '',
-        role: ''
-      });
-    } catch (error) {
-      showNotification(error.message || 'שגיאה בשליחת הזמנה', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRoleChange = (event) => {
-    const newRole = event.target.value;
-    setFormData(prev => ({
-      ...prev,
-      role: newRole,
-      // Clear organization when switching roles
-      organization: ''
-    }));
-    if (errors.role) {
-      setErrors(prev => ({ ...prev, role: '' }));
-    }
-  };
-
-  const showNotification = (message, severity = 'success') => {
+  const showNotification = (message, severity) => {
     setNotification({
       open: true,
       message,
@@ -125,183 +40,202 @@ function InitialRegistration() {
     });
   };
 
-  if (user.role !== 'admin') {
-    return (
-      <Container>
-        <Typography>אין לך הרשאה לצפות בדף זה</Typography>
-      </Container>
-    );
-  }
+  const fetchOrganizations = useCallback(async (role) => {
+    try {
+      if (['integrator', 'maintenance'].includes(role)) {
+        const type = role;
+        const response = await getRegistrationOrganizations(type);
+        setOrganizations(response);
+      }
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      showNotification('שגיאה בטעינת רשימת הארגונים', 'error');
+    }
+  }, []);
 
-  const isOrgSelectionRole = formData.role === 'integrator' || formData.role === 'maintenance';
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({});
+
+    try {
+      await generateRegistrationLink(formData);
+      showNotification('קישור הרשמה נשלח בהצלחה', 'success');
+      setFormData({
+        email: '',
+        name: '',
+        organizationName: '',
+        role: ''
+      });
+      setOrganizations([]);
+    } catch (error) {
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors.reduce((acc, err) => ({
+          ...acc,
+          [err.param]: err.msg
+        }), {}));
+      }
+      showNotification(error.response?.data?.message || 'שגיאה בשליחת קישור הרשמה', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setErrors(prev => ({
+      ...prev,
+      [name]: ''
+    }));
+
+    if (name === 'role') {
+      if (['integrator', 'maintenance'].includes(value)) {
+        fetchOrganizations(value);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          organizationName: ''
+        }));
+        setOrganizations([]);
+      }
+    }
+  };
+
+  const handleOrganizationChange = (event, newValue) => {
+    setFormData(prev => ({
+      ...prev,
+      organizationName: newValue ? newValue.name : ''
+    }));
+    setErrors(prev => ({
+      ...prev,
+      organizationName: ''
+    }));
+  };
+
+  const handleCloseNotification = () => {
+    setNotification(prev => ({
+      ...prev,
+      open: false
+    }));
+  };
 
   return (
-    <Container maxWidth="lg" sx={formStyles.container}>
+    <Container maxWidth="sm">
       <Paper elevation={3} sx={formStyles.paper}>
-        <Box sx={formStyles.formBox}>
-          <Typography variant="h4" gutterBottom sx={formStyles.title}>
-            רישום ראשוני
-          </Typography>
-
-          <Typography variant="body1" sx={{ 
-            color: colors.text.grey,
-            textAlign: 'center',
-            marginBottom: '2rem'
-          }}>
-            הזן את פרטי המשתמש החדש ובחר את תפקידו. לאחר השמירה יישלח אליו מייל עם קישור להשלמת ההרשמה
-          </Typography>
-
-          <Grid container spacing={3}>
+        <Typography variant="h5" component="h1" sx={formStyles.title}>
+          רישום ראשוני
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={formStyles.form}>
+          <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <TextField
-                  required
-                  label="אימייל"
-                  value={formData.email}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, email: e.target.value }));
-                    if (errors.email) {
-                      setErrors(prev => ({ ...prev, email: '' }));
-                    }
-                  }}
-                  error={!!errors.email}
-                  helperText={errors.email}
-                  sx={formStyles.textField}
-                  inputProps={{
-                    dir: "ltr"
-                  }}
-                />
-              </FormControl>
+              <TextField
+                fullWidth
+                label="אימייל"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                error={!!errors.email}
+                helperText={errors.email}
+                required
+                dir="ltr"
+              />
             </Grid>
-
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <TextField
-                  required
-                  label="שם פרטי"
-                  value={formData.firstName}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, firstName: e.target.value }));
-                    if (errors.firstName) {
-                      setErrors(prev => ({ ...prev, firstName: '' }));
-                    }
-                  }}
-                  error={!!errors.firstName}
-                  helperText={errors.firstName}
-                  sx={formStyles.textField}
-                />
-              </FormControl>
+              <TextField
+                fullWidth
+                label="שם"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                error={!!errors.name}
+                helperText={errors.name}
+                required
+              />
             </Grid>
-
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                {isOrgSelectionRole ? (
-                  <Autocomplete
-                    options={organizations}
-                    value={formData.organization}
-                    onChange={(event, newValue) => {
-                      setFormData(prev => ({ ...prev, organization: newValue }));
-                      if (errors.organization) {
-                        setErrors(prev => ({ ...prev, organization: '' }));
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        required
-                        label="ארגון"
-                        error={!!errors.organization}
-                        helperText={errors.organization}
-                        sx={formStyles.textField}
-                      />
-                    )}
-                  />
-                ) : (
-                  <TextField
-                    label="ארגון"
-                    value={formData.organization}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, organization: e.target.value }));
-                      if (errors.organization) {
-                        setErrors(prev => ({ ...prev, organization: '' }));
-                      }
-                    }}
-                    error={!!errors.organization}
-                    helperText={errors.organization}
-                    sx={formStyles.textField}
-                  />
-                )}
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" sx={{ 
-                color: colors.text.white,
-                marginBottom: '1rem'
-              }}>
-                תפקיד
-              </Typography>
-              <FormControl component="fieldset" error={!!errors.role}>
+              <FormControl fullWidth error={!!errors.role}>
+                <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                  תפקיד
+                </Typography>
                 <RadioGroup
+                  name="role"
                   value={formData.role}
-                  onChange={handleRoleChange}
+                  onChange={handleChange}
                 >
-                  {Object.entries(ROLES).map(([key, value]) => (
+                  {ROLE_OPTIONS.filter(role => role.value !== 'admin').map(role => (
                     <FormControlLabel
-                      key={key}
-                      value={key}
-                      control={
-                        <Radio
-                          sx={{
-                            color: colors.text.grey,
-                            '&.Mui-checked': {
-                              color: colors.primary.orange
-                            }
-                          }}
-                        />
-                      }
-                      label={value}
-                      sx={{
-                        color: colors.text.white,
-                        '& .MuiFormControlLabel-label': {
-                          fontSize: '0.9rem'
-                        }
-                      }}
+                      key={role.value}
+                      value={role.value}
+                      control={<Radio />}
+                      label={role.label}
                     />
                   ))}
                 </RadioGroup>
                 {errors.role && (
-                  <Typography variant="caption" sx={{ color: 'error.main' }}>
+                  <Typography color="error" variant="caption">
                     {errors.role}
                   </Typography>
                 )}
               </FormControl>
             </Grid>
-
+            {(['integrator', 'maintenance'].includes(formData.role)) && (
+              <Grid item xs={12}>
+                <Autocomplete
+                  fullWidth
+                  options={organizations}
+                  getOptionLabel={(option) => option.name}
+                  value={organizations.find(org => org.name === formData.organizationName) || null}
+                  onChange={handleOrganizationChange}
+                  freeSolo
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="שם ארגון"
+                      name="organizationName"
+                      value={formData.organizationName}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        organizationName: e.target.value
+                      }))}
+                      error={!!errors.organizationName}
+                      helperText={errors.organizationName || 'ניתן לבחור ארגון קיים או להזין שם חדש'}
+                      required
+                    />
+                  )}
+                />
+              </Grid>
+            )}
             <Grid item xs={12}>
               <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={loading}
+                type="submit"
                 fullWidth
-                sx={formStyles.submitButton}
+                variant="contained"
+                disabled={loading}
+                sx={{
+                  ...formStyles.submitButton,
+                  backgroundColor: colors.primary
+                }}
               >
-                {loading ? 'שולח...' : 'שלח הזמנה'}
+                שלח קישור הרשמה
               </Button>
             </Grid>
           </Grid>
         </Box>
       </Paper>
-
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
-        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert 
+        <Alert
+          onClose={handleCloseNotification}
           severity={notification.severity}
-          onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+          sx={{ width: '100%' }}
         >
           {notification.message}
         </Alert>

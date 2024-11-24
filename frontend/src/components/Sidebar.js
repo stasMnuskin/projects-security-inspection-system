@@ -62,7 +62,7 @@ const Sidebar = ({
   };
 
   const renderUserInfo = () => {
-    if (!userInfo) return null;
+    if (!user.name) return null;
 
     return (
       <Box 
@@ -78,7 +78,7 @@ const Sidebar = ({
         </Avatar>
         <Box>
           <Typography sx={sidebarStyles.userName}>
-            {userInfo.name}
+            {user.name}
           </Typography>
           <Typography sx={sidebarStyles.userDate}>
             {currentDate}
