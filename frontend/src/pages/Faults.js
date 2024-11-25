@@ -98,6 +98,7 @@ const Faults = () => {
     }
 
     try {
+      setLoading(true);
       const queryParams = {};
       
       if (filters.startDate) {
@@ -136,22 +137,14 @@ const Faults = () => {
     fetchOrganizations();
   }, [fetchFaults, fetchOrganizations]);
 
-  // Handle filter changes with debouncing
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(true);
-      fetchFaults();
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
-  }, [fetchFaults]);
-
   const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
-  }, []);
+    // Fetch data immediately when filter changes
+    fetchFaults();
+  }, [fetchFaults]);
 
   const showNotification = (message, severity = 'success') => {
     setNotification({
@@ -345,6 +338,7 @@ const Faults = () => {
           filters={filters} 
           onFilterChange={handleFilterChange}
           variant="faults"
+          disableAutoFetch={true}
         />
 
         {error && (

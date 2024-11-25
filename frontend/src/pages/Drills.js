@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -16,7 +16,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button
+  Button,
+  CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { getDrillsBySite, deleteInspection } from '../services/api';
@@ -30,13 +31,14 @@ const Drills = () => {
   const { user } = useAuth();
   const [drills, setDrills] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [drillToDelete, setDrillToDelete] = useState(null);
   const [filters, setFilters] = useState({
     site: '',
     startDate: (() => {
       const date = new Date();
-      date.setMonth(date.getMonth() - 6); // 6 months ago
+      date.setMonth(date.getMonth() - 6);
       date.setHours(0, 0, 0, 0);
       return date;
     })(),
@@ -49,7 +51,6 @@ const Drills = () => {
     securityOfficer: ''
   });
 
-  // Columns configuration - Removed time column
   const columns = [
     { id: 'site', label: 'אתר', getValue: drill => drill.Site?.name },
     { id: 'securityOfficer', label: 'קב"ט', getValue: drill => drill.formData?.securityOfficer },
@@ -60,7 +61,6 @@ const Drills = () => {
     ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
   ];
 
-  // Format date for display
   const formatDate = (date) => {
     if (!date) return '-';
     const d = new Date(date);
@@ -71,13 +71,11 @@ const Drills = () => {
     });
   };
 
-  // Truncate text for display
   const truncateText = (text, maxLength = 15) => {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
 
-  // Format value for display
   const formatValue = (value, columnId) => {
     if (value === undefined || value === null) return '-';
     
@@ -134,38 +132,64 @@ const Drills = () => {
     }
   };
 
-  // Get value from drill object
   const getValue = (drill, column) => {
     return column.getValue(drill);
   };
 
-  // Handle filter changes
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const fetchDrills = useCallback(async () => {
+    if (!filters.site) {
+      setDrills([]);
+      return;
+    }
 
-  // Handle delete click
-  const handleDeleteClick = (drill, event) => {
-    event.stopPropagation(); // Prevent event bubbling
-    setDrillToDelete(drill);
-    setDeleteDialogOpen(true);
-  };
-
-  // Handle delete confirmation
-  const handleDeleteConfirm = async () => {
     try {
-      await deleteInspection(drillToDelete.id);
-      // Refresh drills list
+      setLoading(true);
       const response = await getDrillsBySite(filters.site, {
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
         type: 'drill',
         securityOfficer: filters.securityOfficer
       });
-      setDrills(response || []);
+
+      const sortedDrills = (response || []).sort((a, b) => {
+        const dateA = new Date(a.formData?.date);
+        const dateB = new Date(b.formData?.date);
+        return dateB - dateA;
+      });
+
+      const filteredDrills = filters.drillType
+        ? sortedDrills.filter(drill => drill.formData?.drill_type === filters.drillType)
+        : sortedDrills;
+
+      setDrills(filteredDrills);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching drills:', error);
+      setError('שגיאה בטעינת תרגילים');
+      setDrills([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  const handleFilterChange = useCallback((field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    fetchDrills();
+  }, [fetchDrills]);
+
+  const handleDeleteClick = (drill, event) => {
+    event.stopPropagation();
+    setDrillToDelete(drill);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteInspection(drillToDelete.id);
+      await fetchDrills();
       setDeleteDialogOpen(false);
       setDrillToDelete(null);
     } catch (error) {
@@ -174,50 +198,20 @@ const Drills = () => {
     }
   };
 
-  // Fetch drills when filters change
-  useEffect(() => {
-    const fetchDrills = async () => {
-      if (!filters.site) return;
-
-      try {
-        const response = await getDrillsBySite(filters.site, {
-          startDate: filters.startDate.toISOString(),
-          endDate: filters.endDate.toISOString(),
-          type: 'drill',
-          securityOfficer: filters.securityOfficer
-        });
-
-        // Sort drills by date in descending order
-        const sortedDrills = (response || []).sort((a, b) => {
-          const dateA = new Date(a.formData?.date);
-          const dateB = new Date(b.formData?.date);
-          return dateB - dateA;
-        });
-
-        // Filter by drill type on the frontend
-        const filteredDrills = filters.drillType
-          ? sortedDrills.filter(drill => drill.formData?.drill_type === filters.drillType)
-          : sortedDrills;
-
-        setDrills(filteredDrills);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching drills:', error);
-        setError('שגיאה בטעינת תרגילים');
-        setDrills([]);
-      }
-    };
-
-    fetchDrills();
-  }, [filters]);
-
-  // Render table
   const renderTable = () => {
     if (!filters.site) {
       return (
         <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
           בחרו אתר כדי לצפות בתרגילים
         </Typography>
+      );
+    }
+
+    if (loading) {
+      return (
+        <Box display="flex" justifyContent="center" p={3}>
+          <CircularProgress sx={{ color: colors.primary.orange }} />
+        </Box>
       );
     }
 
@@ -272,7 +266,6 @@ const Drills = () => {
             {drills.map((drill) => (
               <TableRow 
                 key={drill.id}
-                
               >
                 {columns.map((column) => (
                   <TableCell 
@@ -312,7 +305,7 @@ const Drills = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
-        activeSection="inspections"
+        activeSection="drills"  // שיניתי את ה-section לתרגילים
         userInfo={{ name: user.name }}
       />
       <Container maxWidth="lg">
@@ -324,6 +317,7 @@ const Drills = () => {
           filters={filters}
           onFilterChange={handleFilterChange}
           variant="drills"
+          disableAutoFetch={true}
         />
         {error ? (
           <Typography color="error" align="center" sx={{ mt: 2 }}>
@@ -333,7 +327,6 @@ const Drills = () => {
           renderTable()
         )}
 
-        {/* Delete Confirmation Dialog */}
         <Dialog
           open={deleteDialogOpen}
           onClose={() => setDeleteDialogOpen(false)}

@@ -272,7 +272,7 @@ const Sidebar = ({
     return items;
   };
 
-  const getFaultItems = () => getInspectionItems(); 
+  const getFaultItems = () => getInspectionItems();
 
   const getItems = () => {
     switch (activeSection) {
@@ -281,6 +281,7 @@ const Sidebar = ({
       case 'dashboard':
         return getDashboardItems();
       case 'inspections':
+      case 'drills':  // שניהם משתמשים באותה פונקציה
         return getInspectionItems();
       case 'faults':
         return getFaultItems();

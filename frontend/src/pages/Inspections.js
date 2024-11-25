@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Container, 
   Typography, 
@@ -45,49 +45,49 @@ const Inspections = () => {
   const { user } = useAuth();
 
   // Load enabled fields for inspections when site changes
-  useEffect(() => {
-    const loadEnabledFields = async () => {
-      if (!filters.site) {
-        setColumns([]);
-        return;
-      }
+  const loadEnabledFields = useCallback(async (siteId) => {
+    if (!siteId) {
+      setColumns([]);
+      return;
+    }
+    
+    try {
+      const response = await getEnabledFields(siteId, 'inspection');
+      const fields = response.data.fields;
       
-      try {
-        const response = await getEnabledFields(filters.site, 'inspection');
-        const fields = response.data.fields;
-        
-        // Define the order of columns
-        const orderedColumns = [
-          { id: 'site', label: 'אתר', source: 'Site.name' },
-          { id: 'securityOfficer', label: 'קב"ט' },
-          { id: 'date', label: 'תאריך' },
-          { id: 'time', label: 'שעה' },
-          ...fields
-            .filter(field => !['site', 'securityOfficer', 'date', 'time', 'notes'].includes(field.id))
-            .map(field => ({
-              id: field.id,
-              label: field.label
-            })),
-          // Always add notes column last
-          ...fields
-            .filter(field => field.id === 'notes')
-            .map(field => ({
-              id: field.id,
-              label: field.label
-            })),
-          // Add actions column for admin users
-          ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
-        ];
+      // Define the order of columns
+      const orderedColumns = [
+        { id: 'site', label: 'אתר', source: 'Site.name' },
+        { id: 'securityOfficer', label: 'קב"ט' },
+        { id: 'date', label: 'תאריך' },
+        { id: 'time', label: 'שעה' },
+        ...fields
+          .filter(field => !['site', 'securityOfficer', 'date', 'time', 'notes'].includes(field.id))
+          .map(field => ({
+            id: field.id,
+            label: field.label
+          })),
+        // Always add notes column last
+        ...fields
+          .filter(field => field.id === 'notes')
+          .map(field => ({
+            id: field.id,
+            label: field.label
+          })),
+        // Add actions column for admin users
+        ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
+      ];
 
-        setColumns(orderedColumns);
-      } catch (error) {
-        console.error('Error loading enabled fields:', error);
-        setColumns([]);
-      }
-    };
+      setColumns(orderedColumns);
+    } catch (error) {
+      console.error('Error loading enabled fields:', error);
+      setColumns([]);
+    }
+  }, [user]);
 
-    loadEnabledFields();
-  }, [filters.site, user]);
+  useEffect(() => {
+    loadEnabledFields(filters.site);
+  }, [filters.site, loadEnabledFields]);
 
   // Handle delete click
   const handleDeleteClick = (inspection, event) => {
@@ -100,16 +100,7 @@ const Inspections = () => {
   const handleDeleteConfirm = async () => {
     try {
       await deleteInspection(inspectionToDelete.id);
-      // Refresh inspections list
-      const response = await getInspectionsBySite(filters.site, {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        type: 'inspection',
-        maintenanceOrg: filters.maintenance,
-        integratorOrg: filters.integrator
-      });
-      const filteredInspections = (response || []).filter(item => item.type === 'inspection');
-      setInspections(filteredInspections);
+      await fetchInspections();
       setDeleteDialogOpen(false);
       setInspectionToDelete(null);
     } catch (error) {
@@ -118,46 +109,44 @@ const Inspections = () => {
     }
   };
 
-  // Fetch inspections when filters change
-  useEffect(() => {
-    const fetchInspections = async () => {
-      if (!filters.site) {
-        setInspections([]);
-        return;
-      }
+  // Fetch inspections
+  const fetchInspections = useCallback(async () => {
+    if (!filters.site) {
+      setInspections([]);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        const response = await getInspectionsBySite(filters.site, {
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-          type: 'inspection',
-          maintenanceOrg: filters.maintenance,
-          integratorOrg: filters.integrator
-        });
+    try {
+      setLoading(true);
+      const response = await getInspectionsBySite(filters.site, {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        type: 'inspection',
+        maintenanceOrg: filters.maintenance,
+        integratorOrg: filters.integrator
+      });
 
-        // Filter out any drills that might have slipped through
-        const filteredInspections = (response || []).filter(item => item.type === 'inspection');
-        setInspections(filteredInspections);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching inspections:', error);
-        setInspections([]);
-        setError('שגיאה בטעינת ביקורות');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInspections();
+      // Filter out any drills that might have slipped through
+      const filteredInspections = (response || []).filter(item => item.type === 'inspection');
+      setInspections(filteredInspections);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching inspections:', error);
+      setInspections([]);
+      setError('שגיאה בטעינת ביקורות');
+    } finally {
+      setLoading(false);
+    }
   }, [filters]);
 
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
-  };
+    // Fetch data immediately when filter changes
+    fetchInspections();
+  }, [fetchInspections]);
 
   const getValue = (inspection, column) => {
     if (column.source) {
@@ -266,7 +255,7 @@ const Inspections = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
-        activeSection="inspections"
+        activeSection="inspections"  // נשאר inspections
         userInfo={{ name: user.name }}
       />
       <Container maxWidth="lg">
@@ -279,6 +268,7 @@ const Inspections = () => {
           onFilterChange={handleFilterChange}
           variant="inspections"
           userRole={user.role}
+          disableAutoFetch={true}
         />
 
         {error ? (

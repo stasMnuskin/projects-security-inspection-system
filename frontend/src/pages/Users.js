@@ -177,16 +177,18 @@ function Users() {
 
       // Handle organization for all roles
       let organizationId = editedUser.organizationId;
-      if (editedUser.organization) {
+      let organizationName = editedUser.organization;
+      
+      if (organizationName) {
         const orgType = ['maintenance', 'integrator'].includes(editedUser.role) ? editedUser.role : null;
         if (orgType) {
           // For maintenance/integrator, use existing org or create new one
-          const existingOrg = organizations[orgType].find(org => org.name === editedUser.organization);
+          const existingOrg = organizations[orgType].find(org => org.name === organizationName);
           if (existingOrg) {
             organizationId = existingOrg.id;
           } else {
             const newOrg = await createOrganization({
-              name: editedUser.organization,
+              name: organizationName,
               type: orgType
             });
             organizationId = newOrg.id;
@@ -195,23 +197,39 @@ function Users() {
         } else {
           // For other roles, just create organization without type
           const newOrg = await createOrganization({
-            name: editedUser.organization
+            name: organizationName
           });
           organizationId = newOrg.id;
         }
       } else {
         organizationId = null;
+        organizationName = null;
       }
 
       // Update user with organizationId
       const updatedUser = {
         ...editedUser,
-        organizationId
+        organizationId,
+        organization: organizationName ? { name: organizationName } : null
       };
-      delete updatedUser.organization; // Remove organization name since we're sending ID
+      delete updatedUser.organizationName;
 
       await updateUser(updatedUser);
-      await fetchUsers(); // Refresh users list
+      
+      // Update the user in the list
+      const updatedUsers = users.map(u => {
+        if (u.id === updatedUser.id) {
+          return {
+            ...u,
+            ...updatedUser,
+            organization: organizationName ? { name: organizationName } : null
+          };
+        }
+        return u;
+      });
+      
+      setUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
       showNotification('המשתמש נשמר בהצלחה');
       setSelectedUser(null);
       setEditedUser(null);
