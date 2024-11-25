@@ -58,6 +58,16 @@ function InitialRegistration() {
     setLoading(true);
     setErrors({});
 
+    // Validate organization for maintenance/integrator
+    if (['maintenance', 'integrator'].includes(formData.role) && !formData.organizationName) {
+      setErrors(prev => ({
+        ...prev,
+        organizationName: 'שדה חובה עבור תפקיד זה'
+      }));
+      setLoading(false);
+      return;
+    }
+
     try {
       await generateRegistrationLink(formData);
       showNotification('קישור הרשמה נשלח בהצלחה', 'success');
@@ -126,9 +136,6 @@ function InitialRegistration() {
   return (
     <Container maxWidth="sm">
       <Paper elevation={3} sx={formStyles.paper}>
-        {/* <Typography variant="h5" component="h1" sx={formStyles.title}>
-          רישום ראשוני
-        </Typography> */}
         <Box component="form" onSubmit={handleSubmit} sx={formStyles.form}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
@@ -166,7 +173,7 @@ function InitialRegistration() {
                   value={formData.role}
                   onChange={handleChange}
                 >
-                  {ROLE_OPTIONS.filter(role => role.value !== 'admin').map(role => (
+                  {ROLE_OPTIONS.map(role => (
                     <FormControlLabel
                       key={role.value}
                       value={role.value}
@@ -182,7 +189,7 @@ function InitialRegistration() {
                 )}
               </FormControl>
             </Grid>
-            {(['integrator', 'maintenance'].includes(formData.role)) && (
+            {formData.role && (
               <Grid item xs={12}>
                 <Autocomplete
                   fullWidth
@@ -202,8 +209,13 @@ function InitialRegistration() {
                         organizationName: e.target.value
                       }))}
                       error={!!errors.organizationName}
-                      helperText={errors.organizationName || 'ניתן לבחור ארגון קיים או להזין שם חדש'}
-                      required
+                      helperText={
+                        errors.organizationName || 
+                        (['maintenance', 'integrator'].includes(formData.role) 
+                          ? 'שדה חובה - ניתן לבחור ארגון קיים או להזין שם חדש'
+                          : 'ניתן לבחור ארגון קיים או להזין שם חדש')
+                      }
+                      required={['maintenance', 'integrator'].includes(formData.role)}
                     />
                   )}
                 />

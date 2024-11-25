@@ -175,26 +175,31 @@ function Users() {
     try {
       setLoading(true);
 
-      // If organization is new, create it first
+      // Handle organization for all roles
       let organizationId = editedUser.organizationId;
-      if (['maintenance', 'integrator'].includes(editedUser.role) && editedUser.organization) {
-        const orgType = editedUser.role;
-        const existingOrg = organizations[orgType].find(org => org.name === editedUser.organization);
-        
-        if (existingOrg) {
-          organizationId = existingOrg.id;
+      if (editedUser.organization) {
+        const orgType = ['maintenance', 'integrator'].includes(editedUser.role) ? editedUser.role : null;
+        if (orgType) {
+          // For maintenance/integrator, use existing org or create new one
+          const existingOrg = organizations[orgType].find(org => org.name === editedUser.organization);
+          if (existingOrg) {
+            organizationId = existingOrg.id;
+          } else {
+            const newOrg = await createOrganization({
+              name: editedUser.organization,
+              type: orgType
+            });
+            organizationId = newOrg.id;
+            await fetchOrganizations(orgType);
+          }
         } else {
-          // Create new organization
+          // For other roles, just create organization without type
           const newOrg = await createOrganization({
-            name: editedUser.organization,
-            type: orgType
+            name: editedUser.organization
           });
           organizationId = newOrg.id;
-          // Refresh organizations list
-          await fetchOrganizations(orgType);
         }
       } else {
-        // Clear organizationId if role is not maintenance/integrator
         organizationId = null;
       }
 
@@ -246,10 +251,6 @@ function Users() {
         <Grid item xs={12} md={4}>
           <Paper elevation={3} sx={formStyles.paper}>
             <Box sx={formStyles.formBox}>
-              {/* <Typography variant="h6" gutterBottom sx={formStyles.title}>
-                רשימת משתמשים
-              </Typography> */}
-
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <Autocomplete
                   freeSolo
@@ -384,9 +385,9 @@ function Users() {
                           setEditedUser(prev => ({
                             ...prev,
                             role: newRole,
-                            // Clear organization if switching away from maintenance/integrator
-                            organization: ['maintenance', 'integrator'].includes(newRole) ? prev.organization : '',
-                            organizationId: ['maintenance', 'integrator'].includes(newRole) ? prev.organizationId : null
+                            // Keep organization if switching to non-maintenance/integrator
+                            organization: prev.organization,
+                            organizationId: prev.organizationId
                           }));
                         }}
                         sx={{
@@ -416,8 +417,8 @@ function Users() {
                     </FormControl>
                   </Grid>
 
-                  {/* Organization field - only show for maintenance/integrator roles */}
-                  {['maintenance', 'integrator'].includes(editedUser.role) && (
+                  {/* Organization field - show for all roles */}
+                  {editedUser.role && (
                     <Grid item xs={12}>
                       <Autocomplete
                         freeSolo
@@ -426,22 +427,33 @@ function Users() {
                           ...prev, 
                           organization: newValue,
                           // Clear organizationId when selecting new organization
-                          organizationId: organizations[prev.role]?.find(org => org.name === newValue)?.id || null
+                          organizationId: ['maintenance', 'integrator'].includes(prev.role) 
+                            ? organizations[prev.role]?.find(org => org.name === newValue)?.id || null
+                            : null
                         }))}
                         onInputChange={(_, newValue) => setEditedUser(prev => ({ 
                           ...prev, 
                           organization: newValue,
                           // Clear organizationId when typing new organization
-                          organizationId: organizations[prev.role]?.find(org => org.name === newValue)?.id || null
+                          organizationId: ['maintenance', 'integrator'].includes(prev.role)
+                            ? organizations[prev.role]?.find(org => org.name === newValue)?.id || null
+                            : null
                         }))}
-                        options={organizations[editedUser.role]?.map(org => org.name) || []}
+                        options={['maintenance', 'integrator'].includes(editedUser.role) 
+                          ? organizations[editedUser.role]?.map(org => org.name) || []
+                          : []}
                         renderInput={(params) => (
                           <TextField
                             {...params}
                             label="ארגון"
                             error={!!errors.organization}
-                            helperText={errors.organization}
-                            required
+                            helperText={
+                              errors.organization || 
+                              (['maintenance', 'integrator'].includes(editedUser.role)
+                                ? 'שדה חובה - ניתן לבחור ארגון קיים או להזין שם חדש'
+                                : 'ניתן לבחור ארגון קיים או להזין שם חדש')
+                            }
+                            required={['maintenance', 'integrator'].includes(editedUser.role)}
                             sx={formStyles.textField}
                           />
                         )}
