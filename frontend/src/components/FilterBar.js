@@ -6,7 +6,14 @@ import { dashboardStyles } from '../styles/dashboardStyles';
 import { colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
 import DateRangeSelector from './DateRangeSelector';
-import { getSites, getSecurityOfficers, getOrganizations, getInspectionTypes } from '../services/api';
+import { 
+  getSites, 
+  getSecurityOfficers, 
+  getOrganizations, 
+  getInspectionTypes,
+  getSitesByEntrepreneur,
+  getOrganizationsBySites
+} from '../services/api';
 
 const FAULT_CRITICALITY = [
   { value: true, label: 'משביתה' },
@@ -18,7 +25,7 @@ const FilterBar = ({
   onFilterChange, 
   variant = 'faults'
 }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [options, setOptions] = useState({
     sites: [],
     securityOfficers: [],
@@ -29,64 +36,137 @@ const FilterBar = ({
 
   // Load filter options
   useEffect(() => {
+    // אם AuthContext עדיין טוען, נחכה
+    if (authLoading) {
+      console.log('Auth is still loading, waiting...');
+      return;
+    }
+
+    // אם אין משתמש, לא נטען כלום
+    if (!user) {
+      console.log('No user, skipping load...');
+      return;
+    }
+
     const loadOptions = async () => {
       try {
-        const [sitesData, securityOfficersData, maintenanceOrgs, integratorOrgs] = await Promise.all([
-          getSites(),
-          getSecurityOfficers(),
-          getOrganizations('maintenance'),
-          getOrganizations('integrator')
-        ]);
+        console.log('Loading options for user:', user);
+        console.log('User role:', user.role);
+        console.log('User ID:', user.id);
 
-        let filteredSites = sitesData;
-        if (user.role === 'entrepreneur') {
-          filteredSites = sitesData.filter(site => site.entrepreneurId === user.id);
-        }
+        let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
+        
+        try {
+          if (user.role === 'entrepreneur') {
+            console.log('Loading entrepreneur-specific data...');
+            
+            // Load sites first
+            try {
+              sitesData = await getSitesByEntrepreneur(user.id);
+              console.log('Loaded sites:', sitesData);
 
-        setOptions(prev => ({
-          ...prev,
-          sites: filteredSites,
-          securityOfficers: securityOfficersData || [],
-          maintenance: maintenanceOrgs || [],
-          integrators: integratorOrgs || []
-        }));
+              // Get site IDs
+              const siteIds = sitesData.map(site => site.id);
 
-        // Load drill types only for drills variant
-        if (variant === 'drills') {
-          try {
-            const inspectionTypesData = await getInspectionTypes();
-            if (inspectionTypesData?.data) {
-              const drillType = inspectionTypesData.data.find(type => type.type === 'drill');
-              if (drillType) {
-                const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
-                if (drillTypeField?.options) {
-                  setOptions(prev => ({
-                    ...prev,
-                    drillTypes: drillTypeField.options
-                  }));
+              // Load organizations for these sites
+              if (siteIds.length > 0) {
+                try {
+                  [maintenanceOrgs, integratorOrgs] = await Promise.all([
+                    getOrganizationsBySites(siteIds, 'maintenance'),
+                    getOrganizationsBySites(siteIds, 'integrator')
+                  ]);
+                  console.log('Loaded maintenance orgs:', maintenanceOrgs);
+                  console.log('Loaded integrator orgs:', integratorOrgs);
+                } catch (error) {
+                  console.error('Error loading organizations:', error);
+                  maintenanceOrgs = [];
+                  integratorOrgs = [];
                 }
               }
+            } catch (error) {
+              console.error('Error loading sites:', error);
+              sitesData = [];
             }
-          } catch (error) {
-            console.error('Error loading drill types:', error);
+          } else {
+            console.log('Loading general data...');
+            
+            // Load all data for non-entrepreneurs
+            const [sites, maintenance, integrators] = await Promise.all([
+              getSites(),
+              getOrganizations('maintenance'),
+              getOrganizations('integrator')
+            ]);
+            
+            sitesData = sites;
+            maintenanceOrgs = maintenance;
+            integratorOrgs = integrators;
           }
+
+          // Load security officers separately
+          try {
+            securityOfficersData = await getSecurityOfficers();
+            console.log('Loaded security officers:', securityOfficersData);
+          } catch (error) {
+            console.error('Error loading security officers:', error);
+            securityOfficersData = [];
+          }
+
+          console.log('Setting options with:', {
+            sites: sitesData,
+            securityOfficers: securityOfficersData,
+            maintenance: maintenanceOrgs,
+            integrators: integratorOrgs
+          });
+
+          setOptions(prev => ({
+            ...prev,
+            sites: sitesData || [],
+            securityOfficers: securityOfficersData || [],
+            maintenance: maintenanceOrgs || [],
+            integrators: integratorOrgs || []
+          }));
+
+          // Load drill types only for drills variant
+          if (variant === 'drills') {
+            try {
+              console.log('Loading drill types...');
+              const inspectionTypesData = await getInspectionTypes();
+              if (inspectionTypesData?.data) {
+                const drillType = inspectionTypesData.data.find(type => type.type === 'drill');
+                if (drillType) {
+                  const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
+                  if (drillTypeField?.options) {
+                    console.log('Setting drill types:', drillTypeField.options);
+                    setOptions(prev => ({
+                      ...prev,
+                      drillTypes: drillTypeField.options
+                    }));
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error loading drill types:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Error in loadOptions:', error);
         }
       } catch (error) {
-        console.error('Error loading filter options:', error);
+        console.error('Critical error in loadOptions:', error);
       }
     };
 
     loadOptions();
-  }, [user.role, user.id, variant]);
+  }, [user, user?.role, user?.id, variant, authLoading]);
 
   // Set initial organization filter
   useEffect(() => {
-    if (user.role === 'maintenance' && user.organizationId && !filters.maintenance) {
+    if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
       onFilterChange('maintenance', user.organizationId);
-    } else if (user.role === 'integrator' && user.organizationId && !filters.integrator) {
+    } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
       onFilterChange('integrator', user.organizationId);
     }
-  }, [user.role, user.organizationId, filters.maintenance, filters.integrator, onFilterChange]);
+  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, onFilterChange]);
 
   const formatOrganizationName = (org) => org ? org.name : '';
 
@@ -145,10 +225,10 @@ const FilterBar = ({
           {...commonAutocompleteProps}
           options={options.integrators}
           getOptionLabel={formatOrganizationName}
-          value={options.integrators.find(org => org.id === (user.role === 'integrator' ? user.organizationId : filters.integrator)) || null}
+          value={options.integrators.find(org => org.id === (user?.role === 'integrator' ? user?.organizationId : filters.integrator)) || null}
           onChange={(_, newValue) => onFilterChange('integrator', newValue?.id || '')}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          disabled={user.role === 'integrator'}
+          disabled={user?.role === 'integrator'}
           renderInput={(params) => renderTextField(params, "אינטגרטור")}
         />
       )}
@@ -158,10 +238,10 @@ const FilterBar = ({
           {...commonAutocompleteProps}
           options={options.maintenance}
           getOptionLabel={formatOrganizationName}
-          value={options.maintenance.find(org => org.id === (user.role === 'maintenance' ? user.organizationId : filters.maintenance)) || null}
+          value={options.maintenance.find(org => org.id === (user?.role === 'maintenance' ? user?.organizationId : filters.maintenance)) || null}
           onChange={(_, newValue) => onFilterChange('maintenance', newValue?.id || '')}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          disabled={user.role === 'maintenance'}
+          disabled={user?.role === 'maintenance'}
           renderInput={(params) => renderTextField(params, "אחזקה")}
         />
       )}

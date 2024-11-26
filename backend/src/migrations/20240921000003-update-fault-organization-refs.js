@@ -49,7 +49,6 @@ module.exports = {
       );
     }
 
-    // Keep the old columns for now, will remove them in a separate migration after verifying data
   },
 
   down: async (queryInterface, Sequelize) => {

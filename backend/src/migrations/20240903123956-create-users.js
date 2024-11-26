@@ -53,7 +53,7 @@ module.exports = {
       },
       password: {
         type: Sequelize.STRING,
-        allowNull: true // Allow null for initial registration
+        allowNull: true 
       },
       permissions: {
         type: Sequelize.JSON,

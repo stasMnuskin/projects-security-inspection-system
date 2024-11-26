@@ -71,6 +71,10 @@ export const updateOrganization = (orgId, orgData) => apiCall('put', `/organizat
 export const deleteOrganization = (orgId) => apiCall('delete', `/organizations/${orgId}`);
 export const getOrganizationById = (orgId) => apiCall('get', `/organizations/${orgId}`);
 
+// Organization Management for Sites
+export const getOrganizationsBySites = (siteIds, type) => 
+  apiCall('get', `/organizations/${type}/sites`, { params: { siteIds: siteIds.join(',') } });
+
 // Site Management
 export const getSites = () => apiCall('get', '/sites');
 export const getSiteById = (siteId) => apiCall('get', `/sites/${siteId}`);

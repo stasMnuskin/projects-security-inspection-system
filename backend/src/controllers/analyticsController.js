@@ -8,7 +8,6 @@ exports.getDashboardOverview = async (req, res, next) => {
     const { role, id: userId } = req.user;
     const { startDate, endDate, site, maintenance, securityOfficer, integrator } = req.query;
 
-    // Handle date range
     let dateRange = {};
     if (startDate && endDate) {
       dateRange = {
@@ -23,7 +22,6 @@ exports.getDashboardOverview = async (req, res, next) => {
         [Op.lte]: new Date(endDate)
       };
     } else {
-      // Default to last 6 months if no dates provided
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       dateRange = {
@@ -31,7 +29,6 @@ exports.getDashboardOverview = async (req, res, next) => {
       };
     }
 
-    // Base query for sites based on user role
     let siteQuery = {};
     if (role === 'entrepreneur') {
       siteQuery.entrepreneurId = userId;
@@ -40,14 +37,12 @@ exports.getDashboardOverview = async (req, res, next) => {
       siteQuery.id = site;
     }
 
-    // Get filtered sites
     const sites = await db.Site.findAll({
       where: siteQuery,
       attributes: ['id']
     });
     const siteIds = sites.map(site => site.id);
 
-    // User role filters
     let userFilters = {};
     if (maintenance) {
       userFilters.maintenanceUserId = maintenance;
@@ -59,7 +54,6 @@ exports.getDashboardOverview = async (req, res, next) => {
       userFilters.securityOfficerId = securityOfficer;
     }
 
-    // Get regular inspections count using formData.date
     const inspectionsCount = await db.Inspection.count({
       where: {
         siteId: { [Op.in]: siteIds },
@@ -70,7 +64,6 @@ exports.getDashboardOverview = async (req, res, next) => {
       }
     });
 
-    // Get drills count using formData.date
     const drillsCount = await db.Inspection.count({
       where: {
         siteId: { [Op.in]: siteIds },
@@ -81,9 +74,7 @@ exports.getDashboardOverview = async (req, res, next) => {
       }
     });
 
-    // Get faults data
     const [openFaults, criticalFaults, recurringFaults] = await Promise.all([
-      // Open faults
       db.Fault.findAll({
         where: {
           siteId: { [Op.in]: siteIds },
@@ -99,7 +90,6 @@ exports.getDashboardOverview = async (req, res, next) => {
         order: [['reportedTime', 'DESC']]
       }),
 
-      // Critical faults
       db.Fault.findAll({
         where: {
           siteId: { [Op.in]: siteIds },
@@ -116,7 +106,6 @@ exports.getDashboardOverview = async (req, res, next) => {
         order: [['reportedTime', 'DESC']]
       }),
 
-      // Recurring faults
       db.Fault.findAll({
         where: {
           siteId: { [Op.in]: siteIds },
@@ -134,7 +123,6 @@ exports.getDashboardOverview = async (req, res, next) => {
       })
     ]);
 
-    // Format response
     const formattedResponse = {
       overview: {
         inspections: inspectionsCount,
@@ -176,7 +164,6 @@ exports.getFilterOptions = async (req, res, next) => {
   try {
     const { id: userId, role } = req.user;
 
-    // Get sites based on user role
     let sites;
     if (role === 'entrepreneur') {
       sites = await db.Site.findAll({
@@ -189,7 +176,6 @@ exports.getFilterOptions = async (req, res, next) => {
       });
     }
 
-    // Get users by role
     const getUsersByRole = async (role) => {
       return await db.User.findAll({
         where: { role, status: 'active' },

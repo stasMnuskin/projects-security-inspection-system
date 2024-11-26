@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Organization.associate = function(models) {
-    // Organization has many users (employees)
+    // Organization has many users
     Organization.hasMany(models.User, {
       foreignKey: 'organizationId',
       as: 'employees'

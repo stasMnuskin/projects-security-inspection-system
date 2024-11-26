@@ -9,32 +9,25 @@ exports.createInspection = async (req, res, next) => {
   try {
     const { siteId, inspectionTypeId, formData, type } = req.body;
 
-    // Basic validation
     if (!siteId || !inspectionTypeId || !formData) {
       await transaction.rollback();
       return next(new AppError('Missing required fields', 400));
     }
 
-    // Get the user's name for the security officer field
     const user = await db.User.findByPk(req.user.id);
     formData.securityOfficer = user.name;
 
-    // For drills, validate based on drill type
     if (type === 'drill') {
       if (!formData.drill_type) {
         await transaction.rollback();
         return next(new AppError('Missing drill type', 400));
       }
 
-      // Only validate status if drill type is not 'אחר'
       if (formData.drill_type !== 'אחר' && !formData.status) {
         await transaction.rollback();
         return next(new AppError('Status is required for this drill type', 400));
       }
 
-      // Notes are required if:
-      // 1. Drill type is 'אחר' OR
-      // 2. Status is 'לא תקין'
       const notesRequired = formData.drill_type === 'אחר' || formData.status === 'לא תקין';
       if (notesRequired && !formData.notes?.trim()) {
         await transaction.rollback();
@@ -49,16 +42,15 @@ exports.createInspection = async (req, res, next) => {
     }
 
     try {
-      // Create inspection with the type from request
+      
       const inspection = await db.Inspection.create({
         siteId,
         inspectionTypeId,
         formData,
-        type,  // Use type from request instead of inspectionType.type
+        type,  
         userId: req.user.id
       }, { transaction });
 
-      // Fetch the created inspection with all necessary associations within the transaction
       const createdInspection = await db.Inspection.findByPk(inspection.id, {
         include: [
           { 
@@ -75,16 +67,14 @@ exports.createInspection = async (req, res, next) => {
 
       await transaction.commit();
 
-      // Return the inspection data without trying to fetch entrepreneur details
       res.status(201).json(createdInspection);
       logger.info(`New ${type} created: ${inspection.id}`);
     } catch (error) {
       await transaction.rollback();
-      // Check if it's a validation error
       if (error.name === 'SequelizeValidationError') {
         return next(new AppError(error.message, 400));
       }
-      throw error; // Re-throw other errors to be caught by the outer catch block
+      throw error; 
     }
   } catch (error) {
     await transaction.rollback();
@@ -102,13 +92,11 @@ exports.getAllInspections = async (req, res, next) => {
       { model: db.InspectionType, attributes: ['name', 'type', 'formStructure'] }
     ];
 
-    // Filter by type if provided
     if (req.query.type) {
       whereClause.type = req.query.type;
     }
 
     if (role === 'entrepreneur') {
-      // Entrepreneur should only see inspections for their sites
       const entrepreneurSites = await db.Site.findAll({ where: { entrepreneurId: id }, attributes: ['id'] });
       const siteIds = entrepreneurSites.map(site => site.id);
       whereClause.siteId = { [db.Sequelize.Op.in]: siteIds };
@@ -429,13 +417,12 @@ exports.getDrillSuccessRate = async (req, res, next) => {
       return res.json({ successRate: 0, totalDrills: 0 });
     }
 
-    // Calculate success rate based on the success field in formStructure
     const successfulDrills = drills.filter(drill => {
       const successField = drill.InspectionType.formStructure.find(field => field.id === 'success');
       if (!successField) return false;
       
       const successValue = drill.formData.success;
-      return successField.options && successField.options[0] === successValue; // Assuming first option is success
+      return successField.options && successField.options[0] === successValue; 
     }).length;
 
     const successRate = (successfulDrills / drills.length) * 100;
@@ -475,20 +462,16 @@ exports.getInspectionsBySite = async (req, res, next) => {
     const { siteId } = req.params;
     const { type, startDate, endDate, drillType, maintenanceOrg, integratorOrg } = req.query;
 
-    // Validate siteId
     if (!siteId) {
       return next(new AppError('Site ID is required', 400));
     }
 
-    // Build where clause
     const whereClause = { siteId };
     
-    // Add type filter
     if (type) {
       whereClause.type = type;
     }
 
-    // Add date range filter if provided
     if (startDate || endDate) {
       whereClause.createdAt = {};
       if (startDate) {
@@ -499,12 +482,10 @@ exports.getInspectionsBySite = async (req, res, next) => {
       }
     }
 
-    // Add drill type filter if provided
     if (drillType && type === 'drill') {
       whereClause['$InspectionType.name$'] = drillType;
     }
 
-    // Build site include with organization filters
     const siteInclude = {
       model: db.Site,
       attributes: ['id', 'name', 'entrepreneurId'],
@@ -520,11 +501,10 @@ exports.getInspectionsBySite = async (req, res, next) => {
       }]
     };
 
-    // Add organization filters if provided
     if (maintenanceOrg || integratorOrg) {
       siteInclude.include.push({
         model: db.Organization,
-        as: 'serviceOrganizations',  // Changed from 'organizations' to 'serviceOrganizations'
+        as: 'serviceOrganizations',  
         where: {
           [db.Sequelize.Op.or]: [
             maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,

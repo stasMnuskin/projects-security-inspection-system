@@ -8,7 +8,7 @@ const { PERMISSIONS } = require('../constants/roles');
 
 const router = express.Router();
 
-// Helper function to validate organization IDs
+// function to validate organization IDs
 const validateOrganizationId = (value) => {
   if (!value) return true;
   return Number.isInteger(Number(value));

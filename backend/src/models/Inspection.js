@@ -16,42 +16,42 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
 
-    // Helper method to get inspection date
+    // method to get inspection date
     getDate() {
       return this.formData?.date;
     }
 
-    // Helper method to get inspector name
+    // method to get inspector name
     getInspectorName() {
       return this.formData?.securityOfficer;  // Always use securityOfficer
     }
 
-    // Helper method to check if this is a drill
+    // method to check if this is a drill
     isDrill() {
       return this.type === 'drill';
     }
 
-    // Helper method to check if this is an inspection
+    // method to check if this is an inspection
     isInspection() {
       return this.type === 'inspection';
     }
 
-    // Helper method to get drill type
+    // method to get drill type
     getDrillType() {
       return this.isDrill() ? this.formData?.drill_type : null;
     }
 
-    // Helper method to get drill status
+    // method to get drill status
     getDrillStatus() {
       return this.isDrill() ? this.formData?.status : null;
     }
 
-    // Generic method to get field value
+    // method to get field value
     getFieldValue(fieldId) {
       return this.formData?.[fieldId];
     }
 
-    // Helper method to validate drill fields
+    // method to validate drill fields
     async validateDrillFields(data) {
       // Get inspection type
       const inspectionType = await sequelize.models.InspectionType.findByPk(this.inspectionTypeId);
@@ -89,7 +89,7 @@ module.exports = (sequelize, DataTypes) => {
           if (notesRequired && !value?.trim()) {
             throw new Error('שדה הערות הוא חובה במקרה זה');
           }
-          return;  // Skip other validations for notes field
+          return;  
         }
 
         // For other fields, check if they're required

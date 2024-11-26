@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   });
 
-  // Static method to get permissions for a role
+  // method to get permissions for a role
   RolePermissions.getPermissions = async function(role) {
     try {
       const rolePerms = await this.findByPk(role);
@@ -39,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   };
 
-  // Static method to update permissions for a role
+  // method to update permissions for a role
   RolePermissions.updatePermissions = async function(role, permissions) {
     try {
       // Don't allow modifying admin permissions
@@ -58,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   };
 
-  // Static method to get all role permissions
+  // method to get all role permissions
   RolePermissions.getAllRolePermissions = async function() {
     try {
       const allRoles = Object.values(ROLES);
@@ -85,7 +85,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   };
 
-  // Static method to get default permissions for a role
+  // method to get default permissions for a role
   RolePermissions.getDefaultPermissions = function(role) {
     // Admin has all permissions
     if (role === 'admin') {

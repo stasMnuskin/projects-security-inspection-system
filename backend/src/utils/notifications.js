@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 
 exports.sendFaultNotification = async (fault) => {
   const mailOptions = {
-    from: 'stas.mnuskin@gmail.com',
+    from: 'soltan@lotangrp.com',
     to: process.env.EMAIL_USER, 
     subject: `New Fault Reported: ${fault.siteName}`,
     text: `

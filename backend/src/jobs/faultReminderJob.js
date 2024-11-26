@@ -17,7 +17,7 @@ const checkOpenFaults = async () => {
   try {
     const adminEmail = await getAdminEmail();
     if (!adminEmail) {
-      logger.error('No admin user found for fault reminders');
+      // logger.error('No admin user found for fault reminders');
       return;
     }
 
@@ -59,11 +59,11 @@ const checkOpenFaults = async () => {
           lastEmailTime: new Date()
         });
 
-        logger.info(`Sent reminder email for fault ${fault.id} to admin`);
+        // logger.info(`Sent reminder email for fault ${fault.id} to admin`);
       }
     }
   } catch (error) {
-    logger.error('Error in fault reminder job:', error);
+    // logger.error('Error in fault reminder job:', error);
   }
 };
 

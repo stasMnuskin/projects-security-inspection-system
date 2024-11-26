@@ -3,7 +3,6 @@ const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
 
-// Helper function to get sites based on user role and organization
 const getSitesByUserRole = async (user) => {
   const { role, id: userId, organizationId } = user;
   
@@ -12,7 +11,6 @@ const getSitesByUserRole = async (user) => {
   }
   
   if (role === 'integrator' || role === 'maintenance') {
-    // Get all sites serviced by their organization
     return await db.Site.findAll({
       attributes: ['id'],
       include: [{
@@ -24,14 +22,12 @@ const getSitesByUserRole = async (user) => {
     });
   }
   
-  // For entrepreneurs, get their sites
   return await db.Site.findAll({
     attributes: ['id'],
     where: { entrepreneurId: userId }
   });
 };
 
-// Get open faults for dashboard
 exports.getOpenFaults = async (req, res, next) => {
   try {
     const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
@@ -62,7 +58,6 @@ exports.getOpenFaults = async (req, res, next) => {
   }
 };
 
-// Get recurring faults for dashboard
 exports.getRecurringFaults = async (req, res, next) => {
   try {
     const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
@@ -98,7 +93,6 @@ exports.getRecurringFaults = async (req, res, next) => {
   }
 };
 
-// Get critical faults for dashboard
 exports.getCriticalFaults = async (req, res, next) => {
   try {
     const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
@@ -130,7 +124,6 @@ exports.getCriticalFaults = async (req, res, next) => {
   }
 };
 
-// Create new fault
 exports.createFault = async (req, res, next) => {
   try {
     const { siteId, type, description, isCritical } = req.body;
@@ -160,7 +153,6 @@ exports.createFault = async (req, res, next) => {
       return next(new AppError('חובה להזין תיאור לתקלה מסוג אחר', 400));
     }
 
-    // Get maintenance and integrator organizations from site
     const maintenanceOrg = site.serviceOrganizations.find(org => org.type === 'maintenance');
     const integratorOrg = site.serviceOrganizations.find(org => org.type === 'integrator');
 
@@ -246,7 +238,6 @@ exports.createFault = async (req, res, next) => {
   }
 };
 
-// Update fault status
 exports.updateFaultStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -285,7 +276,6 @@ exports.updateFaultStatus = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
-    // Check if user has permission to update this fault
     if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
       const userOrgId = req.user.organizationId;
       const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
@@ -346,7 +336,6 @@ exports.updateFaultStatus = async (req, res, next) => {
   }
 };
 
-// Update fault details
 exports.updateFaultDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -385,7 +374,6 @@ exports.updateFaultDetails = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
-    // Check if user has permission to update this fault
     if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
       const userOrgId = req.user.organizationId;
       const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
@@ -400,7 +388,6 @@ exports.updateFaultDetails = async (req, res, next) => {
       fault.technician = technician;
     }
 
-    // Update maintenance organization if provided
     if (maintenanceOrganizationId !== undefined) {
       if (maintenanceOrganizationId) {
         const org = await db.Organization.findOne({
@@ -413,7 +400,6 @@ exports.updateFaultDetails = async (req, res, next) => {
       fault.maintenanceOrganizationId = maintenanceOrganizationId;
     }
 
-    // Update integrator organization if provided
     if (integratorOrganizationId !== undefined) {
       if (integratorOrganizationId) {
         const org = await db.Organization.findOne({
@@ -502,7 +488,6 @@ exports.updateFaultDetails = async (req, res, next) => {
   }
 };
 
-// Delete fault
 exports.deleteFault = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -526,7 +511,6 @@ exports.deleteFault = async (req, res, next) => {
   }
 };
 
-// Get fault by ID
 exports.getFaultById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -604,17 +588,14 @@ exports.getFaultById = async (req, res, next) => {
   }
 };
 
-// Get all faults with filters
 
 exports.getAllFaults = async (req, res, next) => {
   try {
     const { role, id: userId, organizationId } = req.user;
     const { startDate, endDate, site, isCritical, maintenanceOrg, integratorOrg } = req.query;
 
-    // Base query
     let whereClause = {};
 
-    // Date range
     if (startDate && endDate) {
       whereClause.reportedTime = {
         [Op.between]: [new Date(startDate), new Date(endDate)]
@@ -629,23 +610,19 @@ exports.getAllFaults = async (req, res, next) => {
       };
     }
 
-    // isCritical filter
     if (isCritical !== undefined) {
       whereClause.isCritical = isCritical === 'true';
     }
 
-    // Role-based site access
     let siteWhere = {};
     if (role === 'entrepreneur') {
       siteWhere.entrepreneurId = userId;
     }
     
-    // Add specific site filter if provided
     if (site) {
       siteWhere.id = site;
     }
 
-    // Include clauses
     const includes = [
       {
         model: db.Site,
@@ -670,7 +647,6 @@ exports.getAllFaults = async (req, res, next) => {
       }
     ];
 
-    // For integrator/maintenance users, add organization filter
     if (role === 'integrator' || role === 'maintenance') {
       includes[0].include[0].where = {
         id: organizationId,
@@ -678,14 +654,12 @@ exports.getAllFaults = async (req, res, next) => {
       };
     }
 
-    // Execute query
     const faults = await db.Fault.findAll({
       where: whereClause,
       include: includes,
       order: [['reportedTime', 'DESC']]
     });
 
-    // Format response
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       site: {
@@ -709,5 +683,3 @@ exports.getAllFaults = async (req, res, next) => {
     next(new AppError('שגיאה בשליפת תקלות', 500));
   }
 };
-
-// ... (rest of the code remains the same)

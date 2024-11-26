@@ -1,6 +1,6 @@
 require('dotenv').config();
 require('./jobs/emailProcessor');
-require('./jobs/faultReminderJob'); // Add fault reminder job
+require('./jobs/faultReminderJob'); 
 const express = require('express');
 const { google } = require('googleapis');
 const csrf = require('csurf');
@@ -47,7 +47,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Middlewares
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL,
   credentials: true
 }));
 app.use(express.json());
@@ -80,7 +80,7 @@ app.use(i18n.init);
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  'http://localhost:5000'  
+  process.env.API_URL  
 );
 
 app.get('/auth/google', (req, res) => {

@@ -4,6 +4,6 @@ const logger = require('../utils/logger');
 
 // 1 hour
 cron.schedule('0 * * * *', async () => {
-  logger.info('Starting fault email processing job');
+  // logger.info('Starting fault email processing job');
   await processFaultEmailsJob();
 });

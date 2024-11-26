@@ -1,4 +1,4 @@
-const { Organization, User } = require('../models');
+const { Organization, User, Site, sequelize } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
@@ -65,6 +65,75 @@ exports.getOrganizations = async (req, res, next) => {
     res.json(organizations);
   } catch (error) {
     logger.error('Error fetching organizations:', error);
+    next(new AppError('שגיאה בשליפת ארגונים', 500));
+  }
+};
+
+exports.getOrganizationsBySites = async (req, res, next) => {
+  try {
+    const { type } = req.params;
+    const { siteIds } = req.query;
+
+    logger.info(`Getting organizations for type: ${type} and sites: ${siteIds}`);
+
+    // Validate organization type
+    if (!['integrator', 'maintenance'].includes(type)) {
+      return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
+    }
+
+    // Validate siteIds
+    if (!siteIds) {
+      return next(new AppError('נדרשים מזהי אתרים', 400, 'SITE_IDS_REQUIRED'));
+    }
+
+    // Parse siteIds from comma-separated string
+    const siteIdsArray = siteIds.split(',').map(id => parseInt(id, 10));
+
+    // First, check if we have any organization-site relationships
+    const orgSitesQuery = `
+      SELECT DISTINCT "organizationId"
+      FROM "OrganizationSites"
+      WHERE "siteId" IN (${siteIdsArray.join(',')})
+    `;
+
+    const [orgSites] = await sequelize.query(orgSitesQuery);
+    logger.info(`Found organization-site relationships:`, orgSites);
+
+    if (orgSites.length === 0) {
+      logger.info('No organization-site relationships found');
+      return res.json([]);
+    }
+
+    // Get organizations that service these sites
+    const organizations = await Organization.findAll({
+      attributes: ['id', 'name', 'type'],
+      where: {
+        type,
+        id: {
+          [Op.in]: orgSites.map(org => org.organizationId)
+        }
+      },
+      raw: true
+    });
+
+    logger.info(`Found organizations:`, organizations);
+
+    // Double check the relationships
+    const verificationQuery = `
+      SELECT o.id, o.name, o.type, array_agg(os."siteId") as site_ids
+      FROM "Organizations" o
+      JOIN "OrganizationSites" os ON o.id = os."organizationId"
+      WHERE o.type = '${type}'
+      AND os."siteId" IN (${siteIdsArray.join(',')})
+      GROUP BY o.id, o.name, o.type
+    `;
+
+    const [verification] = await sequelize.query(verificationQuery);
+    logger.info(`Verification query results:`, verification);
+
+    res.json(organizations);
+  } catch (error) {
+    logger.error('Error fetching organizations by sites:', error);
     next(new AppError('שגיאה בשליפת ארגונים', 500));
   }
 };
