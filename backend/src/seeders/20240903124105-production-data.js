@@ -190,88 +190,96 @@ const ENTREPRENEURS_DATA = [
     email: 'edf@example.com',
     password: 'EDF123',
     role: ROLES.entrepreneur,
-    sites: [
-      'זמורות', 'משאבי שדה', 'אשלים', 'קטורה', 'תמנע', 'גבולות', 'תלמי אליהו',
-      'כרם שלום', 'נחל עוז', 'בטחה', 'זוהר', 'כוכב מיכאל', 'משמר הנגב', 'סמר',
-      'ברור חייל', 'מצפה', 'שורש', 'רנן', 'פדויים', 'מפלסים', 'גבים', 'בורגתא',
-      'הודיה', 'גליה', 'לוחמי', 'מעברות', 'חצב', 'להב', 'כפר מימון', 'כמהין',
-      'אביגדור', 'חצובה', 'חוגלה', 'לוחמי הגטאות', 'עין דור', 'יזרעל', 'סגולה'
-    ]
+    // sites: [
+    //   'זמורות', 'משאבי שדה', 'אשלים', 'קטורה', 'תמנע', 'גבולות', 'תלמי אליהו',
+    //   'כרם שלום', 'נחל עוז', 'בטחה', 'זוהר', 'כוכב מיכאל', 'משמר הנגב', 'סמר',
+    //   'ברור חייל', 'מצפה', 'שורש', 'רנן', 'פדויים', 'מפלסים', 'גבים', 'בורגתא',
+    //   'הודיה', 'גליה', 'לוחמי', 'מעברות', 'חצב', 'להב', 'כפר מימון', 'כמהין',
+    //   'אביגדור', 'חצובה', 'חוגלה', 'לוחמי הגטאות', 'עין דור', 'יזרעל', 'סגולה'
+    // ]
+    sites:[]
   },
   {
     name: 'דוראל',
     email: 'doral@example.com',
     password: 'Doral123',
     role: ROLES.entrepreneur,
-    sites: [
-      'כרמיה', 'כפר וורבורג', 'יהל', 'יוטבתה', 'גדות', 'גבולות דוראל', 'תל יוסף',
-      'רשפים', 'עברון', 'גברעם'
-    ]
+    // sites: [
+    //   'כרמיה', 'כפר וורבורג', 'יהל', 'יוטבתה', 'גדות', 'גבולות דוראל', 'תל יוסף',
+    //   'רשפים', 'עברון', 'גברעם'
+    // ]
+    sites:[]
   },
   {
     name: 'שיכון ובינוי',
     email: 'shikun@example.com',
     password: 'Shikun123',
     role: ROLES.entrepreneur,
-    sites: [
-      'נבטים', 'שחר', 'ברוש', 'שיבולים', 'גבועלים', 'אורים'
-    ]
+    // sites: [
+    //   'נבטים', 'שחר', 'ברוש', 'שיבולים', 'גבועלים', 'אורים'
+    // ]
+    sites:[]
   },
   {
     name: 'טרילט',
     email: 'trilet@example.com',
     password: 'Trilet123',
     role: ROLES.entrepreneur,
-    sites: ['נעמ"ה']
+    // sites: ['נעמ"ה']
+    sites
   },
   {
     name: 'ביוגז',
     email: 'biogaz@example.com',
     password: 'Biogaz123',
     role: ROLES.entrepreneur,
-    sites: ['ערד']
+    // sites: ['ערד']
+    sites:[]
   },
   {
     name: 'טרה',
     email: 'terra@example.com',
     password: 'Terra123',
     role: ROLES.entrepreneur,
-    sites: ['בית נקופה']
+    // sites: ['בית נקופה']
+    sites:[]
   },
   {
     name: 'יבולי שער הנגב',
     email: 'yevulei@example.com',
     password: 'Yevulei123',
     role: ROLES.entrepreneur,
-    sites: ['צובה', 'פלמחים']
+    // sites: ['צובה', 'פלמחים']
+    sites:[]
   },
   {
     name: 'צבר',
     email: 'tzabar@example.com',
     password: 'Tzabar123',
     role: ROLES.entrepreneur,
-    sites: ['מעיין צבי']
+    // sites: ['מעיין צבי']
+    sites:[]
   }
 ];
 
 // Service organizations data
 const SERVICE_ORGANIZATIONS = [
-  {
-    name: 'חברת אינטגרציה 1',
-    type: 'integrator'
-  },
-  {
-    name: 'חברת אינטגרציה 2',
-    type: 'integrator'
-  },
-  {
-    name: 'חברת אחזקה 1',
-    type: 'maintenance'
-  },
-  {
-    name: 'חברת אחזקה 2',
-    type: 'maintenance'
-  }
+  // {
+  //   name: 'חברת אינטגרציה 1',
+  //   type: 'integrator'
+  // },
+  // {
+  //   name: 'חברת אינטגרציה 2',
+  //   type: 'integrator'
+  // },
+  // {
+  //   name: 'חברת אחזקה 1',
+  //   type: 'maintenance'
+  // },
+  // {
+  //   name: 'חברת אחזקה 2',
+  //   type: 'maintenance'
+  // }
 ];
 
 module.exports = {
