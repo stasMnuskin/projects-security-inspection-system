@@ -118,13 +118,24 @@ const Inspections = () => {
 
     try {
       setLoading(true);
-      const response = await getInspectionsBySite(filters.site, {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        type: 'inspection',
-        maintenanceOrg: filters.maintenance,
-        integratorOrg: filters.integrator
-      });
+      const queryParams = {
+        type: 'inspection'
+      };
+      
+      if (filters.startDate) {
+        queryParams.startDate = filters.startDate.toISOString();
+      }
+      if (filters.endDate) {
+        queryParams.endDate = filters.endDate.toISOString();
+      }
+      if (filters.maintenance) {
+        queryParams.maintenanceOrg = filters.maintenance;
+      }
+      if (filters.integrator) {
+        queryParams.integratorOrg = filters.integrator;
+      }
+
+      const response = await getInspectionsBySite(filters.site, queryParams);
 
       // Filter out any drills that might have slipped through
       const filteredInspections = (response || []).filter(item => item.type === 'inspection');
@@ -139,14 +150,22 @@ const Inspections = () => {
     }
   }, [filters]);
 
+  // Update filters without immediate fetch
   const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
-    // Fetch data immediately when filter changes
-    fetchInspections();
-  }, [fetchInspections]);
+  }, []);
+
+  // Fetch data when filters change with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchInspections();
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [filters, fetchInspections]);
 
   const getValue = (inspection, column) => {
     if (column.source) {

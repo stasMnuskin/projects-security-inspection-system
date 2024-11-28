@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -144,12 +144,24 @@ const Drills = () => {
 
     try {
       setLoading(true);
-      const response = await getDrillsBySite(filters.site, {
-        startDate: filters.startDate.toISOString(),
-        endDate: filters.endDate.toISOString(),
-        type: 'drill',
-        securityOfficer: filters.securityOfficer
-      });
+      const queryParams = {
+        type: 'drill'
+      };
+      
+      if (filters.startDate) {
+        queryParams.startDate = filters.startDate.toISOString();
+      }
+      if (filters.endDate) {
+        queryParams.endDate = filters.endDate.toISOString();
+      }
+      if (filters.securityOfficer) {
+        queryParams.securityOfficer = filters.securityOfficer;
+      }
+      if (filters.drillType) {
+        queryParams.drillType = filters.drillType;
+      }
+
+      const response = await getDrillsBySite(filters.site, queryParams);
 
       const sortedDrills = (response || []).sort((a, b) => {
         const dateA = new Date(a.formData?.date);
@@ -157,11 +169,7 @@ const Drills = () => {
         return dateB - dateA;
       });
 
-      const filteredDrills = filters.drillType
-        ? sortedDrills.filter(drill => drill.formData?.drill_type === filters.drillType)
-        : sortedDrills;
-
-      setDrills(filteredDrills);
+      setDrills(sortedDrills);
       setError(null);
     } catch (error) {
       console.error('Error fetching drills:', error);
@@ -172,13 +180,22 @@ const Drills = () => {
     }
   }, [filters]);
 
+  // Update filters without immediate fetch
   const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
-    fetchDrills();
-  }, [fetchDrills]);
+  }, []);
+
+  // Fetch data when filters change with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDrills();
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [filters, fetchDrills]);
 
   const handleDeleteClick = (drill, event) => {
     event.stopPropagation();
