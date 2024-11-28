@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://soltan.lotangrp.com",
   "dependencies": {
     "@emotion/cache": "^11.13.1",
     "@emotion/react": "^11.13.3",
