@@ -322,7 +322,7 @@ const Drills = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
-        activeSection="drills"  // שיניתי את ה-section לתרגילים
+        activeSection="drills"
         userInfo={{ name: user.name }}
       />
       <Container maxWidth="lg">

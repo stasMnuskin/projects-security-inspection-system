@@ -226,9 +226,7 @@ const InspectionForm = () => {
     setFormData(prev => ({
       ...prev,
       drill_type: type,
-      // Clear status and notes if type is 'אחר'
       ...(type === 'אחר' ? { status: '', notes: '' } : {}),
-      // Clear notes if type is not 'אחר' and status is not 'לא תקין'
       ...(type !== 'אחר' && prev.status !== 'לא תקין' ? { notes: '' } : {})
     }));
   };
@@ -245,7 +243,6 @@ const InspectionForm = () => {
   const handleInitialDialogSubmit = async () => {
     const errors = {};
 
-    // Validate site selection
     if (!selectedSite) {
       errors.site = 'יש לבחור אתר';
     }

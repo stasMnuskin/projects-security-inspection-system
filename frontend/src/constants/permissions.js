@@ -37,7 +37,7 @@ export const getPermissionLabel = (permissionId) => PERMISSIONS[permissionId] ||
 export const getRoleLabel = (roleId) => ROLES[roleId] || roleId;
 export const getDefaultPermissions = (role) => DEFAULT_ROLE_PERMISSIONS[role] || [];
 
-// Get permissions as array for select/checkbox components
+// Get permissions as array for checkbox components
 export const getPermissionsArray = () => 
   Object.entries(PERMISSIONS).map(([id, label]) => ({ id, label }));
 

@@ -237,7 +237,6 @@ let theme = createTheme({
   },
 });
 
-// Make typography responsive
 theme = responsiveFontSizes(theme);
 
 // Export the theme

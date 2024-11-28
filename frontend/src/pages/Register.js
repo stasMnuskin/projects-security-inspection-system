@@ -74,7 +74,6 @@ function Register() {
     }
   };
 
-  // If no token or email, show nothing while redirecting
   if (!token || !email) {
     return null;
   }

@@ -15,12 +15,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async (retryCount = 0) => {
       const token = localStorage.getItem('token');
-      console.log('Checking authentication, token exists:', !!token);
       
       if (token) {
         try {
           const response = await getCurrentUser();
-          console.log('Current user data:', response);
           // Parse permissions if they're a string
           if (response && typeof response.permissions === 'string') {
             response.permissions = JSON.parse(response.permissions);
@@ -36,22 +34,17 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           console.error('Error loading user data:', error);
           
-          // If we haven't exceeded max retries and it's a network error or 5xx error
           if (retryCount < MAX_RETRIES && 
               (error.message === 'Network Error' || 
                (error.response && error.response.status >= 500))) {
-            console.log(`Retrying authentication (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
-            // Wait before retrying
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
             return checkAuth(retryCount + 1);
           }
           
-          // If we've exhausted retries or it's a different type of error (e.g., 401)
           await logout();
           setLoading(false);
         }
       } else {
-        console.log('No token found, user is not authenticated');
         setLoading(false);
       }
     };
@@ -60,7 +53,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
-    console.log('Logging in user:', userData);
     // Parse permissions if they're a string
     if (userData && typeof userData.permissions === 'string') {
       userData.permissions = JSON.parse(userData.permissions);
@@ -78,7 +70,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    console.log('Logging out user');
     try {
       await logoutUser();
     } catch (error) {

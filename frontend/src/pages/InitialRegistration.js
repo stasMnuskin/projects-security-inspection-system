@@ -58,7 +58,6 @@ function InitialRegistration() {
     setLoading(true);
     setErrors({});
 
-    // Validate organization for maintenance/integrator
     if (['maintenance', 'integrator'].includes(formData.role) && !formData.organizationName) {
       setErrors(prev => ({
         ...prev,

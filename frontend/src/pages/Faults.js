@@ -142,7 +142,6 @@ const Faults = () => {
       ...prev,
       [field]: value
     }));
-    // Fetch data immediately when filter changes
     fetchFaults();
   }, [fetchFaults]);
 

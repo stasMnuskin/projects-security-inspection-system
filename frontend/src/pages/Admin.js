@@ -57,7 +57,6 @@ const AdminPage = () => {
   const handleSubSectionChange = (subSection) => {
     setActiveSubSection(subSection);
     if (activeSection === 'sites') {
-      // Update siteMode based on subsection
       switch (subSection) {
         case 'new':
           setSiteMode('new');

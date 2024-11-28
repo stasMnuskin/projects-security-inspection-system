@@ -88,7 +88,7 @@ const Sidebar = ({
         <Box sx={{ marginLeft: 'auto' }}>
           <IconButton 
             onClick={(e) => {
-              e.stopPropagation(); // Prevent navigation to home
+              e.stopPropagation();
               handleLogout();
             }} 
             sx={{ 
@@ -281,7 +281,7 @@ const Sidebar = ({
       case 'dashboard':
         return getDashboardItems();
       case 'inspections':
-      case 'drills':  // שניהם משתמשים באותה פונקציה
+      case 'drills':  
         return getInspectionItems();
       case 'faults':
         return getFaultItems();

@@ -60,7 +60,6 @@ function Users() {
     }
   }, []);
 
-  // Fetch organizations when needed
   const fetchOrganizations = useCallback(async (type) => {
     try {
       const data = await getOrganizations(type);
@@ -76,7 +75,6 @@ function Users() {
   useEffect(() => {
     if (user.role === 'admin') {
       fetchUsers();
-      // Fetch both types of organizations
       fetchOrganizations('maintenance');
       fetchOrganizations('integrator');
     }
@@ -144,7 +142,7 @@ function Users() {
 
   // Handle delete click
   const handleDeleteClick = (userItem, event) => {
-    event.stopPropagation(); // Prevent event bubbling
+    event.stopPropagation();
     setUserToDelete(userItem);
     setDeleteDialogOpen(true);
   };
@@ -154,10 +152,9 @@ function Users() {
     try {
       await deleteUser(userToDelete.id);
       showNotification('המשתמש נמחק בהצלחה');
-      await fetchUsers(); // Refresh users list
+      await fetchUsers(); 
       setDeleteDialogOpen(false);
       setUserToDelete(null);
-      // If the deleted user was selected, clear the selection
       if (selectedUser?.id === userToDelete.id) {
         setSelectedUser(null);
         setEditedUser(null);
@@ -403,7 +400,6 @@ function Users() {
                           setEditedUser(prev => ({
                             ...prev,
                             role: newRole,
-                            // Keep organization if switching to non-maintenance/integrator
                             organization: prev.organization,
                             organizationId: prev.organizationId
                           }));
@@ -452,7 +448,6 @@ function Users() {
                         onInputChange={(_, newValue) => setEditedUser(prev => ({ 
                           ...prev, 
                           organization: newValue,
-                          // Clear organizationId when typing new organization
                           organizationId: ['maintenance', 'integrator'].includes(prev.role)
                             ? organizations[prev.role]?.find(org => org.name === newValue)?.id || null
                             : null

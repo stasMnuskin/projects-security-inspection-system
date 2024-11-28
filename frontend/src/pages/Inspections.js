@@ -67,14 +67,12 @@ const Inspections = () => {
             id: field.id,
             label: field.label
           })),
-        // Always add notes column last
         ...fields
           .filter(field => field.id === 'notes')
           .map(field => ({
             id: field.id,
             label: field.label
           })),
-        // Add actions column for admin users
         ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
       ];
 
@@ -91,7 +89,7 @@ const Inspections = () => {
 
   // Handle delete click
   const handleDeleteClick = (inspection, event) => {
-    event.stopPropagation(); // Prevent event bubbling
+    event.stopPropagation();
     setInspectionToDelete(inspection);
     setDeleteDialogOpen(true);
   };
@@ -137,7 +135,6 @@ const Inspections = () => {
 
       const response = await getInspectionsBySite(filters.site, queryParams);
 
-      // Filter out any drills that might have slipped through
       const filteredInspections = (response || []).filter(item => item.type === 'inspection');
       setInspections(filteredInspections);
       setError(null);
@@ -150,7 +147,6 @@ const Inspections = () => {
     }
   }, [filters]);
 
-  // Update filters without immediate fetch
   const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
@@ -184,11 +180,9 @@ const Inspections = () => {
       case 'time':
         return value;
       default:
-        // Handle boolean values consistently
         if (typeof value === 'boolean') {
           return value ? 'תקין' : 'לא תקין';
         }
-        // Handle string boolean values
         if (value === 'תקין' || value === 'לא תקין') {
           return value;
         }
@@ -274,7 +268,7 @@ const Inspections = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar 
-        activeSection="inspections"  // נשאר inspections
+        activeSection="inspections"  
         userInfo={{ name: user.name }}
       />
       <Container maxWidth="lg">

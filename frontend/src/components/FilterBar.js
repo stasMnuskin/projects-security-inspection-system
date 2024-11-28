@@ -36,35 +36,24 @@ const FilterBar = ({
 
   // Load filter options
   useEffect(() => {
-    // אם AuthContext עדיין טוען, נחכה
+    
     if (authLoading) {
-      console.log('Auth is still loading, waiting...');
       return;
     }
 
-    // אם אין משתמש, לא נטען כלום
     if (!user) {
-      console.log('No user, skipping load...');
       return;
     }
 
     const loadOptions = async () => {
       try {
-        console.log('Loading options for user:', user);
-        console.log('User role:', user.role);
-        console.log('User ID:', user.id);
-
         let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
         
         try {
           if (user.role === 'entrepreneur') {
-            console.log('Loading entrepreneur-specific data...');
-            
             // Load sites first
             try {
               sitesData = await getSitesByEntrepreneur(user.id);
-              console.log('Loaded sites:', sitesData);
-
               // Get site IDs
               const siteIds = sitesData.map(site => site.id);
 
@@ -75,8 +64,6 @@ const FilterBar = ({
                     getOrganizationsBySites(siteIds, 'maintenance'),
                     getOrganizationsBySites(siteIds, 'integrator')
                   ]);
-                  console.log('Loaded maintenance orgs:', maintenanceOrgs);
-                  console.log('Loaded integrator orgs:', integratorOrgs);
                 } catch (error) {
                   console.error('Error loading organizations:', error);
                   maintenanceOrgs = [];
@@ -87,9 +74,7 @@ const FilterBar = ({
               console.error('Error loading sites:', error);
               sitesData = [];
             }
-          } else {
-            console.log('Loading general data...');
-            
+          } else {            
             // Load all data for non-entrepreneurs
             const [sites, maintenance, integrators] = await Promise.all([
               getSites(),
@@ -105,18 +90,10 @@ const FilterBar = ({
           // Load security officers separately
           try {
             securityOfficersData = await getSecurityOfficers();
-            console.log('Loaded security officers:', securityOfficersData);
           } catch (error) {
             console.error('Error loading security officers:', error);
             securityOfficersData = [];
           }
-
-          console.log('Setting options with:', {
-            sites: sitesData,
-            securityOfficers: securityOfficersData,
-            maintenance: maintenanceOrgs,
-            integrators: integratorOrgs
-          });
 
           setOptions(prev => ({
             ...prev,
@@ -129,14 +106,12 @@ const FilterBar = ({
           // Load drill types only for drills variant
           if (variant === 'drills') {
             try {
-              console.log('Loading drill types...');
               const inspectionTypesData = await getInspectionTypes();
               if (inspectionTypesData?.data) {
                 const drillType = inspectionTypesData.data.find(type => type.type === 'drill');
                 if (drillType) {
                   const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
                   if (drillTypeField?.options) {
-                    console.log('Setting drill types:', drillTypeField.options);
                     setOptions(prev => ({
                       ...prev,
                       drillTypes: drillTypeField.options

@@ -38,7 +38,6 @@ export const exportToPDF = (data, filename) => {
 
   yOffset = doc.lastAutoTable.finalY + 10;
 
-  // Add recurring faults table
   doc.text("Recurring Faults", 14, yOffset);
   doc.autoTable({
     startY: yOffset + 5,

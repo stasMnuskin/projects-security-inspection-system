@@ -10,7 +10,7 @@ export const dashboardStyles = {
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     marginBottom: { xs: '12px', sm: '20px' },
-    flexDirection: { xs: 'column', sm: 'row-reverse' }, // Stack on mobile, row-reverse for RTL on larger screens
+    flexDirection: { xs: 'column', sm: 'row-reverse' }, 
     justifyContent: 'flex-start',
     width: '100%',
   },
@@ -42,7 +42,7 @@ export const dashboardStyles = {
       }
     },
     '& .MuiSelect-select': {
-      padding: { xs: '12px', sm: '8px 12px' }, // Larger touch target on mobile
+      padding: { xs: '12px', sm: '8px 12px' }, 
     },
     '& .MuiSvgIcon-root': {
       color: colors.text.grey
@@ -66,7 +66,7 @@ export const dashboardStyles = {
       }
     },
     '& .MuiInputBase-input': {
-      padding: { xs: '12px', sm: '8px 12px' }, // Larger touch target on mobile
+      padding: { xs: '12px', sm: '8px 12px' }, 
       color: colors.text.white
     },
     '& .MuiSvgIcon-root': {

@@ -84,7 +84,6 @@ function Sites({ mode = 'list', onModeChange }) {
     setFilteredSites(filtered);
   }, [searchTerm, sites]);
 
-  // Open form dialog when mode changes to 'new'
   useEffect(() => {
     if (mode === 'new') {
       setSelectedSite(null);
@@ -251,7 +250,6 @@ function Sites({ mode = 'list', onModeChange }) {
   return (
     <Container maxWidth="lg" sx={formStyles.container}>
       {mode === 'inspection-config' ? (
-        // Only admin can access inspection config
         user.hasPermission(PERMISSIONS.ADMIN) ? (
           <InspectionTypeConfig />
         ) : (
