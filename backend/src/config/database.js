@@ -25,13 +25,16 @@ module.exports = {
     logging: console.log
   },
   production: {
-    use_env_variable: 'DATABASE_URL',
+    username: 'securityapp',
+    password: 'your_db_password',
+    database: 'security_inspection_db',
+    host: 'localhost',
     dialect: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
     }
   }
 };
