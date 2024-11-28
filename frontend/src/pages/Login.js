@@ -133,7 +133,7 @@ function Login() {
               disabled={loading}
               sx={formStyles.submitButton}
             >
-              {loading ? 'מתחבר...' : 'כנס למערכת'}
+              {loading ? 'מתחבר...' : 'כניסה למערכת'}
             </Button>
           </Box>
         </Paper>
