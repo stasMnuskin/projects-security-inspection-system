@@ -26,9 +26,9 @@ module.exports = {
   },
   production: {
     username: 'securityapp',
-    password: 'your_db_password',
-    database: 'security_inspection_db',
-    host: 'localhost',
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
     dialect: 'postgres',
     pool: {
       max: 5,
