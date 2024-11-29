@@ -304,10 +304,6 @@ exports.deleteUser = async (req, res, next) => {
       return next(new AppError('משתמש לא נמצא', 404, 'USER_NOT_FOUND'));
     }
 
-    if (user.role === 'admin') {
-      return next(new AppError('לא ניתן למחוק מנהל מערכת', 403, 'FORBIDDEN'));
-    }
-
     await user.destroy();
     logger.info(`User deleted: ${user.email}`);
     res.json({ message: 'משתמש נמחק בהצלחה' });
