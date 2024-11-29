@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { User, Organization } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
@@ -202,9 +203,13 @@ exports.registerUser = async (req, res, next) => {
       return next(new AppError('ההרשמה כבר הושלמה', 400, 'REGISTRATION_COMPLETED'));
     }
 
-    // Update user with password to complete registration
+    // Hash the password before saving
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Update user with hashed password to complete registration
     user.name = name;
-    user.password = password;
+    user.password = hashedPassword;
     await user.save();
 
     // Send registration completion email

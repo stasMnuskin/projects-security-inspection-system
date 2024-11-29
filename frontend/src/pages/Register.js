@@ -168,7 +168,7 @@ function Register() {
               disabled={loading}
               sx={formStyles.submitButton}
             >
-              {loading ? 'נרשם...' : 'הירשם'}
+              {loading ? 'נרשם...' : 'הרשמה'}
             </Button>
           </Box>
         </Paper>
