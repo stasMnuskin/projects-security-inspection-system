@@ -17,6 +17,8 @@ import { pageStyles, formStyles } from '../styles/components';
 import logo from '../assets/logo-black.svg';
 import EmailIcon from '@mui/icons-material/Email';
 import { colors } from '../styles/colors';
+import { useAuth } from '../context/AuthContext';
+import { login as apiLogin } from '../services/api';
 
 function Register() {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ function Register() {
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get('email');
   const token = queryParams.get('token');
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({
     email: email || '',
@@ -49,14 +52,27 @@ function Register() {
     e.preventDefault();
     setLoading(true);
     try {
+      // First register the user
       await register(formData);
+      
+      // Then automatically log them in
+      const loginResponse = await apiLogin({
+        email: formData.email,
+        password: formData.password
+      });
+      
+      // Set the auth context
+      login(loginResponse);
+
       setNotification({
         open: true,
         message: 'ההרשמה בוצעה בהצלחה',
         severity: 'success'
       });
+
+      // Navigate directly to home page after short delay
       setTimeout(() => {
-        navigate('/login');
+        navigate('/');
       }, 2000);
     } catch (error) {
       console.error('Registration error:', error);

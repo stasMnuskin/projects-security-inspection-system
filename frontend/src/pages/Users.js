@@ -309,20 +309,18 @@ function Users() {
                       }
                     }}
                     secondaryAction={
-                      userItem.role !== 'admin' && (
-                        <IconButton
-                          edge="end"
-                          onClick={(e) => handleDeleteClick(userItem, e)}
-                          sx={{ 
-                            color: colors.text.error,
-                            '&:hover': {
-                              color: colors.text.errorHover
-                            }
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      )
+                      <IconButton
+                        edge="end"
+                        onClick={(e) => handleDeleteClick(userItem, e)}
+                        sx={{ 
+                          color: colors.primary.orange,
+                          '&:hover': {
+                            color: colors.primary.orangeHover
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
                     }
                   >
                     <ListItemText 
@@ -537,9 +535,9 @@ function Users() {
           <Button 
             onClick={handleDeleteConfirm}
             sx={{ 
-              color: colors.text.error,
+              color: colors.primary.orange,
               '&:hover': {
-                color: colors.text.errorHover
+                color: colors.primary.orangeHover
               }
             }}
           >
