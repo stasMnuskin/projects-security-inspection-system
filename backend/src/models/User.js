@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: true, // Allow null for initial registration
+      allowNull: true, 
     },
     role: {
       type: DataTypes.ENUM(
@@ -36,15 +36,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       validate: {
         isValidForRole(value) {
-          // organizationId should only be set for integrator and maintenance roles
-          if (['integrator', 'maintenance'].includes(this.role)) {
-            if (!value) {
-              throw new Error('Organization is required for integrator and maintenance roles');
-            }
-          } else {
-            if (value) {
-              throw new Error('Organization should only be set for integrator and maintenance roles');
-            }
+          // organizationId is required only for integrator and maintenance roles
+          if (['integrator', 'maintenance'].includes(this.role) && !value) {
+            throw new Error('Organization is required for integrator and maintenance roles');
           }
         }
       }
@@ -74,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
       as: 'sites'
     });
 
-    // User belongs to an organization (only for integrator and maintenance roles)
+    // User belongs to an organization
     User.belongsTo(models.Organization, {
       foreignKey: 'organizationId',
       as: 'organization'

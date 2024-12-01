@@ -57,7 +57,7 @@ const sendEmailWithGmail = async ({ to, subject, text }) => {
 const emailTemplates = {
   registrationLink: (userData) => {
     const token = jwt.sign({ email: userData.email }, activeSecrets[0], { expiresIn: '24h' });
-    const registrationLink = `${process.env.FRONTEND_URL}/register?email=${encodeURIComponent(userData.email)}&token=${token}`;
+    const registrationLink = `${process.env.FRONTEND_URL}/register?email=${encodeURIComponent(userData.email)}&token=${token}&name=${encodeURIComponent(userData.name)}`;
     
     return {
       subject: 'מייל רישום למערכת',

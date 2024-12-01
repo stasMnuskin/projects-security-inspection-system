@@ -9,9 +9,9 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        isIn: [['integrator', 'maintenance']]
+        isIn: [['integrator', 'maintenance', 'general']]
       },
-      comment: 'Type of service the organization provides'
+      comment: 'Type of service the organization provides. "general" is used for organizations that are not service providers.'
     }
   });
 

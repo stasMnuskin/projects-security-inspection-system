@@ -13,7 +13,7 @@ exports.createOrganization = async (req, res, next) => {
     const { name, type } = req.body;
 
     // Validate organization type
-    if (!['integrator', 'maintenance'].includes(type)) {
+    if (!['integrator', 'maintenance', 'general'].includes(type)) {
       return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
     }
 
@@ -47,7 +47,7 @@ exports.getOrganizations = async (req, res, next) => {
 
     // Filter by type if provided
     if (type) {
-      if (!['integrator', 'maintenance'].includes(type)) {
+      if (!['integrator', 'maintenance', 'general'].includes(type)) {
         return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
       }
       where.type = type;
@@ -76,7 +76,7 @@ exports.getOrganizationsBySites = async (req, res, next) => {
 
     logger.info(`Getting organizations for type: ${type} and sites: ${siteIds}`);
 
-    // Validate organization type
+    // Validate organization type - only for service organizations
     if (!['integrator', 'maintenance'].includes(type)) {
       return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
     }
@@ -169,7 +169,7 @@ exports.updateOrganization = async (req, res, next) => {
     }
 
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, type } = req.body;
 
     const organization = await Organization.findByPk(id);
     if (!organization) {
@@ -189,8 +189,13 @@ exports.updateOrganization = async (req, res, next) => {
       }
     }
 
+    // Validate type if provided
+    if (type && !['integrator', 'maintenance', 'general'].includes(type)) {
+      return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
+    }
+
     // Update organization
-    await organization.update({ name });
+    await organization.update({ name, type });
 
     logger.info(`Organization updated: ${id}`);
     res.json({

@@ -29,9 +29,14 @@ exports.loginUser = async (req, res, next) => {
     const { email, password } = req.body;
     logger.info(`Login attempt for email: ${email}`);
 
-    // Find user with sites if they're an entrepreneur
+    // Find user with organization data
     const user = await User.findOne({ 
-      where: { email }
+      where: { email },
+      include: [{
+        model: Organization,
+        as: 'organization',
+        attributes: ['id', 'name', 'type']
+      }]
     });
 
     if (!user) {
@@ -104,7 +109,12 @@ exports.loginUser = async (req, res, next) => {
 
 exports.getCurrentUser = async (req, res, next) => {
   try {
-    const include = [];
+    const include = [{
+      model: Organization,
+      as: 'organization',
+      attributes: ['id', 'name', 'type']
+    }];
+    
     if (req.user.role === 'entrepreneur') {
       include.push({
         model: Site,
@@ -146,11 +156,18 @@ exports.getAllUsers = async (req, res, next) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
-      include: [{
-        model: Site,
-        as: 'sites',
-        attributes: ['id', 'name', 'type']
-      }]
+      include: [
+        {
+          model: Site,
+          as: 'sites',
+          attributes: ['id', 'name', 'type']
+        },
+        {
+          model: Organization,
+          as: 'organization',
+          attributes: ['id', 'name', 'type']
+        }
+      ]
     });
     res.json(users);
   } catch (error) {
@@ -250,8 +267,15 @@ exports.updateUserDetails = async (req, res, next) => {
     const { name, email, organizationId, role } = req.body;
     const userId = req.params.id;
 
-    // Find the user
-    const user = await User.findByPk(userId);
+    // Find the user with organization
+    const user = await User.findByPk(userId, {
+      include: [{
+        model: Organization,
+        as: 'organization',
+        attributes: ['id', 'name', 'type']
+      }]
+    });
+    
     if (!user) {
       return next(new AppError('משתמש לא נמצא', 404, 'USER_NOT_FOUND'));
     }
@@ -279,16 +303,26 @@ exports.updateUserDetails = async (req, res, next) => {
       permissions
     });
 
+    // Fetch updated user with organization
+    const updatedUser = await User.findByPk(userId, {
+      include: [{
+        model: Organization,
+        as: 'organization',
+        attributes: ['id', 'name', 'type']
+      }]
+    });
+
     logger.info(`User updated successfully: ${user.email}`);
     res.json({ 
       message: 'המשתמש עודכן בהצלחה',
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        organizationId: user.organizationId,
-        role: user.role,
-        permissions: user.permissions
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        organizationId: updatedUser.organizationId,
+        organization: updatedUser.organization,
+        role: updatedUser.role,
+        permissions: updatedUser.permissions
       }
     });
   } catch (error) {

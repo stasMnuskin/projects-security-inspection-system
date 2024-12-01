@@ -42,11 +42,14 @@ function InitialRegistration() {
 
   const fetchOrganizations = useCallback(async (role) => {
     try {
+      let type;
       if (['integrator', 'maintenance'].includes(role)) {
-        const type = role;
-        const response = await getRegistrationOrganizations(type);
-        setOrganizations(response);
+        type = role;
+      } else {
+        type = 'general';
       }
+      const response = await getRegistrationOrganizations(type);
+      setOrganizations(response);
     } catch (error) {
       console.error('Error fetching organizations:', error);
       showNotification('שגיאה בטעינת רשימת הארגונים', 'error');
@@ -102,15 +105,8 @@ function InitialRegistration() {
     }));
 
     if (name === 'role') {
-      if (['integrator', 'maintenance'].includes(value)) {
-        fetchOrganizations(value);
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          organizationName: ''
-        }));
-        setOrganizations([]);
-      }
+      // Always fetch organizations when role changes
+      fetchOrganizations(value);
     }
   };
 

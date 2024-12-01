@@ -18,7 +18,7 @@ const validateOrganization = [
     .trim()
     .notEmpty()
     .withMessage('נדרש סוג ארגון')
-    .isIn(['integrator', 'maintenance'])
+    .isIn(['integrator', 'maintenance', 'general'])
     .withMessage('סוג ארגון לא תקין'),
   validate
 ];

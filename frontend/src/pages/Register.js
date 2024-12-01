@@ -26,11 +26,12 @@ function Register() {
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get('email');
   const token = queryParams.get('token');
+  const name = queryParams.get('name');
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
     email: email || '',
-    name: '',
+    name: name || '',
     password: '',
     token: token || ''
   });
@@ -114,8 +115,15 @@ function Register() {
                 required
                 label="שם"
                 value={formData.name}
+                disabled={!!name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                sx={formStyles.textField}
+                sx={{
+                  ...formStyles.textField,
+                  '& .Mui-disabled': {
+                    WebkitTextFillColor: `${colors.text.grey} !important`,
+                    backgroundColor: `${colors.background.darkGrey} !important`
+                  }
+                }}
               />
             </FormControl>
 

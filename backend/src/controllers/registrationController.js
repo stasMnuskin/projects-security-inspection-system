@@ -37,33 +37,53 @@ exports.generateRegistrationLink = async (req, res, next) => {
 
     let organizationId = null;
 
-    // For integrator and maintenance roles, handle organization
-    if (role === 'integrator' || role === 'maintenance') {
-      if (!organizationName) {
-        return next(new AppError('נדרש שם ארגון למשתמש מסוג אינטגרטור או אחזקה', 400, 'ORGANIZATION_REQUIRED'));
-      }
-
-      // Find or create organization
-      let organization = await Organization.findOne({
-        where: { name: organizationName }
-      });
-
-      if (!organization) {
-        // Create new organization with type based on user role
-        organization = await Organization.create({
-          name: organizationName,
-          type: role === 'integrator' ? 'integrator' : 'maintenance'
-        });
-        logger.info(`Created new organization: ${organizationName}, Type: ${organization.type}`);
-      } else {
-        // Validate organization type matches user role
-        if ((role === 'integrator' && organization.type !== 'integrator') ||
-            (role === 'maintenance' && organization.type !== 'maintenance')) {
-          return next(new AppError('סוג הארגון אינו תואם לתפקיד המשתמש', 400, 'ORGANIZATION_TYPE_MISMATCH'));
+    if (organizationName) {
+      // For integrator and maintenance roles, handle organization with type validation
+      if (role === 'integrator' || role === 'maintenance') {
+        if (!organizationName) {
+          return next(new AppError('נדרש שם ארגון למשתמש מסוג אינטגרטור או אחזקה', 400, 'ORGANIZATION_REQUIRED'));
         }
-      }
 
-      organizationId = organization.id;
+        // Find or create organization
+        let organization = await Organization.findOne({
+          where: { name: organizationName }
+        });
+
+        if (!organization) {
+          // Create new organization with type based on user role
+          organization = await Organization.create({
+            name: organizationName,
+            type: role === 'integrator' ? 'integrator' : 'maintenance'
+          });
+          logger.info(`Created new organization: ${organizationName}, Type: ${organization.type}`);
+        } else {
+          // Validate organization type matches user role
+          if ((role === 'integrator' && organization.type !== 'integrator') ||
+              (role === 'maintenance' && organization.type !== 'maintenance')) {
+            return next(new AppError('סוג הארגון אינו תואם לתפקיד המשתמש', 400, 'ORGANIZATION_TYPE_MISMATCH'));
+          }
+        }
+
+        organizationId = organization.id;
+      } else {
+        // For other roles, handle general type organizations
+        let organization = await Organization.findOne({
+          where: { name: organizationName }
+        });
+
+        if (!organization) {
+          // Create new organization with general type
+          organization = await Organization.create({
+            name: organizationName,
+            type: 'general'
+          });
+          logger.info(`Created new general organization: ${organizationName}`);
+        } else if (organization.type !== 'general') {
+          return next(new AppError('לא ניתן להשתמש בארגון מסוג אחזקה או אינטגרטור', 400, 'ORGANIZATION_TYPE_MISMATCH'));
+        }
+
+        organizationId = organization.id;
+      }
     }
 
     // Get default permissions for role
@@ -171,7 +191,9 @@ exports.registerUser = async (req, res, next) => {
       return next(new AppError('שגיאת אימות', 400, 'VALIDATION_ERROR', true, errors.array()));
     }
 
-    const { email, name, password, token } = req.body;
+    console.log('Registration request body:', req.body); 
+
+    const { email, password, token } = req.body;
 
     // Verify token and get stored data
     let decoded;
@@ -208,7 +230,6 @@ exports.registerUser = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Update user with hashed password to complete registration
-    user.name = name;
     user.password = hashedPassword;
     await user.save();
 
@@ -245,7 +266,7 @@ exports.getOrganizations = async (req, res, next) => {
 
     // Filter by type if provided
     if (type) {
-      if (!['integrator', 'maintenance'].includes(type)) {
+      if (!['integrator', 'maintenance', 'general'].includes(type)) {
         return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
       }
       where.type = type;

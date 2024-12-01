@@ -42,7 +42,8 @@ function Users() {
   const [errors, setErrors] = useState({});
   const [organizations, setOrganizations] = useState({
     maintenance: [],
-    integrator: []
+    integrator: [],
+    general: []
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
@@ -75,8 +76,10 @@ function Users() {
   useEffect(() => {
     if (user.role === 'admin') {
       fetchUsers();
+      // Fetch organizations of all types
       fetchOrganizations('maintenance');
       fetchOrganizations('integrator');
+      fetchOrganizations('general');
     }
   }, [fetchUsers, fetchOrganizations, user.role]);
 
@@ -140,14 +143,12 @@ function Users() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle delete click
   const handleDeleteClick = (userItem, event) => {
     event.stopPropagation();
     setUserToDelete(userItem);
     setDeleteDialogOpen(true);
   };
 
-  // Handle delete confirmation
   const handleDeleteConfirm = async () => {
     try {
       await deleteUser(userToDelete.id);
@@ -164,6 +165,30 @@ function Users() {
     }
   };
 
+  const findExistingOrganization = (name) => {
+    // Check in all organization types
+    for (const type of ['maintenance', 'integrator', 'general']) {
+      const existing = organizations[type]?.find(
+        org => org.name.toLowerCase() === name.toLowerCase()
+      );
+      if (existing) {
+        return existing;
+      }
+    }
+    return null;
+  };
+
+  const getOrganizationOptions = useCallback(() => {
+    // Get all unique organization names across all types
+    const allOrgs = new Set();
+    ['maintenance', 'integrator', 'general'].forEach(type => {
+      organizations[type]?.forEach(org => {
+        allOrgs.add(org.name);
+      });
+    });
+    return Array.from(allOrgs);
+  }, [organizations]);
+
   const handleSave = async () => {
     if (!validateForm()) {
       return;
@@ -177,26 +202,27 @@ function Users() {
       let organizationName = editedUser.organization;
       
       if (organizationName) {
-        const orgType = ['maintenance', 'integrator'].includes(editedUser.role) ? editedUser.role : null;
-        if (orgType) {
-          // For maintenance/integrator, use existing org or create new one
-          const existingOrg = organizations[orgType].find(org => org.name === organizationName);
-          if (existingOrg) {
-            organizationId = existingOrg.id;
-          } else {
-            const newOrg = await createOrganization({
-              name: organizationName,
-              type: orgType
-            });
-            organizationId = newOrg.id;
-            await fetchOrganizations(orgType);
-          }
+        // Check if organization already exists (case-insensitive)
+        const existingOrg = findExistingOrganization(organizationName);
+        
+        if (existingOrg) {
+          // Use existing organization
+          organizationId = existingOrg.id;
+          organizationName = existingOrg.name; // Use the exact name from the existing org
         } else {
-          // For other roles, just create organization without type
+          // Create new organization with appropriate type
+          const orgType = ['maintenance', 'integrator'].includes(editedUser.role) 
+            ? editedUser.role 
+            : 'general';
+          
           const newOrg = await createOrganization({
-            name: organizationName
+            name: organizationName,
+            type: orgType
           });
           organizationId = newOrg.id;
+          
+          // Refresh organizations list
+          await fetchOrganizations(orgType);
         }
       } else {
         organizationId = null;
@@ -438,21 +464,14 @@ function Users() {
                         onChange={(_, newValue) => setEditedUser(prev => ({ 
                           ...prev, 
                           organization: newValue,
-                          // Clear organizationId when selecting new organization
-                          organizationId: ['maintenance', 'integrator'].includes(prev.role) 
-                            ? organizations[prev.role]?.find(org => org.name === newValue)?.id || null
-                            : null
+                          organizationId: null // Will be set in handleSave
                         }))}
                         onInputChange={(_, newValue) => setEditedUser(prev => ({ 
                           ...prev, 
                           organization: newValue,
-                          organizationId: ['maintenance', 'integrator'].includes(prev.role)
-                            ? organizations[prev.role]?.find(org => org.name === newValue)?.id || null
-                            : null
+                          organizationId: null // Will be set in handleSave
                         }))}
-                        options={['maintenance', 'integrator'].includes(editedUser.role) 
-                          ? organizations[editedUser.role]?.map(org => org.name) || []
-                          : []}
+                        options={getOrganizationOptions()}
                         renderInput={(params) => (
                           <TextField
                             {...params}

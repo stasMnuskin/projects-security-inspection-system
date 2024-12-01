@@ -48,7 +48,6 @@ router.get(
 router.post(
   '/complete',
   [
-    check('name', 'שם נדרש').not().isEmpty(),
     check('email', 'נא להזין כתובת אימייל תקינה').isEmail(),
     check('password', 'הסיסמה חייבת להכיל לפחות 6 תווים, כולל אותיות באנגלית ומספרים')
       .isLength({ min: 6 })
