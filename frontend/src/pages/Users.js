@@ -208,7 +208,7 @@ function Users() {
         if (existingOrg) {
           // Use existing organization
           organizationId = existingOrg.id;
-          organizationName = existingOrg.name; // Use the exact name from the existing org
+          organizationName = existingOrg.name;
         } else {
           // Create new organization with appropriate type
           const orgType = ['maintenance', 'integrator'].includes(editedUser.role) 
@@ -464,12 +464,12 @@ function Users() {
                         onChange={(_, newValue) => setEditedUser(prev => ({ 
                           ...prev, 
                           organization: newValue,
-                          organizationId: null // Will be set in handleSave
+                          organizationId: null 
                         }))}
                         onInputChange={(_, newValue) => setEditedUser(prev => ({ 
                           ...prev, 
                           organization: newValue,
-                          organizationId: null // Will be set in handleSave
+                          organizationId: null 
                         }))}
                         options={getOrganizationOptions()}
                         renderInput={(params) => (

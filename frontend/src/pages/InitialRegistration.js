@@ -105,7 +105,6 @@ function InitialRegistration() {
     }));
 
     if (name === 'role') {
-      // Always fetch organizations when role changes
       fetchOrganizations(value);
     }
   };

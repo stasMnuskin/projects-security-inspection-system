@@ -138,15 +138,9 @@ module.exports = (sequelize, DataTypes) => {
         }
       );
 
-      // Log the changes
       const addedPermissions = permissions.filter(p => !currentPermissions.includes(p));
       const removedPermissions = currentPermissions.filter(p => !permissions.includes(p));
-      console.log(`Updated permissions for role ${role}:`, {
-        addedPermissions,
-        removedPermissions,
-        usersUpdated: updatedCount
-      });
-
+      
       await transaction.commit();
 
       return {

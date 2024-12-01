@@ -216,7 +216,7 @@ exports.getMaintenanceStaff = async (req, res, next) => {
         && req.user.organizationId) {
       whereClause.organizationId = req.user.organizationId;
     }
-    // For admin/security_officer, use query param if provided
+    // For admin/security_officer/control_center, use query param if provided
     else if (req.query.organizationId) {
       whereClause.organizationId = req.query.organizationId;
     }
@@ -241,7 +241,7 @@ exports.getIntegrators = async (req, res, next) => {
         && req.user.organizationId) {
       whereClause.organizationId = req.user.organizationId;
     }
-    // For admin/security_officer, use query param if provided
+    // For admin/security_officer/control_center, use query param if provided
     else if (req.query.organizationId) {
       whereClause.organizationId = req.query.organizationId;
     }
