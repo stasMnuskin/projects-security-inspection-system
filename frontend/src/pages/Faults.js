@@ -133,17 +133,24 @@ const Faults = () => {
 
   // Initial data load
   useEffect(() => {
-    fetchFaults();
     fetchOrganizations();
-  }, [fetchFaults, fetchOrganizations]);
+  }, [fetchOrganizations]);
+
+  // Fetch faults when filters change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchFaults();
+    }, 300); // Add debounce to prevent rapid refetching
+
+    return () => clearTimeout(timer);
+  }, [fetchFaults, filters]);
 
   const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
-    fetchFaults();
-  }, [fetchFaults]);
+  }, []);
 
   const showNotification = (message, severity = 'success') => {
     setNotification({

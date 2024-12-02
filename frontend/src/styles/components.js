@@ -423,6 +423,13 @@ export const sidebarStyles = {
     },
     height: 'fit-content'
   },
+  headerContainer: {
+    padding: '1rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottom: `1px solid ${colors.border.grey}`
+  },
   userInfo: {
     display: 'flex',
     alignItems: 'center',

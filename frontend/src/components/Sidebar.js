@@ -6,6 +6,7 @@ import { sidebarStyles } from '../styles/components';
 import SidebarItem from './SidebarItem';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
+import HomeIcon from '@mui/icons-material/Home';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -66,14 +67,7 @@ const Sidebar = ({
     if (!user.name) return null;
 
     return (
-      <Box 
-        sx={{
-          ...sidebarStyles.userInfo,
-          cursor: 'pointer',
-          '&:hover': { opacity: 0.8 }
-        }}
-        onClick={() => navigate('/')}
-      >
+      <Box sx={sidebarStyles.userInfo}>
         <Avatar sx={{ bgcolor: 'primary.main' }}>
           <PersonOutlineIcon />
         </Avatar>
@@ -87,16 +81,13 @@ const Sidebar = ({
         </Box>
         <Box sx={{ marginLeft: 'auto' }}>
           <IconButton 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLogout();
-            }} 
+            onClick={() => navigate('/')} 
             sx={{ 
               color: 'inherit',
               '&:hover': { opacity: 0.8 }
             }}
           >
-            <LogoutIcon />
+            <HomeIcon />
           </IconButton>
         </Box>
       </Box>
@@ -292,8 +283,8 @@ const Sidebar = ({
 
   return (
     <Box sx={sidebarStyles.sidebar}>
-      {/* Logo */}
-      <Box sx={{ padding: '1rem' }}>
+      {/* Logo and Logout */}
+      <Box sx={sidebarStyles.headerContainer}>
         <Box 
           component="img" 
           src={logo} 
@@ -303,6 +294,15 @@ const Sidebar = ({
             filter: 'brightness(0) invert(1)'
           }} 
         />
+        <IconButton 
+          onClick={handleLogout}
+          sx={{ 
+            color: 'inherit',
+            '&:hover': { opacity: 0.8 }
+          }}
+        >
+          <LogoutIcon />
+        </IconButton>
       </Box>
 
       {renderUserInfo()}
