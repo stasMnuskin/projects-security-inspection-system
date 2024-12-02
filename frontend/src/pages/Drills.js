@@ -182,7 +182,6 @@ const Drills = () => {
     }
   }, [filters]);
 
-  // Update filters without immediate fetch
   const handleFilterChange = useCallback((field, value) => {
     setFilters(prev => ({
       ...prev,
@@ -190,13 +189,9 @@ const Drills = () => {
     }));
   }, []);
 
-  // Fetch data when filters change with debounce
+  // Fetch data when filters change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchDrills();
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
+    fetchDrills();
   }, [filters, fetchDrills]);
 
   const handleDeleteClick = (drill, event) => {

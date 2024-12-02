@@ -160,13 +160,9 @@ const Inspections = () => {
     }));
   }, []);
 
-  // Fetch data when filters change with debounce
+  // Fetch data when filters change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchInspections();
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
+    fetchInspections();
   }, [filters, fetchInspections]);
 
   const getValue = (inspection, column) => {

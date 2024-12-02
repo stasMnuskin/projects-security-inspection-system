@@ -3,6 +3,98 @@ const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 
+exports.getAllInspections = async (req, res, next) => {
+  try {
+    const { role, id: userId, organizationId } = req.user;
+    const { startDate, endDate, site, type, maintenanceOrg, integratorOrg, securityOfficer } = req.query;
+
+    let whereClause = {};
+
+    // Handle date filters
+    if (startDate && endDate) {
+      whereClause.createdAt = {
+        [db.Sequelize.Op.between]: [new Date(startDate), new Date(endDate)]
+      };
+    } else if (startDate) {
+      whereClause.createdAt = {
+        [db.Sequelize.Op.gte]: new Date(startDate)
+      };
+    } else if (endDate) {
+      whereClause.createdAt = {
+        [db.Sequelize.Op.lte]: new Date(endDate)
+      };
+    }
+
+    // Handle inspection type filter
+    if (type) {
+      whereClause.type = type;
+    }
+
+    // Handle site access based on user role
+    let siteWhere = {};
+    if (role === 'entrepreneur') {
+      siteWhere.entrepreneurId = userId;
+    }
+    
+    if (site) {
+      siteWhere.id = site;
+    }
+
+    // Build includes with proper filtering
+    const includes = [
+      {
+        model: db.Site,
+        where: siteWhere,
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: db.Organization,
+            as: 'serviceOrganizations',
+            attributes: ['id', 'name', 'type'],
+            ...(maintenanceOrg || integratorOrg ? {
+              where: {
+                [db.Sequelize.Op.or]: [
+                  maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
+                  integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
+                ].filter(Boolean)
+              }
+            } : {})
+          }
+        ]
+      },
+      { 
+        model: db.InspectionType, 
+        attributes: ['id', 'name', 'type', 'formStructure']
+      }
+    ];
+
+    // Handle organization-specific access
+    if (role === 'integrator' || role === 'maintenance') {
+      includes[0].include[0].where = {
+        id: organizationId,
+        type: role === 'integrator' ? 'integrator' : 'maintenance'
+      };
+    }
+
+    // Handle security officer filter
+    if (securityOfficer) {
+      whereClause['$formData.securityOfficer$'] = securityOfficer;
+    }
+
+    const inspections = await db.Inspection.findAll({
+      where: whereClause,
+      include: includes,
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json(inspections);
+    logger.info(`getAllInspections function called by ${role}`);
+  } catch (error) {
+    logger.error('Error getting inspections:', error);
+    next(new AppError('Error fetching inspections', 500));
+  }
+};
+
 exports.createInspection = async (req, res, next) => {
   const transaction = await db.sequelize.transaction();
 
@@ -83,38 +175,6 @@ exports.createInspection = async (req, res, next) => {
   }
 };
 
-exports.getAllInspections = async (req, res, next) => {
-  try {
-    const { role, id } = req.user;
-    let whereClause = {};
-    let includeClause = [
-      { model: db.Site, attributes: ['name'] },
-      { model: db.InspectionType, attributes: ['name', 'type', 'formStructure'] }
-    ];
-
-    if (req.query.type) {
-      whereClause.type = req.query.type;
-    }
-
-    if (role === 'entrepreneur') {
-      const entrepreneurSites = await db.Site.findAll({ where: { entrepreneurId: id }, attributes: ['id'] });
-      const siteIds = entrepreneurSites.map(site => site.id);
-      whereClause.siteId = { [db.Sequelize.Op.in]: siteIds };
-    }
-
-    const inspections = await db.Inspection.findAll({
-      where: whereClause,
-      include: includeClause,
-      order: [['createdAt', 'DESC']]
-    });
-
-    res.json(inspections);
-    logger.info(`getAllInspections function called by ${role}`);
-  } catch (error) {
-    logger.error('Error getting inspections:', error);
-    next(new AppError('Error fetching inspections', 500));
-  }
-};
 
 exports.getInspection = async (req, res, next) => {
   try {
