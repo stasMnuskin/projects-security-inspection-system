@@ -194,10 +194,27 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
 
       {/* Fault Type */}
       <FormControl fullWidth>
-        <InputLabel sx={{ color: colors.text.grey }}>סוג תקלה</InputLabel>
+        <InputLabel 
+          id="fault-type-label"
+          sx={{
+            color: colors.text.grey,
+            '&.Mui-focused': {
+              color: colors.primary.orange,
+            },
+            '&.MuiFormLabel-filled': {
+              transform: 'translate(14px, -9px) scale(0.75)',
+            },
+            backgroundColor: colors.background.darkGreyOpaque,
+            padding: '0 5px',
+          }}
+        >
+          סוג תקלה
+        </InputLabel>
         <Select
+          labelId="fault-type-label"
           value={faultData.type}
           onChange={(e) => updateFaultData({ type: e.target.value })}
+          label="סוג תקלה"
           sx={{
             ...dialogStyles.dialogContent['& .MuiInputBase-root'],
             '& .MuiSelect-icon': {
