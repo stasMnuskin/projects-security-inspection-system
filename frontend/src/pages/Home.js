@@ -10,6 +10,7 @@ import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { colors } from '../styles/colors';
+import { PERMISSIONS } from '../constants/roles';
 
 const MenuItem = ({ icon: Icon, label, onClick }) => (
   <Box sx={homeStyles.menuItem} onClick={onClick}>
@@ -26,31 +27,51 @@ const menuItems = [
   {
     label: 'מנהל מערכת',
     path: '/admin',
-    icon: AdminPanelSettingsOutlinedIcon
+    icon: AdminPanelSettingsOutlinedIcon,
+    requiredPermissions: [PERMISSIONS.ADMIN]
   },
   {
     label: 'דשבורד',
     path: '/dashboard',
-    icon: BarChartOutlinedIcon
+    icon: BarChartOutlinedIcon,
+    requiredPermissions: [PERMISSIONS.DASHBOARD]
   },
   {
     label: 'ביקורות',
     path: '/inspections',
-    icon: VisibilityOutlinedIcon
+    icon: VisibilityOutlinedIcon,
+    requiredPermissions: [
+      PERMISSIONS.VIEW_INSPECTIONS,
+      PERMISSIONS.NEW_INSPECTION,
+      PERMISSIONS.VIEW_DRILLS,
+      PERMISSIONS.NEW_DRILL
+    ]
   },
   {
     label: 'תקלות',
     path: '/faults',
-    icon: DescriptionOutlinedIcon
+    icon: DescriptionOutlinedIcon,
+    requiredPermissions: [
+      PERMISSIONS.VIEW_FAULTS,
+      PERMISSIONS.NEW_FAULT,
+      PERMISSIONS.UPDATE_FAULT_STATUS,
+      PERMISSIONS.UPDATE_FAULT_DETAILS
+    ]
   }
 ];
 
 function Home() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  // Filter menu items based on user permissions
+  const hasPermissionForMenuItem = (item) => {
+    return item.requiredPermissions.some(permission => user.hasPermission(permission));
+  };
+
+  const filteredMenuItems = menuItems.filter(hasPermissionForMenuItem);
 
   const handleMenuClick = (path) => {
-    // Navigation will be handled by ProtectedRoute component's role check
     navigate(path);
   };
 
@@ -65,7 +86,6 @@ function Home() {
 
   return (
     <Box sx={layoutStyles.root}>
-      {/* <Box component="img" sx={layoutStyles.logo} /> */}
       <Box sx={homeStyles.container}>
         <Box sx={homeStyles.menuContainer}>
           {/* Logout Button */}
@@ -97,7 +117,7 @@ function Home() {
             {/* {getSystemMessage()} */}
           </Typography>
           <Box sx={homeStyles.gridContainer}>
-            {menuItems.map((item, index) => (
+            {filteredMenuItems.map((item, index) => (
               <MenuItem
                 key={index}
                 icon={item.icon}

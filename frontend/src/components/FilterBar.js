@@ -36,12 +36,7 @@ const FilterBar = ({
 
   // Load filter options
   useEffect(() => {
-    
-    if (authLoading) {
-      return;
-    }
-
-    if (!user) {
+    if (authLoading || !user) {
       return;
     }
 
@@ -49,15 +44,16 @@ const FilterBar = ({
       try {
         let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
         
-        try {
-          if (user.role === 'entrepreneur') {
-            // Load sites first
-            try {
-              sitesData = await getSitesByEntrepreneur(user.id);
-              // Get site IDs
-              const siteIds = sitesData.map(site => site.id);
-
-              // Load organizations for these sites
+        // Load sites based on user role
+        if (user.role === 'entrepreneur') {
+          try {
+            // Get entrepreneur's sites
+            const entrepreneurSites = await getSitesByEntrepreneur(user.id);
+            if (Array.isArray(entrepreneurSites)) {
+              sitesData = entrepreneurSites;
+              
+              // Get site IDs for loading organizations
+              const siteIds = entrepreneurSites.map(site => site.id);
               if (siteIds.length > 0) {
                 try {
                   [maintenanceOrgs, integratorOrgs] = await Promise.all([
@@ -70,61 +66,69 @@ const FilterBar = ({
                   integratorOrgs = [];
                 }
               }
-            } catch (error) {
-              console.error('Error loading sites:', error);
+            } else {
+              console.error('Invalid response from getSitesByEntrepreneur');
               sitesData = [];
             }
-          } else {            
-            // Load all data for non-entrepreneurs
+          } catch (error) {
+            console.error('Error loading entrepreneur sites:', error);
+            sitesData = [];
+          }
+        } else {
+          // Load all data for non-entrepreneurs
+          try {
             const [sites, maintenance, integrators] = await Promise.all([
               getSites(),
               getOrganizations('maintenance'),
               getOrganizations('integrator')
             ]);
-            
             sitesData = sites;
             maintenanceOrgs = maintenance;
             integratorOrgs = integrators;
-          }
-
-          // Load security officers separately
-          try {
-            securityOfficersData = await getSecurityOfficers();
           } catch (error) {
-            console.error('Error loading security officers:', error);
-            securityOfficersData = [];
+            console.error('Error loading sites and organizations:', error);
+            sitesData = [];
+            maintenanceOrgs = [];
+            integratorOrgs = [];
           }
+        }
 
-          setOptions(prev => ({
-            ...prev,
-            sites: sitesData || [],
-            securityOfficers: securityOfficersData || [],
-            maintenance: maintenanceOrgs || [],
-            integrators: integratorOrgs || []
-          }));
+        // Load security officers
+        try {
+          securityOfficersData = await getSecurityOfficers();
+        } catch (error) {
+          console.error('Error loading security officers:', error);
+          securityOfficersData = [];
+        }
 
-          // Load drill types only for drills variant
-          if (variant === 'drills') {
-            try {
-              const inspectionTypesData = await getInspectionTypes();
-              if (inspectionTypesData?.data) {
-                const drillType = inspectionTypesData.data.find(type => type.type === 'drill');
-                if (drillType) {
-                  const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
-                  if (drillTypeField?.options) {
-                    setOptions(prev => ({
-                      ...prev,
-                      drillTypes: drillTypeField.options
-                    }));
-                  }
+        // Update options state
+        setOptions(prev => ({
+          ...prev,
+          sites: sitesData || [],
+          securityOfficers: securityOfficersData || [],
+          maintenance: maintenanceOrgs || [],
+          integrators: integratorOrgs || []
+        }));
+
+        // Load drill types for drills variant
+        if (variant === 'drills') {
+          try {
+            const inspectionTypesData = await getInspectionTypes();
+            if (inspectionTypesData?.data) {
+              const drillType = inspectionTypesData.data.find(type => type.type === 'drill');
+              if (drillType) {
+                const drillTypeField = drillType.formStructure.find(field => field.id === 'drill_type');
+                if (drillTypeField?.options) {
+                  setOptions(prev => ({
+                    ...prev,
+                    drillTypes: drillTypeField.options
+                  }));
                 }
               }
-            } catch (error) {
-              console.error('Error loading drill types:', error);
             }
+          } catch (error) {
+            console.error('Error loading drill types:', error);
           }
-        } catch (error) {
-          console.error('Error in loadOptions:', error);
         }
       } catch (error) {
         console.error('Critical error in loadOptions:', error);
@@ -132,7 +136,7 @@ const FilterBar = ({
     };
 
     loadOptions();
-  }, [user, user?.role, user?.id, variant, authLoading]);
+  }, [user, variant, authLoading]);
 
   // Set initial organization filter
   useEffect(() => {

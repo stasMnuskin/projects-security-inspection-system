@@ -35,11 +35,19 @@ export const homeStyles = {
     fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' }
   },
   gridContainer: {
-    display: 'grid',
-    gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' },
+    display: 'flex',
+    flexWrap: 'wrap',
     gap: { xs: 2, sm: 3 },
     width: '100%',
-    justifyItems: 'center'
+    justifyContent: 'center',
+    '& > *': {
+      flex: {
+        xs: '0 0 calc(50% - 16px)', // 2 items per row on mobile with gap
+        sm: '0 0 calc(25% - 24px)'  // 4 items per row on larger screens with gap
+      },
+      minWidth: { xs: '120px', sm: '140px' },
+      maxWidth: { xs: '160px', sm: '180px' }
+    }
   },
   menuItem: {
     display: 'flex',
@@ -48,8 +56,6 @@ export const homeStyles = {
     justifyContent: 'center',
     gap: 1,
     cursor: 'pointer',
-    width: '100%',
-    maxWidth: { xs: '120px', sm: '140px', md: '160px' },
     transition: 'transform 0.2s ease',
     '&:hover': {
       transform: 'scale(1.05)'
