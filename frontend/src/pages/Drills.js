@@ -20,7 +20,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { getDrillsBySite, deleteInspection } from '../services/api';
+import { getDrillsBySite, getInspections, deleteInspection } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
 import { colors } from '../styles/colors';
@@ -137,11 +137,6 @@ const Drills = () => {
   };
 
   const fetchDrills = useCallback(async () => {
-    if (!filters.site) {
-      setDrills([]);
-      return;
-    }
-
     try {
       setLoading(true);
       const queryParams = {
@@ -161,15 +156,22 @@ const Drills = () => {
         queryParams.drillType = filters.drillType;
       }
 
-      const response = await getDrillsBySite(filters.site, queryParams);
+      let response;
+      if (filters.site) {
+        response = await getDrillsBySite(filters.site, queryParams);
+      } else {
+        response = await getInspections();
+      }
 
-      const sortedDrills = (response || []).sort((a, b) => {
-        const dateA = new Date(a.formData?.date);
-        const dateB = new Date(b.formData?.date);
-        return dateB - dateA;
-      });
+      const filteredDrills = (response || [])
+        .filter(item => item.type === 'drill')
+        .sort((a, b) => {
+          const dateA = new Date(a.formData?.date);
+          const dateB = new Date(b.formData?.date);
+          return dateB - dateA;
+        });
 
-      setDrills(sortedDrills);
+      setDrills(filteredDrills);
       setError(null);
     } catch (error) {
       console.error('Error fetching drills:', error);
@@ -216,14 +218,6 @@ const Drills = () => {
   };
 
   const renderTable = () => {
-    if (!filters.site) {
-      return (
-        <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
-          בחרו אתר כדי לצפות בתרגילים
-        </Typography>
-      );
-    }
-
     if (loading) {
       return (
         <Box display="flex" justifyContent="center" p={3}>
@@ -249,11 +243,6 @@ const Drills = () => {
           <Typography variant="body1" sx={{ color: colors.text.grey }}>
             {`בטווח התאריכים ${formatDate(filters.startDate)} - ${formatDate(filters.endDate)}`}
           </Typography>
-          {filters.site && (
-            <Typography variant="body1" sx={{ color: colors.text.grey }}>
-              {`באתר ${filters.site}`}
-            </Typography>
-          )}
         </Box>
       );
     }

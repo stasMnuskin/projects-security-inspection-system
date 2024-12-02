@@ -21,7 +21,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
-import { getInspectionsBySite, getEnabledFields, deleteInspection } from '../services/api';
+import { getInspectionsBySite, getInspections, getEnabledFields, deleteInspection } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { subMonths } from 'date-fns';
 import { colors } from '../styles/colors';
@@ -46,14 +46,12 @@ const Inspections = () => {
 
   // Load enabled fields for inspections when site changes
   const loadEnabledFields = useCallback(async (siteId) => {
-    if (!siteId) {
-      setColumns([]);
-      return;
-    }
-    
     try {
-      const response = await getEnabledFields(siteId, 'inspection');
-      const fields = response.data.fields;
+      let fields = [];
+      if (siteId) {
+        const response = await getEnabledFields(siteId, 'inspection');
+        fields = response.data.fields;
+      }
       
       // Define the order of columns
       const orderedColumns = [
@@ -79,7 +77,15 @@ const Inspections = () => {
       setColumns(orderedColumns);
     } catch (error) {
       console.error('Error loading enabled fields:', error);
-      setColumns([]);
+      // Set default columns if there's an error
+      const defaultColumns = [
+        { id: 'site', label: 'אתר', source: 'Site.name' },
+        { id: 'securityOfficer', label: 'קב"ט' },
+        { id: 'date', label: 'תאריך' },
+        { id: 'time', label: 'שעה' },
+        ...(user.hasPermission(PERMISSIONS.ADMIN) ? [{ id: 'actions', label: 'פעולות' }] : [])
+      ];
+      setColumns(defaultColumns);
     }
   }, [user]);
 
@@ -109,11 +115,6 @@ const Inspections = () => {
 
   // Fetch inspections
   const fetchInspections = useCallback(async () => {
-    if (!filters.site) {
-      setInspections([]);
-      return;
-    }
-
     try {
       setLoading(true);
       const queryParams = {
@@ -133,7 +134,12 @@ const Inspections = () => {
         queryParams.integratorOrg = filters.integrator;
       }
 
-      const response = await getInspectionsBySite(filters.site, queryParams);
+      let response;
+      if (filters.site) {
+        response = await getInspectionsBySite(filters.site, queryParams);
+      } else {
+        response = await getInspections();
+      }
 
       const filteredInspections = (response || []).filter(item => item.type === 'inspection');
       setInspections(filteredInspections);
@@ -191,14 +197,6 @@ const Inspections = () => {
   };
 
   const renderTable = () => {
-    if (!filters.site) {
-      return (
-        <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
-          בחרו אתר כדי לצפות בביקורות
-        </Typography>
-      );
-    }
-
     if (!columns.length) {
       return (
         <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
@@ -218,7 +216,7 @@ const Inspections = () => {
     if (inspections.length === 0) {
       return (
         <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
-          לא נמצאו ביקורות לאתר זה בטווח התאריכים שנבחר
+          לא נמצאו ביקורות בטווח התאריכים שנבחר
         </Typography>
       );
     }
