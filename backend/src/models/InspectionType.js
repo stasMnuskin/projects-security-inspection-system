@@ -45,7 +45,29 @@ module.exports = (sequelize, DataTypes) => {
         where: { type: 'inspection' }
       });
 
-      // Filter types by site type
+      // If no site type provided, get all fields that are enabled in at least one inspection type
+      if (siteType === null) {
+        const enabledFields = new Map();
+        
+        types.forEach(inspType => {
+          if (Array.isArray(inspType.formStructure)) {
+            inspType.formStructure.forEach(field => {
+              // If field is enabled in this type and we haven't seen it before, or
+              // if we've seen it before but it wasn't enabled
+              if (field.enabled && (!enabledFields.has(field.id) || !enabledFields.get(field.id).enabled)) {
+                enabledFields.set(field.id, {
+                  ...field,
+                  showInForm: field.showInForm !== false
+                });
+              }
+            });
+          }
+        });
+
+        return [...this.getAutoFields(), ...Array.from(enabledFields.values())];
+      }
+
+      // For specific site type, filter types and get enabled fields
       const relevantTypes = types.filter(inspType => {
         if (!inspType.name.includes('ביקורת שגרתית')) return true;
         if (siteType === 'radar') {
@@ -72,7 +94,6 @@ module.exports = (sequelize, DataTypes) => {
         }
       });
 
-      // Combine auto fields with enabled fields
       return [...this.getAutoFields(), ...Array.from(enabledFields.values())];
     }
 

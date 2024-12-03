@@ -30,7 +30,14 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={heLocale}>
       <Box 
-        sx={{ display: 'flex', gap: 2 }}
+        sx={{ 
+          display: 'flex', 
+          gap: 1,
+          width: '100%',
+          '& > *': {
+            flex: 1
+          }
+        }}
         onKeyDown={preventSubmit}
         role="presentation"
       >

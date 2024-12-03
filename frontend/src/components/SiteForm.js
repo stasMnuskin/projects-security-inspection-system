@@ -9,7 +9,9 @@ import {
   Autocomplete,
   IconButton,
   Chip,
-  Typography
+  Typography,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { getEntrepreneurs, getUsers, getOrganizations } from '../services/api';
@@ -22,6 +24,9 @@ const SITE_TYPES = [
 ];
 
 function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [entrepreneurs, setEntrepreneurs] = useState([]);
   const [integratorOrgs, setIntegratorOrgs] = useState([]);
   const [maintenanceOrgs, setMaintenanceOrgs] = useState([]);
@@ -68,7 +73,6 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     fetchOrganizations();
   }, [fetchUsers, fetchOrganizations]);
 
-  // Update form when initialData changes
   useEffect(() => {
     if (initialData) {
       setSiteDetails({
@@ -104,13 +108,33 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     });
   };
 
+  const commonTextFieldStyles = {
+    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
+    '& .MuiOutlinedInput-root': {
+      ...dialogStyles.dialogContent['& .MuiInputBase-root'],
+      fontSize: { xs: '0.9rem', sm: '1rem' }
+    },
+    '& .MuiInputLabel-root': {
+      ...dialogStyles.dialogContent['& .MuiInputLabel-root'],
+      fontSize: { xs: '0.9rem', sm: '1rem' }
+    }
+  };
+
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ color: colors.text.white, mb: 2 }}>
+    <Box sx={{ 
+      p: { xs: 1.5, sm: 2 },
+      maxWidth: '100%',
+      overflow: 'hidden'
+    }}>
+      <Typography variant="h6" sx={{ 
+        color: colors.text.white, 
+        mb: 2,
+        fontSize: { xs: '1.1rem', sm: '1.25rem' }
+      }}>
         {initialData ? 'עריכת אתר' : 'הוספת אתר'}
       </Typography>
       
-      <Grid container spacing={2}>
+      <Grid container spacing={{ xs: 1.5, sm: 2 }}>
         <Grid item xs={12}>
           <FormControl fullWidth>
             <TextField
@@ -118,11 +142,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
               label="שם האתר"
               value={siteDetails.name}
               onChange={(e) => setSiteDetails(prev => ({ ...prev, name: e.target.value }))}
-              sx={{
-                ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-              }}
+              sx={commonTextFieldStyles}
             />
           </FormControl>
         </Grid>
@@ -144,11 +164,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   {...params} 
                   label="יזם"
                   required
-                  sx={{
-                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                  }}
+                  sx={commonTextFieldStyles}
                 />
               )}
             />
@@ -172,11 +188,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   {...params} 
                   label="סוג האתר"
                   required
-                  sx={{
-                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                  }}
+                  sx={commonTextFieldStyles}
                 />
               )}
             />
@@ -203,7 +215,8 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                     {...getTagProps({ index })}
                     sx={{
                       backgroundColor: colors.background.darkGrey,
-                      color: colors.text.white
+                      color: colors.text.white,
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' }
                     }}
                   />
                 ))
@@ -212,11 +225,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 <TextField 
                   {...params} 
                   label="חברות אינטגרציה"
-                  sx={{
-                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                  }}
+                  sx={commonTextFieldStyles}
                 />
               )}
             />
@@ -243,7 +252,8 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                     {...getTagProps({ index })}
                     sx={{
                       backgroundColor: colors.background.darkGrey,
-                      color: colors.text.white
+                      color: colors.text.white,
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' }
                     }}
                   />
                 ))
@@ -252,11 +262,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 <TextField 
                   {...params} 
                   label="חברות אחזקה"
-                  sx={{
-                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                  }}
+                  sx={commonTextFieldStyles}
                 />
               )}
             />
@@ -279,53 +285,46 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 <TextField 
                   {...params} 
                   label="מוקד"
-                  sx={{
-                    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                    '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                    '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                  }}
+                  sx={commonTextFieldStyles}
                 />
               )}
             />
           </FormControl>
         </Grid>
 
-        {/* Custom Fields */}
         {customFields.length > 0 && (
           <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ color: colors.text.white, mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ 
+              color: colors.text.white, 
+              mb: 1,
+              fontSize: { xs: '0.9rem', sm: '1rem' }
+            }}>
               שדות נוספים
             </Typography>
           </Grid>
         )}
         
         {customFields.map((field, index) => (
-          <Grid item xs={12} key={index} container spacing={2}>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="שדה"
-                value={field.name}
-                onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
-                sx={{
-                  ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                  '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                  '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="ערך"
-                value={field.value}
-                onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
-                sx={{
-                  ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-                  '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-                  '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-                }}
-              />
+          <Grid item xs={12} key={index}>
+            <Grid container spacing={{ xs: 1, sm: 2 }}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="שדה"
+                  value={field.name}
+                  onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
+                  sx={commonTextFieldStyles}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="ערך"
+                  value={field.value}
+                  onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
+                  sx={commonTextFieldStyles}
+                />
+              </Grid>
             </Grid>
           </Grid>
         ))}
@@ -344,25 +343,38 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           </IconButton>
         </Grid>
 
-        <Grid item xs={12} container spacing={2} justifyContent="flex-end">
-          <Grid item>
-            <Button
-              variant="contained"
-              onClick={handleSubmit}
-              sx={dialogStyles.submitButton}
-            >
-              {submitLabel}
-            </Button>
-          </Grid>
-          <Grid item>
+        <Grid item xs={12}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: { xs: 1, sm: 2 },
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'flex-end'
+          }}>
             <Button
               variant="outlined"
               onClick={onCancel}
-              sx={dialogStyles.cancelButton}
+              fullWidth={isMobile}
+              sx={{
+                ...dialogStyles.cancelButton,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                order: { xs: 2, sm: 1 }
+              }}
             >
               ביטול
             </Button>
-          </Grid>
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              fullWidth={isMobile}
+              sx={{
+                ...dialogStyles.submitButton,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                order: { xs: 1, sm: 2 }
+              }}
+            >
+              {submitLabel}
+            </Button>
+          </Box>
         </Grid>
       </Grid>
     </Box>

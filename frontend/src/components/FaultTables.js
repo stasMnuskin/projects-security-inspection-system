@@ -2,8 +2,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { dashboardStyles } from '../styles/dashboardStyles';
+import { useNavigate } from 'react-router-dom';
 
-const FaultTable = ({ title, headers, data, columns }) => (
+const FaultTable = ({ title, headers, data, columns, onRowClick }) => (
   <Paper sx={dashboardStyles.faultTable}>
     <Typography variant="h6">{title}</Typography>
     <TableContainer>
@@ -24,7 +25,16 @@ const FaultTable = ({ title, headers, data, columns }) => (
             </TableRow>
           ) : (
             data.map((row, rowIndex) => (
-              <TableRow key={rowIndex}>
+              <TableRow 
+                key={rowIndex}
+                onClick={() => onRowClick && onRowClick(row)}
+                sx={{ 
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
                 {columns.map((column, index) => (
                   <TableCell key={index}>
                     {column === 'fault' ? (
@@ -52,33 +62,76 @@ FaultTable.propTypes = {
     type: PropTypes.string,
     description: PropTypes.string,
     site: PropTypes.shape({
-      name: PropTypes.string
+      name: PropTypes.string,
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
     }),
     count: PropTypes.number,
     serialNumber: PropTypes.number
   })).isRequired,
-  columns: PropTypes.arrayOf(PropTypes.string).isRequired
+  columns: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onRowClick: PropTypes.func
 };
 
 const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [] }) => {
+  const navigate = useNavigate();
+
+  const handleRecurringFaultClick = (row) => {
+    const faultType = row.type === 'אחר' ? row.description : row.type;
+    navigate('/faults', { 
+      state: { 
+        initialFilters: {
+          faultType
+        }
+      }
+    });
+  };
+
+  const handleOpenFaultClick = (row) => {
+    navigate('/faults', {
+      state: {
+        initialFilters: {
+          site: row.site.id,
+          status: 'פתוח',
+          faultType: row.type === 'אחר' ? row.description : row.type
+        }
+      }
+    });
+  };
+
+  const handleCriticalFaultClick = (row) => {
+    navigate('/faults', {
+      state: {
+        initialFilters: {
+          site: row.site.id,
+          status: 'פתוח',
+          isCritical: true,
+          faultType: row.type === 'אחר' ? row.description : row.type
+        }
+      }
+    });
+  };
+
   const tables = [
     {
       title: 'תקלות נפוצות',
-      headers: ['כמות', 'תקלה', 'מס"ד'],
-      columns: ['count', 'fault', 'serialNumber'],
-      data: recurringFaults
+      headers: ['מס"ד', 'תקלה', 'כמות'],
+      columns: ['serialNumber', 'fault', 'count'],
+      data: recurringFaults,
+      onRowClick: handleRecurringFaultClick
     },
     {
       title: 'תקלות פתוחות',
-      headers: ['אתר', 'תקלה', 'מס"ד'],
-      columns: ['site', 'fault', 'serialNumber'],
-      data: openFaults
+      headers: ['מס"ד', 'תקלה', 'אתר'],
+      columns: ['serialNumber', 'fault', 'site'],
+      data: openFaults,
+      onRowClick: handleOpenFaultClick
     },
     {
       title: 'תקלות משביתות',
-      headers: ['אתר', 'תקלה', 'מס"ד'],
-      columns: ['site', 'fault', 'serialNumber'],
-      data: criticalFaults
+      headers: ['מס"ד', 'תקלה', 'אתר'],
+      columns: ['serialNumber', 'fault', 'site'],
+      data: criticalFaults,
+      onRowClick: handleCriticalFaultClick
     }
   ];
 
@@ -105,6 +158,7 @@ FaultTables.propTypes = {
     type: PropTypes.string,
     description: PropTypes.string,
     site: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       name: PropTypes.string
     })
   })),
@@ -113,6 +167,7 @@ FaultTables.propTypes = {
     type: PropTypes.string,
     description: PropTypes.string,
     site: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       name: PropTypes.string
     })
   }))

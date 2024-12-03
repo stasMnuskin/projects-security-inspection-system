@@ -47,11 +47,8 @@ const Inspections = () => {
   // Load enabled fields for inspections when site changes
   const loadEnabledFields = useCallback(async (siteId) => {
     try {
-      let fields = [];
-      if (siteId) {
-        const response = await getEnabledFields(siteId, 'inspection');
-        fields = response.data.fields;
-      }
+      const response = await getEnabledFields(siteId, 'inspection');
+      const fields = response.data.fields;
       
       // Define the order of columns
       const orderedColumns = [

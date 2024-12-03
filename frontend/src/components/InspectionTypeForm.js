@@ -17,7 +17,9 @@ import {
   Snackbar,
   FormControlLabel,
   Checkbox,
-  IconButton
+  IconButton,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
@@ -25,6 +27,9 @@ import { dialogStyles } from '../styles/components';
 import { createInspectionType } from '../services/api';
 
 const InspectionTypeForm = ({ onSuccess, onCancel }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   // State for form data with auto fields
   const [formData, setFormData] = useState({
     name: '',
@@ -168,10 +173,19 @@ const InspectionTypeForm = ({ onSuccess, onCancel }) => {
   // Get visible fields (non-auto fields)
   const visibleFields = formData.formStructure.filter(field => !field.autoFill);
 
-return (
-    <Box>
-      <Paper sx={{ p: 2, backgroundColor: colors.background.black }}>
-        <Typography variant="h6" sx={{ color: colors.text.white, mb: 2 }}>
+  return (
+    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      <Paper sx={{ 
+        p: { xs: 1.5, sm: 2 }, 
+        backgroundColor: colors.background.black,
+        maxWidth: '100%',
+        overflow: 'hidden'
+      }}>
+        <Typography variant="h6" sx={{ 
+          color: colors.text.white, 
+          mb: 2,
+          fontSize: { xs: '1.1rem', sm: '1.25rem' }
+        }}>
           יצירת סוג חדש
         </Typography>
 
@@ -184,18 +198,28 @@ return (
             required
             sx={{
               mb: 2,
-              '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-              '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
+              '& .MuiOutlinedInput-root': {
+                ...dialogStyles.dialogContent['& .MuiInputBase-root'],
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              },
+              '& .MuiInputLabel-root': {
+                ...dialogStyles.dialogContent['& .MuiInputLabel-root'],
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }
             }}
           />
 
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel sx={{ color: colors.text.grey }}>סוג</InputLabel>
+            <InputLabel sx={{ 
+              color: colors.text.grey,
+              fontSize: { xs: '0.9rem', sm: '1rem' }
+            }}>סוג</InputLabel>
             <Select
               value={formData.type}
               onChange={(e) => handleInputChange('type', e.target.value)}
               sx={{
                 ...dialogStyles.dialogContent['& .MuiInputBase-root'],
+                fontSize: { xs: '0.9rem', sm: '1rem' },
                 '& .MuiSelect-icon': {
                   color: colors.text.grey
                 }
@@ -206,26 +230,59 @@ return (
             </Select>
           </FormControl>
 
-          <Typography variant="subtitle1" sx={{ color: colors.text.white, mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ 
+            color: colors.text.white, 
+            mb: 1,
+            fontSize: { xs: '0.9rem', sm: '1rem' }
+          }}>
             שדות
           </Typography>
 
-          {visibleFields.map((field, index) => (
-            <Box key={index} sx={{ mb: 1, color: colors.text.white }}>
-              {field.label} ({field.type})
-              {field.type === 'select' && (
-                <Typography variant="caption" sx={{ ml: 1, color: colors.text.grey }}>
-                  [{field.options.join(', ')}]
-                </Typography>
-              )}
-            </Box>
-          ))}
+          <Box sx={{ 
+            maxHeight: { xs: '200px', sm: '300px' }, 
+            overflowY: 'auto',
+            mb: 2,
+            pr: 1,
+            '&::-webkit-scrollbar': {
+              width: '6px'
+            },
+            '&::-webkit-scrollbar-track': {
+              background: colors.background.darkGrey
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: colors.border.grey,
+              borderRadius: '3px',
+              '&:hover': {
+                background: colors.border.orange
+              }
+            }
+          }}>
+            {visibleFields.map((field, index) => (
+              <Box key={index} sx={{ 
+                mb: 1, 
+                color: colors.text.white,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}>
+                {field.label} ({field.type})
+                {field.type === 'select' && (
+                  <Typography variant="caption" sx={{ 
+                    ml: 1, 
+                    color: colors.text.grey,
+                    fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                  }}>
+                    [{field.options.join(', ')}]
+                  </Typography>
+                )}
+              </Box>
+            ))}
+          </Box>
 
           <Button
             onClick={() => setShowFieldDialog(true)}
             sx={{
               mt: 2,
               color: colors.text.orange,
+              fontSize: { xs: '0.9rem', sm: '1rem' },
               '&:hover': {
                 backgroundColor: colors.background.darkGrey
               }
@@ -234,17 +291,29 @@ return (
             הוסף שדה
           </Button>
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Box sx={{ 
+            mt: 3, 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: { xs: 1, sm: 2 },
+            flexWrap: 'wrap'
+          }}>
             <Button
               onClick={onCancel}
-              sx={dialogStyles.cancelButton}
+              sx={{
+                ...dialogStyles.cancelButton,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}
             >
               ביטול
             </Button>
             <Button
               type="submit"
               variant="contained"
-              sx={dialogStyles.submitButton}
+              sx={{
+                ...dialogStyles.submitButton,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}
             >
               צור
             </Button>
@@ -256,9 +325,13 @@ return (
       <Dialog
         open={showFieldDialog}
         onClose={() => setShowFieldDialog(false)}
+        fullScreen={isMobile}
         sx={dialogStyles.dialog}
       >
-        <DialogTitle sx={dialogStyles.dialogTitle}>
+        <DialogTitle sx={{
+          ...dialogStyles.dialogTitle,
+          fontSize: { xs: '1.1rem', sm: '1.25rem' }
+        }}>
           הוסף שדה חדש
           <IconButton
             onClick={() => setShowFieldDialog(false)}
@@ -276,21 +349,28 @@ return (
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={dialogStyles.dialogContent}>
+        <DialogContent sx={{
+          ...dialogStyles.dialogContent,
+          p: { xs: 1.5, sm: 2 }
+        }}>
           <Box sx={{ mt: 2 }}>
             <TextField
               fullWidth
               label="שם השדה"
               value={newField.label}
               onChange={(e) => handleNewFieldChange('label', e.target.value)}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}
             />
 
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>סוג שדה</InputLabel>
+              <InputLabel sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>סוג שדה</InputLabel>
               <Select
                 value={newField.type}
                 onChange={(e) => handleNewFieldChange('type', e.target.value)}
+                sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}
               >
                 {formData.type === 'drill' ? (
                   <>
@@ -324,36 +404,82 @@ return (
                 />
               }
               label="שדה חובה"
-              sx={{ color: colors.text.white }}
+              sx={{ 
+                color: colors.text.white,
+                '& .MuiFormControlLabel-label': {
+                  fontSize: { xs: '0.9rem', sm: '1rem' }
+                }
+              }}
             />
 
             {newField.type === 'select' && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ 
+                  mb: 1,
+                  fontSize: { xs: '0.9rem', sm: '1rem' }
+                }}>
                   אפשרויות בחירה
                 </Typography>
-                {newField.options.map((option, index) => (
-                  <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography sx={{ flexGrow: 1 }}>{option}</Typography>
-                    <Button
-                      onClick={() => handleRemoveOption(index)}
-                      sx={{ color: colors.text.orange }}
-                    >
-                      הסר
-                    </Button>
-                  </Box>
-                ))}
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ 
+                  maxHeight: '200px', 
+                  overflowY: 'auto',
+                  pr: 1,
+                  '&::-webkit-scrollbar': {
+                    width: '6px'
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: colors.background.darkGrey
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: colors.border.grey,
+                    borderRadius: '3px',
+                    '&:hover': {
+                      background: colors.border.orange
+                    }
+                  }
+                }}>
+                  {newField.options.map((option, index) => (
+                    <Box key={index} sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 1,
+                      gap: 1
+                    }}>
+                      <Typography sx={{ 
+                        flexGrow: 1,
+                        fontSize: { xs: '0.9rem', sm: '1rem' }
+                      }}>{option}</Typography>
+                      <Button
+                        onClick={() => handleRemoveOption(index)}
+                        sx={{ 
+                          color: colors.text.orange,
+                          fontSize: { xs: '0.9rem', sm: '1rem' }
+                        }}
+                      >
+                        הסר
+                      </Button>
+                    </Box>
+                  ))}
+                </Box>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 1,
+                  mt: 2,
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
                   <TextField
                     fullWidth
                     label="אפשרות חדשה"
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
+                    sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}
                   />
                   <Button
                     onClick={handleAddOption}
                     sx={{
                       color: colors.text.orange,
+                      whiteSpace: 'nowrap',
+                      fontSize: { xs: '0.9rem', sm: '1rem' },
                       '&:hover': {
                         backgroundColor: colors.background.darkGrey
                       }
@@ -366,17 +492,29 @@ return (
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={dialogStyles.dialogActions}>
+        <DialogActions sx={{
+          ...dialogStyles.dialogActions,
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 0 }
+        }}>
           <Button
             onClick={() => setShowFieldDialog(false)}
-            sx={dialogStyles.cancelButton}
+            sx={{
+              ...dialogStyles.cancelButton,
+              width: { xs: '100%', sm: 'auto' },
+              fontSize: { xs: '0.9rem', sm: '1rem' }
+            }}
           >
             ביטול
           </Button>
           <Button
             onClick={handleAddField}
             variant="contained"
-            sx={dialogStyles.submitButton}
+            sx={{
+              ...dialogStyles.submitButton,
+              width: { xs: '100%', sm: 'auto' },
+              fontSize: { xs: '0.9rem', sm: '1rem' }
+            }}
           >
             הוסף
           </Button>
@@ -388,11 +526,15 @@ return (
         open={!!error}
         autoHideDuration={6000}
         onClose={() => setError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
           onClose={() => setError(null)}
           severity="error"
-          sx={{ width: '100%' }}
+          sx={{ 
+            width: '100%',
+            fontSize: { xs: '0.9rem', sm: '1rem' }
+          }}
         >
           {error}
         </Alert>

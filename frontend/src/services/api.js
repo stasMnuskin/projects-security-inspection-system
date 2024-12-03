@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { AppError } from '../utils/errorHandler';
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = `${process.env.REACT_APP_API_URL}/api`;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -96,6 +96,7 @@ export const updateFaultStatus = (faultId, statusData) => apiCall('put', `/fault
 export const updateFaultDetails = (faultId, detailsData) => apiCall('put', `/faults/${faultId}/details`, detailsData);
 export const getFaultById = (faultId) => apiCall('get', `/faults/${faultId}`);
 export const deleteFault = (faultId) => apiCall('delete', `/faults/${faultId}`);
+export const getFaultTypes = () => apiCall('get', '/faults/types');
 
 // Dashboard Data
 export const getDashboardData = (filters) => apiCall('get', '/analytics/dashboard/overview', { params: filters });
@@ -138,7 +139,11 @@ export const addCustomField = (id, label, type, fieldType) => {
 export const deleteCustomField = (id, fieldId) =>
   apiCall('delete', `/inspection-types/${id}/fields/${fieldId}`);
 export const getEnabledFields = (siteId, type) => 
-  apiCall('get', `/inspection-types/site/${siteId}/enabled-fields`, { params: { type } });
+  apiCall('get', siteId 
+    ? `/inspection-types/site/${siteId}/enabled-fields` 
+    : '/inspection-types/enabled-fields', 
+    { params: { type } }
+  );
 
 // Inspection Management
 export const getInspectionTypes = () => apiCall('get', '/inspection-types');

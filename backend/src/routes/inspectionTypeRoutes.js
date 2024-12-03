@@ -13,7 +13,8 @@ router.get('/', inspectionTypeController.getAllInspectionTypes);
 // Get inspection types for a specific site
 router.get('/site/:siteId', inspectionTypeController.getInspectionTypesBySite);
 
-// Get enabled fields for a specific type and site
+// Get enabled fields (both with and without site)
+router.get('/enabled-fields', inspectionTypeController.getEnabledFields);
 router.get('/site/:siteId/enabled-fields', inspectionTypeController.getEnabledFields);
 
 // Get field types

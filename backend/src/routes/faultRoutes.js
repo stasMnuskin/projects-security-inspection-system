@@ -14,6 +14,9 @@ const validateOrganizationId = (value) => {
   return Number.isInteger(Number(value));
 };
 
+// Get fault types - no special permission needed
+router.get('/types', auth, faultController.getFaultTypes);
+
 // Dashboard routes - requires VIEW_FAULTS permission
 router.get('/status/open', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultController.getOpenFaults);
 router.get('/recurring', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultController.getRecurringFaults);

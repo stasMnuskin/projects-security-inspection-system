@@ -3,6 +3,17 @@ const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
 
+// Get fault types from the model's ENUM definition
+exports.getFaultTypes = async (req, res, next) => {
+  try {
+    const faultTypes = db.Fault.rawAttributes.type.values;
+    res.json(faultTypes);
+  } catch (error) {
+    logger.error('Error fetching fault types:', error);
+    next(new AppError('שגיאה בשליפת סוגי תקלות', 500));
+  }
+};
+
 const getSitesByUserRole = async (user) => {
   const { role, id: userId, organizationId } = user;
   
@@ -40,13 +51,18 @@ exports.getOpenFaults = async (req, res, next) => {
       include: [{
         model: db.Site,
         as: 'site',
-        attributes: ['name']
+        attributes: ['name', 'id']
       }],
       order: [['reportedTime', 'DESC']]
     });
 
     const formattedFaults = faults.map((fault, index) => ({
-      site: fault.site.name,
+      site: {
+        id: fault.site.id,
+        name: fault.site.name
+      },
+      type: fault.type,
+      description: fault.description,
       fault: fault.type === 'אחר' ? fault.description : fault.type,
       serialNumber: index + 1
     }));
@@ -100,19 +116,24 @@ exports.getCriticalFaults = async (req, res, next) => {
     const faults = await db.Fault.findAll({
       where: {
         isCritical: true,
-        status: { [Op.ne]: 'סגור' },
+        status: 'פתוח',
         siteId: { [Op.in]: siteIds }
       },
       include: [{
         model: db.Site,
         as: 'site',
-        attributes: ['name']
+        attributes: ['name', 'id']
       }],
       order: [['reportedTime', 'DESC']]
     });
 
     const formattedFaults = faults.map((fault, index) => ({
-      site: fault.site.name,
+      site: {
+        id: fault.site.id,
+        name: fault.site.name
+      },
+      type: fault.type,
+      description: fault.description,
       fault: fault.type === 'אחר' ? fault.description : fault.type,
       serialNumber: index + 1
     }));
@@ -121,6 +142,117 @@ exports.getCriticalFaults = async (req, res, next) => {
   } catch (error) {
     logger.error('Error fetching critical faults:', error);
     next(new AppError('שגיאה בשליפת תקלות משביתות', 500));
+  }
+};
+
+exports.getAllFaults = async (req, res, next) => {
+  try {
+    const { role, id: userId, organizationId } = req.user;
+    const { startDate, endDate, site, isCritical, maintenanceOrg, integratorOrg, faultType, status } = req.query;
+
+    let whereClause = {};
+
+    if (startDate && endDate) {
+      whereClause.reportedTime = {
+        [Op.between]: [new Date(startDate), new Date(endDate)]
+      };
+    } else if (startDate) {
+      whereClause.reportedTime = {
+        [Op.gte]: new Date(startDate)
+      };
+    } else if (endDate) {
+      whereClause.reportedTime = {
+        [Op.lte]: new Date(endDate)
+      };
+    }
+
+    if (isCritical !== undefined) {
+      whereClause.isCritical = isCritical === 'true';
+    }
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    if (faultType) {
+      whereClause[Op.or] = [
+        { type: faultType },
+        {
+          [Op.and]: [
+            { type: 'אחר' },
+            { description: faultType }
+          ]
+        }
+      ];
+    }
+
+    let siteWhere = {};
+    if (role === 'entrepreneur') {
+      siteWhere.entrepreneurId = userId;
+    }
+    
+    if (site) {
+      siteWhere.id = site;
+    }
+
+    const includes = [
+      {
+        model: db.Site,
+        as: 'site',
+        where: siteWhere,
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: db.Organization,
+            as: 'serviceOrganizations',
+            attributes: ['id', 'name', 'type'],
+            ...(maintenanceOrg || integratorOrg ? {
+              where: {
+                [Op.or]: [
+                  maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
+                  integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
+                ].filter(Boolean)
+              }
+            } : {})
+          }
+        ]
+      }
+    ];
+
+    if (role === 'integrator' || role === 'maintenance') {
+      includes[0].include[0].where = {
+        id: organizationId,
+        type: role === 'integrator' ? 'integrator' : 'maintenance'
+      };
+    }
+
+    const faults = await db.Fault.findAll({
+      where: whereClause,
+      include: includes,
+      order: [['reportedTime', 'DESC']]
+    });
+
+    const formattedFaults = faults.map(fault => ({
+      id: fault.id,
+      site: {
+        id: fault.site.id,
+        name: fault.site.name,
+        serviceOrganizations: fault.site.serviceOrganizations
+      },
+      type: fault.type,
+      description: fault.description,
+      technician: fault.technician,
+      isCritical: fault.isCritical,
+      reportedTime: fault.reportedTime,
+      closedTime: fault.closedTime,
+      status: fault.status,
+      lastUpdatedTime: fault.lastUpdatedTime
+    }));
+
+    res.json(formattedFaults);
+  } catch (error) {
+    logger.error('Error fetching faults:', error);
+    next(new AppError('שגיאה בשליפת תקלות', 500));
   }
 };
 
@@ -144,7 +276,7 @@ exports.createFault = async (req, res, next) => {
       return next(new AppError('אתר לא נמצא', 404));
     }
 
-    const validTypes = ['גדר', 'מצלמות', 'תקשורת', 'אחר'];
+    const validTypes = db.Fault.rawAttributes.type.values;
     if (!validTypes.includes(type)) {
       return next(new AppError('סוג תקלה לא חוקי', 400));
     }
@@ -585,101 +717,5 @@ exports.getFaultById = async (req, res, next) => {
   } catch (error) {
     logger.error('Error fetching fault:', error);
     next(new AppError('שגיאה בשליפת תקלה', 500));
-  }
-};
-
-
-exports.getAllFaults = async (req, res, next) => {
-  try {
-    const { role, id: userId, organizationId } = req.user;
-    const { startDate, endDate, site, isCritical, maintenanceOrg, integratorOrg } = req.query;
-
-    let whereClause = {};
-
-    if (startDate && endDate) {
-      whereClause.reportedTime = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
-      };
-    } else if (startDate) {
-      whereClause.reportedTime = {
-        [Op.gte]: new Date(startDate)
-      };
-    } else if (endDate) {
-      whereClause.reportedTime = {
-        [Op.lte]: new Date(endDate)
-      };
-    }
-
-    if (isCritical !== undefined) {
-      whereClause.isCritical = isCritical === 'true';
-    }
-
-    let siteWhere = {};
-    if (role === 'entrepreneur') {
-      siteWhere.entrepreneurId = userId;
-    }
-    
-    if (site) {
-      siteWhere.id = site;
-    }
-
-    const includes = [
-      {
-        model: db.Site,
-        as: 'site',
-        where: siteWhere,
-        attributes: ['id', 'name'],
-        include: [
-          {
-            model: db.Organization,
-            as: 'serviceOrganizations',
-            attributes: ['id', 'name', 'type'],
-            ...(maintenanceOrg || integratorOrg ? {
-              where: {
-                [Op.or]: [
-                  maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
-                  integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
-                ].filter(Boolean)
-              }
-            } : {})
-          }
-        ]
-      }
-    ];
-
-    if (role === 'integrator' || role === 'maintenance') {
-      includes[0].include[0].where = {
-        id: organizationId,
-        type: role === 'integrator' ? 'integrator' : 'maintenance'
-      };
-    }
-
-    const faults = await db.Fault.findAll({
-      where: whereClause,
-      include: includes,
-      order: [['reportedTime', 'DESC']]
-    });
-
-    const formattedFaults = faults.map(fault => ({
-      id: fault.id,
-      site: {
-        id: fault.site.id,
-        name: fault.site.name,
-        serviceOrganizations: fault.site.serviceOrganizations
-      },
-      type: fault.type,
-      description: fault.description,
-      technician: fault.technician,
-      isCritical: fault.isCritical,
-      reportedTime: fault.reportedTime,
-      closedTime: fault.closedTime,
-      status: fault.status,
-      lastUpdatedTime: fault.lastUpdatedTime
-    }));
-
-    res.json(formattedFaults);
-  } catch (error) {
-    logger.error('Error fetching faults:', error);
-    next(new AppError('שגיאה בשליפת תקלות', 500));
   }
 };

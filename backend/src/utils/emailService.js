@@ -1,53 +1,77 @@
-const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
 const logger = require('./logger');
 const jwt = require('jsonwebtoken');
 const { getActiveSecrets } = require('./secretManager');
 
 const activeSecrets = getActiveSecrets();
 
-// Create OAuth2 client
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.API_URL
-);
-
-oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-});
-
-const sendEmailWithGmail = async ({ to, subject, text }) => {
-  try {
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-    
-    // Create the email content
-    const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
-    const messageParts = [
-      `To: ${to}`,
-      `From: ${process.env.GOOGLE_USER}`,
-      'Content-Type: text/plain; charset=utf-8',
-      'MIME-Version: 1.0',
-      `Subject: ${utf8Subject}`,
-      '',
-      text
-    ];
-    const message = messageParts.join('\n');
-
-    // The body needs to be base64url encoded
-    const encodedMessage = Buffer.from(message)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: encodedMessage
+// Create SMTP transporter based on environment and configuration
+const createTransporter = () => {
+  // Use real email if explicitly configured or in production
+  if (process.env.USE_REAL_EMAIL === 'true' || process.env.NODE_ENV === 'production') {
+    logger.info('Using real email configuration');
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD
+      },
+      tls: {
+        rejectUnauthorized: false 
       }
     });
+  } else {
+    // Development transporter (local SMTP server)
+    logger.info('Using development email server');
+    return nodemailer.createTransport({
+      host: 'localhost',
+      port: 2525,
+      secure: false,
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  }
+};
 
+const transporter = createTransporter();
+
+// Verify connection configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    logger.error('SMTP connection error:', error);
+  } else {
+    logger.info(`SMTP server is ready (${process.env.USE_REAL_EMAIL === 'true' ? 'Real Email' : 'Development'} mode)`);
+    logger.info(`Using SMTP host: ${process.env.SMTP_HOST}`);
+  }
+});
+
+const sendEmail = async ({ to, subject, text }) => {
+  try {
+    const mailOptions = {
+      from: {
+        name: 'מערכת סול-טן',
+        address: process.env.FROM_EMAIL
+      },
+      to: to,
+      subject: subject,
+      text: text
+    };
+
+    await transporter.sendMail(mailOptions);
     logger.info(`Email sent successfully to ${to}`);
+
+    // Log email details in development
+    if (process.env.NODE_ENV === 'development') {
+      logger.info('Email Content:', {
+        to: to,
+        subject: subject,
+        text: text,
+        usingRealEmail: process.env.USE_REAL_EMAIL === 'true'
+      });
+    }
   } catch (error) {
     logger.error('Error sending email:', error);
     throw error;
@@ -68,7 +92,7 @@ ${registrationLink}
 במהלך תהליך ההרשמה תתבקשו לספק מספר פרטים מזהים כגון שם מלא ולייצר סיסמא עבורכם.
 לאחר שתירשמו, תועברו לדף המערכת.
 במידה ותחוו קשיים כלשהם בתהליך ההרשמה או החיבור, אנא צרו קשר איתנו בכתובת:
-${process.env.GOOGLE_USER}
+${process.env.FROM_EMAIL}
 
 נתראה בקרוב,
 צוות לוטן גרופ`
@@ -83,7 +107,7 @@ ${process.env.GOOGLE_USER}
 מעתה תוכלו להיכנס למערכת באמצעות כתובת האימייל והסיסמה שהגדרתם.
 
 במידה ונתקלתם בבעיה כלשהי, אנא צרו קשר עם מנהל המערכת בכתובת:
-${process.env.GOOGLE_USER}
+${process.env.FROM_EMAIL}
 
 בברכה,
 צוות לוטן גרופ`
@@ -110,7 +134,7 @@ ${resetLink}
 מעתה תוכלו להיכנס למערכת עם הסיסמה החדשה.
 
 אם לא אתם ביצעתם את השינוי, אנא צרו קשר מיידית עם מנהל המערכת בכתובת:
-${process.env.GOOGLE_USER}
+${process.env.FROM_EMAIL}
 
 בברכה,
 צוות לוטן גרופ`
@@ -137,11 +161,12 @@ ${fault.type === 'אחר' ? `תיאור: ${fault.description}\n` : ''}
   })
 };
 
-exports.sendEmail = sendEmailWithGmail;
+ //Export functions with the sendEmail implementation
+exports.sendEmail = sendEmail;
 
 exports.sendRegistrationLink = async (userData) => {
   const template = emailTemplates.registrationLink(userData);
-  await sendEmailWithGmail({
+  await sendEmail({
     to: userData.email,
     subject: template.subject,
     text: template.text
@@ -150,7 +175,7 @@ exports.sendRegistrationLink = async (userData) => {
 
 exports.sendRegistrationComplete = async (userData) => {
   const template = emailTemplates.registrationComplete(userData);
-  await sendEmailWithGmail({
+  await sendEmail({
     to: userData.email,
     subject: template.subject,
     text: template.text
@@ -159,7 +184,7 @@ exports.sendRegistrationComplete = async (userData) => {
 
 exports.sendPasswordResetEmail = async (email, resetToken) => {
   const template = emailTemplates.passwordReset(email, resetToken);
-  await sendEmailWithGmail({
+  await sendEmail({
     to: email,
     subject: template.subject,
     text: template.text
@@ -168,7 +193,7 @@ exports.sendPasswordResetEmail = async (email, resetToken) => {
 
 exports.sendPasswordResetConfirmation = async (userData) => {
   const template = emailTemplates.passwordResetConfirmation(userData);
-  await sendEmailWithGmail({
+  await sendEmail({
     to: userData.email,
     subject: template.subject,
     text: template.text
@@ -177,7 +202,7 @@ exports.sendPasswordResetConfirmation = async (userData) => {
 
 exports.sendOpenFaultReminder = async (fault, adminEmail) => {
   const template = emailTemplates.openFaultReminder(fault);
-  await sendEmailWithGmail({
+  await sendEmail({
     to: adminEmail,
     subject: template.subject,
     text: template.text

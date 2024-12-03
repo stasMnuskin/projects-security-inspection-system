@@ -10,9 +10,12 @@ export const dashboardStyles = {
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     marginBottom: { xs: '12px', sm: '20px' },
-    flexDirection: { xs: 'column', sm: 'row-reverse' }, 
+    flexDirection: { xs: 'column', sm: 'row-reverse' },
     justifyContent: 'flex-start',
     width: '100%',
+    '& > *:first-of-type': {
+      order: 1
+    }
   },
   filterIcon: {
     color: colors.text.white,

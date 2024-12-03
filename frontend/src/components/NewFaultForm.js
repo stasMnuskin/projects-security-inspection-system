@@ -17,9 +17,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
 import { dialogStyles } from '../styles/components';
-import { getEntrepreneurs, getSites } from '../services/api';
-
-const FAULT_TYPES = ['גדר', 'מצלמות', 'תקשורת', 'אחר'];
+import { getEntrepreneurs, getSites, getFaultTypes } from '../services/api';
 
 const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -28,6 +26,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   const [filteredSites, setFilteredSites] = useState([]);
   const [selectedEntrepreneur, setSelectedEntrepreneur] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [faultTypes, setFaultTypes] = useState([]);
   const [faultData, setFaultData] = useState({
     type: '',
     description: '',
@@ -39,9 +38,10 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [entrepreneursData, sitesData] = await Promise.all([
+        const [entrepreneursData, sitesData, faultTypesData] = await Promise.all([
           getEntrepreneurs(),
-          getSites()
+          getSites(),
+          getFaultTypes()
         ]);
 
         const sitesWithEntrepreneurs = sitesData.map(site => {
@@ -55,6 +55,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
         setEntrepreneurs(entrepreneursData);
         setAllSites(sitesWithEntrepreneurs);
         setFilteredSites(sitesWithEntrepreneurs);
+        setFaultTypes(faultTypesData);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -222,7 +223,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
             }
           }}
         >
-          {FAULT_TYPES.map(type => (
+          {faultTypes.map(type => (
             <MenuItem key={type} value={type}>{type}</MenuItem>
           ))}
         </Select>

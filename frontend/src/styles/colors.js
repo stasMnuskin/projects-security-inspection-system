@@ -20,5 +20,9 @@ export const colors = {
     grey: 'rgba(166, 166, 166, 0.3)',
     orange: 'rgb(241, 89, 35)',
     orangeLight: 'rgba(241, 89, 35, 0.3)'
+  },
+  status: {
+    error: '#FF4444',
+    success: '#4CAF50'
   }
 };

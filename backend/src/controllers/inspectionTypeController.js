@@ -4,13 +4,25 @@ const logger = require('../utils/logger');
 
 exports.getEnabledFields = async (req, res, next) => {
   try {
-    const { siteId } = req.params;
     const { type } = req.query;
+    const { siteId } = req.params;
 
     if (!type || !['inspection', 'drill'].includes(type)) {
       return next(new AppError('Type must be either inspection or drill', 400));
     }
 
+    // If no siteId, get all enabled fields without filtering by site type
+    if (!siteId) {
+      const fields = await db.InspectionType.getTableFields(null);
+      return res.json({
+        status: 'success',
+        data: {
+          fields
+        }
+      });
+    }
+
+    // Site-specific logic
     const site = await db.Site.findByPk(siteId);
     if (!site) {
       return next(new AppError('Site not found', 404));
@@ -18,10 +30,8 @@ exports.getEnabledFields = async (req, res, next) => {
 
     let fields;
     if (type === 'drill') {
-      // For drills, get fields from drill type
       fields = await db.InspectionType.getDrillTypeFields();
     } else {
-      // For inspections, get fields based on site type
       fields = await db.InspectionType.getTableFields(site.type);
     }
 
@@ -36,6 +46,7 @@ exports.getEnabledFields = async (req, res, next) => {
     next(new AppError('Error fetching enabled fields', 500));
   }
 };
+
 exports.createInspectionType = async (req, res, next) => {
   try {
     const { name, type, formStructure } = req.body;
@@ -199,7 +210,7 @@ exports.addCustomField = async (req, res, next) => {
     const allTypes = await db.InspectionType.findAll({
       where: { type: inspectionType.type }
     });
-
+    
     for (const type of allTypes) {
       let typeFields = Array.isArray(type.formStructure) ? type.formStructure : [];
       
@@ -207,7 +218,8 @@ exports.addCustomField = async (req, res, next) => {
       if (!typeFields.some(f => f.id === field.id)) {
         typeFields.push({
           ...field,
-          enabled: type.id === parseInt(id) // Enable only for current type, disable for others
+          enabled: type.id === parseInt(id), 
+          showInForm: field.showInForm !== false
         });
         type.formStructure = typeFields;
         await type.save();

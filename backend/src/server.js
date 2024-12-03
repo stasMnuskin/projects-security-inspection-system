@@ -2,7 +2,6 @@ require('dotenv').config();
 require('./jobs/emailProcessor');
 require('./jobs/faultReminderJob'); 
 const express = require('express');
-const { google } = require('googleapis');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -14,6 +13,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const swaggerConfig = require('./config/swaggerConfig');
 const { startRotation } = require('./utils/secretManager');
+const { startDevMailServer } = require('./utils/devMailServer');
 
 // Route imports
 const analyticsRoutes = require('./routes/analyticsRoutes');
@@ -43,6 +43,11 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 if (process.env.NODE_ENV !== 'test') {
   startRotation();
+}
+
+// Start development mail server if in development mode
+if (process.env.NODE_ENV === 'development') {
+  startDevMailServer(app);
 }
 
 // Middlewares
@@ -77,40 +82,6 @@ i18n.configure({
 });
 app.use(i18n.init);
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.API_URL  
-);
-
-app.get('/auth/google', (req, res) => {
-  const url = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    prompt: 'consent',
-    scope: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.modify']
-  });
-  res.redirect(url);
-});
-
-app.get('/', async (req, res) => {
-  const { code } = req.query;
-  if (code) {
-    try {
-      const { tokens } = await oauth2Client.getToken(code);
-      oauth2Client.setCredentials(tokens);
-      
-      console.log('Refresh Token:', tokens.refresh_token);
-      res.send('Authentication successful! Check your console for the refresh token.');
-      
-    } catch (error) {
-      console.error('Error getting tokens:', error);
-      res.status(500).send('Authentication failed');
-    }
-  } else {
-    res.send('No authentication code provided');
-  }
-});
-
 // Routes
 // Authentication & User Management
 app.use('/api/auth/register', registrationRoutes);
@@ -124,7 +95,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/faults', faultRoutes);
 app.use('/api/inspection-types', inspectionTypeRoutes);
 app.use('/api/sites', siteRoutes);
-app.use('/api/organizations', organizationRoutes); // Add organization routes
+app.use('/api/organizations', organizationRoutes);
 
 // Language
 app.use((req, res, next) => {
@@ -212,6 +183,9 @@ async function startServer() {
 
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
+      if (process.env.NODE_ENV === 'development') {
+        logger.info('Development mail interface available at:');
+      }
     });
   } catch (error) {
     logger.error('Unable to start server:', { error: error.message, stack: error.stack });

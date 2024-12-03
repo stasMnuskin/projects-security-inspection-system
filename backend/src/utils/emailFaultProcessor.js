@@ -1,99 +1,40 @@
-const { google } = require('googleapis');
-const nodemailer = require('nodemailer');
-const simpleParser = require('mailparser').simpleParser;
-const db = require('../models');
 const logger = require('./logger');
-
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.API_URL
-);
-
-oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-});
-
-const getGmailTransporter = async () => {
-  const accessToken = await oauth2Client.getAccessToken();
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      type: 'OAuth2',
-      user: process.env.GOOGLE_USER,
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-      accessToken: accessToken.token
-    }
-  });
-};
+const db = require('../models');
 
 const processEmails = async () => {
   try {
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    if (process.env.NODE_ENV === 'development' && global.receivedEmails) {
+      const unprocessedEmails = global.receivedEmails.filter(email => !email.processed);
+      
+      for (const email of unprocessedEmails) {
+        try {
+          logger.info(`Processing email: ${email.subject}`);
 
-    const res = await gmail.users.messages.list({
-      userId: 'me',
-      q: 'is:unread'
-    });
+          const emailData = {
+            subject: email.subject || '',
+            text: email.text || '',
+            sender: email.from || ''
+          };
 
-    const messages = res.data.messages || [];
+          const parsedData = parseFaultFromEmail(emailData);
 
-    for (const message of messages) {
-      try {
-        const email = await gmail.users.messages.get({
-          userId: 'me',
-          id: message.id,
-          format: 'full'
-        });
-
-        logger.info(`מעבד אימייל: ${message.id}`);
-
-        const headers = email.data.payload.headers;
-        const subject = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
-        const sender = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
-        
-        let body = '';
-        if (email.data.payload.body.data) {
-          body = Buffer.from(email.data.payload.body.data, 'base64').toString('utf-8');
-        } else if (email.data.payload.parts) {
-          const textPart = email.data.payload.parts.find(part => part.mimeType === 'text/plain');
-          if (textPart && textPart.body.data) {
-            body = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+          if (parsedData.isClosureEmail) {
+            await closeFault(parsedData);
+            logger.info('Fault closed successfully');
+          } else {
+            await createFault(parsedData);
+            logger.info('Fault created successfully');
           }
-        }
 
-        if (!body) {
-          logger.warn(`אימייל ${message.id} אין גוף קריא`);
-          continue;
-        }
+          email.processed = true;
 
-        logger.info(`נושא האימייל: ${subject}`);
-        logger.info(`גוף האימייל (100 תווים ראשונים): ${body.substring(0, 100)}...`);
-
-        const emailData = parseFaultFromEmail({ subject, text: body, sender });
-        if (emailData.isClosureEmail) {
-          await closeFault(emailData);
-          logger.info(`נסגרה תקלה מאימייל: ${message.id}`);
-        } else {
-          await createFault(emailData);
-          logger.info(`נוצרה תקלה מאימייל: ${message.id}`);
+        } catch (error) {
+          logger.error(`Error processing email:`, error);
         }
-        
-        await gmail.users.messages.modify({
-          userId: 'me',
-          id: message.id,
-          requestBody: {
-            removeLabelIds: ['UNREAD']
-          }
-        });
-      } catch (error) {
-        logger.error(`שגיאה בעיבוד אימייל ${message.id}:`, error);
       }
     }
   } catch (error) {
-    logger.error('שגיאה בעיבוד אימיילים:', error);
+    logger.error('Error in processEmails:', error);
   }
 };
 
@@ -230,4 +171,4 @@ const closeFault = async (faultData) => {
   return fault;
 };
 
-module.exports = { processEmails, createFault, parseFaultFromEmail, getGmailTransporter, closeFault };
+module.exports = { processEmails, createFault, parseFaultFromEmail, closeFault };
