@@ -15,6 +15,13 @@ const swaggerConfig = require('./config/swaggerConfig');
 const { startRotation } = require('./utils/secretManager');
 const { startDevMailServer } = require('./utils/devMailServer');
 
+logger.info('Environment variables:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  USE_REAL_EMAIL: process.env.USE_REAL_EMAIL,
+  SMTP_HOST: process.env.SMTP_HOST
+});
+
 // Route imports
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
