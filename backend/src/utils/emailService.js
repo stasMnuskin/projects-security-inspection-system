@@ -5,31 +5,17 @@ const { getActiveSecrets } = require('./secretManager');
 
 const activeSecrets = getActiveSecrets();
 
-// Create SMTP transporter based on environment and configuration
+// Create SMTP transporter
 const createTransporter = () => {
-  // Use real email in production
-  if (process.env.NODE_ENV === 'production') {
-    logger.info('Using production email configuration');
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-  }
-  
-  // Development transporter (local SMTP server)
-  logger.info('Using development email server');
+  logger.info('Creating email transporter');
   return nodemailer.createTransport({
-    host: 'localhost',
-    port: 2525,
-    secure: false,
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD
+    },
     tls: {
       rejectUnauthorized: false
     }
@@ -52,16 +38,7 @@ const sendEmail = async ({ to, subject, text }) => {
 
     await transporter.sendMail(mailOptions);
     logger.info(`Email sent successfully to ${to}`);
-
-    // Log email details in development
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('Email Content:', {
-        to: to,
-        subject: subject,
-        text: text,
-        usingRealEmail: process.env.USE_REAL_EMAIL === 'true'
-      });
-    }
+    logger.debug('Email Content:', { to, subject, text });
   } catch (error) {
     logger.error('Error sending email:', error);
     throw error;
@@ -151,7 +128,6 @@ ${fault.type === 'אחר' ? `תיאור: ${fault.description}\n` : ''}
   })
 };
 
-//Export functions with the sendEmail implementation
 exports.sendEmail = sendEmail;
 
 exports.sendRegistrationLink = async (userData) => {

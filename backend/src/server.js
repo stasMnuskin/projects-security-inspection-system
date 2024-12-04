@@ -1,21 +1,18 @@
 const path = require('path');
-const envPath = path.resolve(__dirname, '../.env');
-require('dotenv').config({ path: envPath });
-
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const logger = require('./utils/logger');
 
 // Add debug logs
-logger.info('Environment variables:', {
-  NODE_ENV: process.env.NODE_ENV,
+logger.info('Starting server with configuration:', {
   PORT: process.env.PORT,
-  DB_USER: process.env.DB_USER,
-  DB_NAME: process.env.DB_NAME,
   DB_HOST: process.env.DB_HOST,
-  DB_PORT: process.env.DB_PORT
+  DB_USER: process.env.DB_USER,
+  DB_NAME: process.env.DB_NAME
 });
 
+require('./jobs/emailProcessor');
+require('./jobs/faultReminderJob'); 
 const express = require('express');
-const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const http = require('http');
@@ -25,7 +22,6 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const swaggerConfig = require('./config/swaggerConfig');
 const { startRotation } = require('./utils/secretManager');
-const { startDevMailServer } = require('./utils/devMailServer');
 
 // Route imports
 const analyticsRoutes = require('./routes/analyticsRoutes');
@@ -52,9 +48,7 @@ const io = socketIo(server);
 const swaggerDocs = swaggerJsDoc(swaggerConfig);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-if (process.env.NODE_ENV !== 'test') {
-  startRotation();
-}
+startRotation();
 
 // Middlewares
 app.use(cors({
@@ -66,18 +60,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(loggerMiddleware);
 app.use(cookieParser());
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  logger.debug('Incoming request:', {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    body: req.body
+  });
+  next();
+});
+
 // WebSocket setup
 notificationController.setIo(io);
-
-// CSRF protection
-if (process.env.NODE_ENV === 'production') {
-  app.use(csrf({ cookie: true }));
-} else {
-  app.use((req, res, next) => {
-    req.csrfToken = () => '';
-    next();
-  });
-}
 
 // Int. setup
 i18n.configure({
@@ -113,15 +108,6 @@ app.use((req, res, next) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN') {
-    logger.error('CSRF error:', err);
-    return res.status(403).json({
-      status: 'error',
-      message: 'Session has expired or form tampered with',
-      errorCode: 'CSRF_ERROR'
-    });
-  }
-
   if (!(err instanceof AppError)) {
     logger.error('Unhandled error:', err);
     err = new AppError('An unexpected error occurred', 500, 'INTERNAL_SERVER_ERROR')
@@ -137,14 +123,14 @@ app.use((err, req, res, next) => {
     status: err.status || 'error',
     message: err.message,
     errorCode: err.errorCode,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    stack: err.stack
   };
 
   logger.error(`Error ${statusCode}: ${err.message}`, {
     errorCode: err.errorCode,
     path: err.path,
     method: err.method,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    stack: err.stack
   });
 
   res.status(statusCode).json(errorResponse);
@@ -185,25 +171,13 @@ async function startServer() {
     await db.sequelize.authenticate();
     logger.info('Database connection has been established successfully.');
 
-    // Then sync database (without alter in production)
-    if (process.env.NODE_ENV === 'production') {
-      await db.sequelize.sync();
-    } else {
-      await db.sequelize.sync({ alter: true });
-    }
+    // Then sync database
+    await db.sequelize.sync();
     logger.info('Database synced successfully.');
-
-    // Start mail server in development
-    if (process.env.NODE_ENV === 'development') {
-      startDevMailServer(app);
-    }
 
     // Finally start the server
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
-      if (process.env.NODE_ENV === 'development') {
-        logger.info('Development mail interface available at:');
-      }
     });
   } catch (error) {
     logger.error('Unable to start server:', { error: error.message, stack: error.stack });
@@ -219,8 +193,6 @@ process.on('SIGTERM', async () => {
   await db.sequelize.close();
 });
 
-if (process.env.NODE_ENV !== 'test') {
-  startServer();
-}
+startServer();
 
 module.exports = { app, startServer };
