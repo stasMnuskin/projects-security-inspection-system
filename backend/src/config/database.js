@@ -1,5 +1,8 @@
-require('dotenv').config();
+const path = require('path');
 const logger = require('../utils/logger');
+
+// Load environment variables from the correct path
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 // Validate database configuration
 const validateConfig = () => {
