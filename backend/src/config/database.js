@@ -1,41 +1,33 @@
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const logger = require('../utils/logger');
 
-// Log exact values for debugging
-logger.info('Database Configuration:', {
-  NODE_ENV: process.env.NODE_ENV,
-  DB_USER: process.env.DB_USER,
-  DB_NAME: process.env.DB_NAME,
-  DB_HOST: process.env.DB_HOST,
-  DB_PORT: process.env.DB_PORT,
-  DB_PASS_TYPE: typeof process.env.DB_PASS,
-  DB_PASS_LENGTH: process.env.DB_PASS ? process.env.DB_PASS.length : 0,
-  DB_PASS_VALUE: process.env.DB_PASS // Only for debugging, remove in production
-});
-
-const baseConfig = {
-  username: process.env.DB_USER,
-  password: String(process.env.DB_PASS), 
-  database: process.env.DB_NAME,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
+// For debugging purposes only
+const config = {
+  username: 'securityapp',
+  password: 'postgres123',
+  database: 'security_inspection_db',
+  host: 'localhost',
+  port: 5432,
   dialect: 'postgres'
 };
 
+logger.info('Using test configuration:', {
+  ...config,
+  password: '***'
+});
+
 module.exports = {
   development: {
-    ...baseConfig,
+    ...config,
     logging: msg => logger.debug('Sequelize:', msg)
   },
   test: {
-    ...baseConfig,
+    ...config,
     dialect: 'sqlite',
     storage: ':memory:',
     logging: false
   },
   production: {
-    ...baseConfig,
+    ...config,
     pool: {
       max: 5,
       min: 0,
