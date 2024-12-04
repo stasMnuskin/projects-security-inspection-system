@@ -36,20 +36,14 @@ const createTransporter = () => {
   }
 };
 
-const transporter = createTransporter();
-
-// Verify connection configuration
-transporter.verify(function(error, success) {
-  if (error) {
-    logger.error('SMTP connection error:', error);
-  } else {
-    logger.info(`SMTP server is ready (${process.env.USE_REAL_EMAIL === 'true' ? 'Real Email' : 'Development'} mode)`);
-    logger.info(`Using SMTP host: ${process.env.SMTP_HOST}`);
-  }
-});
-
 const sendEmail = async ({ to, subject, text }) => {
   try {
+    // Create a new transporter for each email
+    const transporter = createTransporter();
+    
+    // Verify connection
+    await transporter.verify();
+    
     const mailOptions = {
       from: {
         name: 'מערכת סול-טן',
@@ -161,7 +155,7 @@ ${fault.type === 'אחר' ? `תיאור: ${fault.description}\n` : ''}
   })
 };
 
- //Export functions with the sendEmail implementation
+//Export functions with the sendEmail implementation
 exports.sendEmail = sendEmail;
 
 exports.sendRegistrationLink = async (userData) => {
