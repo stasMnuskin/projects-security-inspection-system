@@ -19,7 +19,8 @@ module.exports = {
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
     dialectOptions: {
-      ssl: false
+      ssl: false,
+      clientMinMessages: 'warning'
     },
     logging: msg => logger.debug('Sequelize:', msg)
   },
@@ -40,7 +41,8 @@ module.exports = {
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
     dialectOptions: {
-      ssl: false
+      ssl: false,
+      clientMinMessages: 'warning'
     },
     pool: {
       max: 5,
