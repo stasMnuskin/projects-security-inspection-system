@@ -10,40 +10,33 @@ logger.info('Database Configuration:', {
   DB_PORT: process.env.DB_PORT
 });
 
+const baseConfig = {
+  username: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 5432,
+  dialect: 'postgres',
+  dialectOptions: {
+    application_name: 'security-inspection',
+    supportBigNumbers: true,
+    bigNumberStrings: true
+  }
+};
+
 module.exports = {
   development: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: false,
-      clientMinMessages: 'warning'
-    },
+    ...baseConfig,
     logging: msg => logger.debug('Sequelize:', msg)
   },
   test: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
+    ...baseConfig,
     dialect: 'sqlite',
     storage: ':memory:',
     logging: false
   },
   production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: false,
-      clientMinMessages: 'warning'
-    },
+    ...baseConfig,
     pool: {
       max: 5,
       min: 0,
