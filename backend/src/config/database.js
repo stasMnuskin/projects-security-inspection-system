@@ -1,4 +1,13 @@
 require('dotenv').config();
+const logger = require('../utils/logger');
+
+// Log database configuration
+logger.info('Database Configuration:', {
+  NODE_ENV: process.env.NODE_ENV,
+  DB_USER: process.env.DB_USER,
+  DB_NAME: process.env.DB_NAME,
+  DB_HOST: process.env.DB_HOST
+});
 
 module.exports = {
   jwtSecretLifetime: 24 * 60 * 60 * 1000, 
