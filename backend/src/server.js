@@ -1,12 +1,17 @@
-require('dotenv').config();
+const path = require('path');
+const envPath = path.resolve(__dirname, '../.env');
+require('dotenv').config({ path: envPath });
+
 const logger = require('./utils/logger');
 
 // Add debug logs
 logger.info('Environment variables:', {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
-  USE_REAL_EMAIL: process.env.USE_REAL_EMAIL,
-  SMTP_HOST: process.env.SMTP_HOST
+  DB_USER: process.env.DB_USER,
+  DB_NAME: process.env.DB_NAME,
+  DB_HOST: process.env.DB_HOST,
+  DB_PORT: process.env.DB_PORT
 });
 
 const express = require('express');
@@ -16,7 +21,6 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const i18n = require('i18n');
-const path = require('path');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const swaggerConfig = require('./config/swaggerConfig');
@@ -188,10 +192,6 @@ async function startServer() {
       await db.sequelize.sync({ alter: true });
     }
     logger.info('Database synced successfully.');
-
-    // Only after database is ready, load email processors
-    require('./jobs/emailProcessor');
-    require('./jobs/faultReminderJob');
 
     // Start mail server in development
     if (process.env.NODE_ENV === 'development') {
