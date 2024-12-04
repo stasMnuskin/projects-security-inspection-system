@@ -9,8 +9,6 @@ logger.info('Environment variables:', {
   SMTP_HOST: process.env.SMTP_HOST
 });
 
-require('./jobs/emailProcessor');
-require('./jobs/faultReminderJob'); 
 const express = require('express');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
@@ -52,11 +50,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 if (process.env.NODE_ENV !== 'test') {
   startRotation();
-}
-
-// Start development mail server if in development mode
-if (process.env.NODE_ENV === 'development') {
-  startDevMailServer(app);
 }
 
 // Middlewares
@@ -184,12 +177,28 @@ process.on('SIGTERM', () => {
 
 async function startServer() {
   try {
+    // First connect to database
     await db.sequelize.authenticate();
     logger.info('Database connection has been established successfully.');
 
-    await db.sequelize.sync({ alter: true });
+    // Then sync database (without alter in production)
+    if (process.env.NODE_ENV === 'production') {
+      await db.sequelize.sync();
+    } else {
+      await db.sequelize.sync({ alter: true });
+    }
     logger.info('Database synced successfully.');
 
+    // Only after database is ready, load email processors
+    require('./jobs/emailProcessor');
+    require('./jobs/faultReminderJob');
+
+    // Start mail server in development
+    if (process.env.NODE_ENV === 'development') {
+      startDevMailServer(app);
+    }
+
+    // Finally start the server
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
       if (process.env.NODE_ENV === 'development') {

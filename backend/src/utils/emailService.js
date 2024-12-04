@@ -4,14 +4,38 @@ const jwt = require('jsonwebtoken');
 const { getActiveSecrets } = require('./secretManager');
 
 const activeSecrets = getActiveSecrets();
+let cachedTransporter = null;
+
+// Validate SMTP configuration
+const validateSMTPConfig = () => {
+  const requiredFields = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
+  const missingFields = requiredFields.filter(field => !process.env[field]);
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Missing SMTP configuration: ${missingFields.join(', ')}`);
+  }
+};
 
 // Create SMTP transporter based on environment and configuration
-const createTransporter = () => {
+const createTransporter = async () => {
+  // Return cached transporter if available
+  if (cachedTransporter) {
+    try {
+      await cachedTransporter.verify();
+      return cachedTransporter;
+    } catch (error) {
+      logger.warn('Cached transporter verification failed, creating new one');
+      cachedTransporter = null;
+    }
+  }
+
   if (process.env.USE_REAL_EMAIL === 'true' || process.env.NODE_ENV === 'production') {
-    logger.info('Using real email configuration');
-    return nodemailer.createTransport({
+    validateSMTPConfig();
+    logger.info('Creating real email transporter');
+    
+    const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
+      port: parseInt(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
         user: process.env.SMTP_USER,
@@ -21,6 +45,17 @@ const createTransporter = () => {
         rejectUnauthorized: false 
       }
     });
+
+    // Verify connection
+    try {
+      await transporter.verify();
+      logger.info('SMTP connection verified successfully');
+      cachedTransporter = transporter;
+      return transporter;
+    } catch (error) {
+      logger.error('SMTP connection verification failed:', error);
+      throw error;
+    }
   } else {
     // Development transporter (local SMTP server)
     logger.info('Using development email server');
@@ -35,40 +70,53 @@ const createTransporter = () => {
   }
 };
 
-const sendEmail = async ({ to, subject, text }) => {
-  try {
-    // Create a new transporter for each email
-    const transporter = createTransporter();
-    
-    // Verify connection
-    await transporter.verify();
-    
-    const mailOptions = {
-      from: {
-        name: 'מערכת סול-טן',
-        address: process.env.FROM_EMAIL
-      },
-      to: to,
-      subject: subject,
-      text: text
-    };
-
-    await transporter.sendMail(mailOptions);
-    logger.info(`Email sent successfully to ${to}`);
-
-    // Log email details in development
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('Email Content:', {
+const sendEmail = async ({ to, subject, text }, retries = 3) => {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const transporter = await createTransporter();
+      
+      const mailOptions = {
+        from: {
+          name: 'מערכת סול-טן',
+          address: process.env.FROM_EMAIL
+        },
         to: to,
         subject: subject,
-        text: text,
-        usingRealEmail: process.env.USE_REAL_EMAIL === 'true'
-      });
+        text: text
+      };
+
+      await transporter.sendMail(mailOptions);
+      logger.info(`Email sent successfully to ${to}`);
+
+      // Log email details in development
+      if (process.env.NODE_ENV === 'development') {
+        logger.info('Email Content:', {
+          to: to,
+          subject: subject,
+          text: text,
+          usingRealEmail: process.env.USE_REAL_EMAIL === 'true'
+        });
+      }
+
+      return;
+    } catch (error) {
+      lastError = error;
+      logger.error(`Error sending email (attempt ${attempt}/${retries}):`, error);
+      
+      // Clear cached transporter on error
+      cachedTransporter = null;
+      
+      // Wait before retrying (exponential backoff)
+      if (attempt < retries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-  } catch (error) {
-    logger.error('Error sending email:', error);
-    throw error;
   }
+
+  throw lastError;
 };
 
 const emailTemplates = {

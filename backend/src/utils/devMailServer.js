@@ -4,17 +4,22 @@ const logger = require('./logger');
 const express = require('express');
 const path = require('path');
 
-
-global.receivedEmails = [];
-
+// Only initialize in development
+if (process.env.NODE_ENV === 'development') {
+    global.receivedEmails = [];
+}
 
 const smtpServer = new SMTPServer({
     secure: false,
     authOptional: true,
     disabledCommands: ['STARTTLS'],
     
-    
     onData(stream, session, callback) {
+        if (process.env.NODE_ENV !== 'development') {
+            callback();
+            return;
+        }
+
         simpleParser(stream)
             .then(parsed => {
                 const emailData = {
@@ -27,9 +32,7 @@ const smtpServer = new SMTPServer({
                     processed: false
                 };
 
-                
                 global.receivedEmails.unshift(emailData);
-                
                 
                 if (global.receivedEmails.length > 100) {
                     global.receivedEmails = global.receivedEmails.slice(0, 100);
@@ -53,7 +56,6 @@ const smtpServer = new SMTPServer({
         callback(null, { user: auth.username });
     }
 });
-
 
 const setupDevMailInterface = (app) => {
     if (process.env.NODE_ENV !== 'development') return;
@@ -148,17 +150,14 @@ const setupDevMailInterface = (app) => {
     });
 };
 
-
 const startDevMailServer = (app) => {
-    const port = process.env.NODE_ENV === 'development' ? 2525 : null;
-    
-    if (port) {
+    // Only start in development
+    if (process.env.NODE_ENV === 'development') {
+        const port = 2525;
         smtpServer.listen(port, () => {
             logger.info(`Development SMTP Server running on port ${port}`);
             logger.info('View emails at: http://localhost:5000/dev/emails');
         });
-
-        
         setupDevMailInterface(app);
     }
 };
