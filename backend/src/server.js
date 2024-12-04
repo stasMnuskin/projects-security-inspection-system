@@ -1,4 +1,14 @@
 require('dotenv').config();
+const logger = require('./utils/logger');
+
+// Add debug logs
+logger.info('Environment variables:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  USE_REAL_EMAIL: process.env.USE_REAL_EMAIL,
+  SMTP_HOST: process.env.SMTP_HOST
+});
+
 require('./jobs/emailProcessor');
 require('./jobs/faultReminderJob'); 
 const express = require('express');
@@ -15,13 +25,6 @@ const swaggerConfig = require('./config/swaggerConfig');
 const { startRotation } = require('./utils/secretManager');
 const { startDevMailServer } = require('./utils/devMailServer');
 
-logger.info('Environment variables:', {
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT,
-  USE_REAL_EMAIL: process.env.USE_REAL_EMAIL,
-  SMTP_HOST: process.env.SMTP_HOST
-});
-
 // Route imports
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const inspectionRoutes = require('./routes/inspectionRoutes');
@@ -37,7 +40,6 @@ const organizationRoutes = require('./routes/organizationRoutes');
 const db = require('./models');
 const cache = require('./utils/cache');
 const AppError = require('./utils/appError');
-const logger = require('./utils/logger');
 const loggerMiddleware = require('./middleware/loggerMiddleware');
 const notificationController = require('./controllers/notificationController');
 
