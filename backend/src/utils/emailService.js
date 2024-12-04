@@ -7,7 +7,6 @@ const activeSecrets = getActiveSecrets();
 
 // Create SMTP transporter based on environment and configuration
 const createTransporter = () => {
-  // Use real email if explicitly configured or in production
   if (process.env.USE_REAL_EMAIL === 'true' || process.env.NODE_ENV === 'production') {
     logger.info('Using real email configuration');
     return nodemailer.createTransport({
