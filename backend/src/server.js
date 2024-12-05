@@ -83,6 +83,20 @@ i18n.configure({
 });
 app.use(i18n.init);
 
+// Basic API route and health check
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', message: 'API is running' });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date(),
+    uptime: process.uptime(),
+    database: db.sequelize.authenticate().then(() => true).catch(() => false)
+  });
+});
+
 // Routes
 // Authentication & User Management
 app.use('/api/auth/register', registrationRoutes);
