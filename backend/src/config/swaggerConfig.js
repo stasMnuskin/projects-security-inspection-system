@@ -11,7 +11,7 @@ module.exports = {
     servers: [
       {
         url: process.env.API_URL,
-        description: 'Development server',
+        description: 'API Server',
       },
     ],
   },

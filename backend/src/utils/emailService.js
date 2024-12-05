@@ -27,10 +27,11 @@ const sendEmail = async ({ to, subject, text }) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: {
-        name: 'מערכת סול-טן',
-        address: process.env.FROM_EMAIL
+      envelope: {
+        from: process.env.FROM_EMAIL,
+        to: to
       },
+      from: `מערכת סול-טן <${process.env.FROM_EMAIL}>`,
       to: to,
       subject: subject,
       text: text

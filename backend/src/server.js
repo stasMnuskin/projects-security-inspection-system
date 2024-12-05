@@ -156,22 +156,13 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received. Shutting down gracefully');
-  server.close(() => {
-    logger.info('Process terminated');
-  });
-  db.sequelize.close();
-  cache.quit();
-});
-
 async function startServer() {
   try {
     // First connect to database
     await db.sequelize.authenticate();
     logger.info('Database connection has been established successfully.');
 
-    // Then sync database
+    // Then sync database (force: false to prevent dropping tables)
     await db.sequelize.sync();
     logger.info('Database synced successfully.');
 
@@ -179,18 +170,23 @@ async function startServer() {
     server.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
+
+    // Setup WebSocket
+    setupWebSocket();
   } catch (error) {
     logger.error('Unable to start server:', { error: error.message, stack: error.stack });
     process.exit(1);
   }
 }
 
+// Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Shutting down gracefully');
   server.close(() => {
     logger.info('Process terminated');
   });
   await db.sequelize.close();
+  cache.quit();
 });
 
 startServer();

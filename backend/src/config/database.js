@@ -28,9 +28,5 @@ const config = {
   logging: msg => logger.debug('Sequelize:', msg)
 };
 
-// Export same config for all environments
-module.exports = {
-  development: config,
-  test: config,
-  production: config
-};
+// Export single config for all environments
+module.exports = config;

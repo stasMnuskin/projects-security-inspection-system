@@ -6,16 +6,14 @@ const Sequelize = require('sequelize');
 const process = require('process');
 const logger = require('../utils/logger');
 const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
 
 // Load database config
 const configPath = path.join(__dirname, '/../config/database.js');
 logger.info('Loading database config from:', configPath);
-const config = require(configPath)[env];
+const config = require(configPath);
 
 // Log loaded configuration
 logger.info('Loaded database configuration:', {
-  env,
   config: {
     ...config,
     password: '***'
