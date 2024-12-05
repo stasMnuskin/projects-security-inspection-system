@@ -1,7 +1,6 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const logger = require('./utils/logger');
-const csrf = require('csurf');
 
 // Add debug logs
 logger.info('Starting server with configuration:', {
@@ -87,11 +86,10 @@ i18n.configure({
 });
 app.use(i18n.init);
 
-
-
-// Routes that don't need CSRF
+// API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+// Health check endpoints
 app.get('/api', (req, res) => {
   res.json({ 
     status: 'ok',
@@ -108,34 +106,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Login route without CSRF
+// Routes
 app.post('/api/users/login', userController.loginUser);
-
-// CSRF protection setup
-const csrfProtection = csrf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.API_URL.startsWith('https'),
-    sameSite: 'strict'
-  }
-});
-
-// CSRF Token endpoint
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
-
-// Protected routes with CSRF
-app.use('/api/auth/register', csrfProtection, registrationRoutes);
-app.use('/api/users', csrfProtection, userRoutes); // All user routes except login
-app.use('/api/analytics', csrfProtection, analyticsRoutes);
-app.use('/api/inspections', csrfProtection, inspectionRoutes);
-app.use('/api/notifications', csrfProtection, notificationRoutes);
-app.use('/api/reports', csrfProtection, reportRoutes);
-app.use('/api/faults', csrfProtection, faultRoutes);
-app.use('/api/inspection-types', csrfProtection, inspectionTypeRoutes);
-app.use('/api/sites', csrfProtection, siteRoutes);
-app.use('/api/organizations', csrfProtection, organizationRoutes);
+app.use('/api/auth/register', registrationRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/inspections', inspectionRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/faults', faultRoutes);
+app.use('/api/inspection-types', inspectionTypeRoutes);
+app.use('/api/sites', siteRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 // Language
 app.use((req, res, next) => {
@@ -147,19 +129,6 @@ app.use((req, res, next) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN') {
-    logger.warn('CSRF token validation failed:', {
-      path: req.path,
-      method: req.method,
-      token: req.headers['x-csrf-token'] || req.body._csrf
-    });
-    return res.status(403).json({
-      status: 'error',
-      message: 'Invalid CSRF token',
-      errorCode: 'INVALID_CSRF_TOKEN'
-    });
-  }
-
   if (!(err instanceof AppError)) {
     logger.error('Unhandled error:', err);
     err = new AppError('An unexpected error occurred', 500, 'INTERNAL_SERVER_ERROR')
