@@ -1,6 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const logger = require('./utils/logger');
+const csrf = require('csurf');
 
 // Add debug logs
 logger.info('Starting server with configuration:', {
@@ -46,8 +47,8 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 const swaggerDocs = swaggerJsDoc(swaggerConfig);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+// Start secret rotation
 startRotation();
 
 // Middlewares
@@ -57,8 +58,28 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(loggerMiddleware);
 app.use(cookieParser());
+app.use(loggerMiddleware);
+
+// CSRF protection setup
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.API_URL.startsWith('https'),
+    sameSite: 'strict'
+  }
+});
+
+// Routes that don't need CSRF
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// CSRF Token endpoint
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // Add request logging middleware
 app.use((req, res, next) => {
@@ -83,34 +104,17 @@ i18n.configure({
 });
 app.use(i18n.init);
 
-// Basic API route and health check
-app.get('/api', (req, res) => {
-  res.json({ status: 'ok', message: 'API is running' });
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date(),
-    uptime: process.uptime(),
-    database: db.sequelize.authenticate().then(() => true).catch(() => false)
-  });
-});
-
-// Routes
-// Authentication & User Management
-app.use('/api/auth/register', registrationRoutes);
-app.use('/api/users', userRoutes);
-
-// Core Features
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/inspections', inspectionRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/faults', faultRoutes);
-app.use('/api/inspection-types', inspectionTypeRoutes);
-app.use('/api/sites', siteRoutes);
-app.use('/api/organizations', organizationRoutes);
+// Protected routes with CSRF
+app.use('/api/auth/register', csrfProtection, registrationRoutes);
+app.use('/api/users', csrfProtection, userRoutes);
+app.use('/api/analytics', csrfProtection, analyticsRoutes);
+app.use('/api/inspections', csrfProtection, inspectionRoutes);
+app.use('/api/notifications', csrfProtection, notificationRoutes);
+app.use('/api/reports', csrfProtection, reportRoutes);
+app.use('/api/faults', csrfProtection, faultRoutes);
+app.use('/api/inspection-types', csrfProtection, inspectionTypeRoutes);
+app.use('/api/sites', csrfProtection, siteRoutes);
+app.use('/api/organizations', csrfProtection, organizationRoutes);
 
 // Language
 app.use((req, res, next) => {
@@ -122,6 +126,19 @@ app.use((req, res, next) => {
 
 // Error handling
 app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    logger.warn('CSRF token validation failed:', {
+      path: req.path,
+      method: req.method,
+      token: req.headers['x-csrf-token'] || req.body._csrf
+    });
+    return res.status(403).json({
+      status: 'error',
+      message: 'Invalid CSRF token',
+      errorCode: 'INVALID_CSRF_TOKEN'
+    });
+  }
+
   if (!(err instanceof AppError)) {
     logger.error('Unhandled error:', err);
     err = new AppError('An unexpected error occurred', 500, 'INTERNAL_SERVER_ERROR')
@@ -176,7 +193,7 @@ async function startServer() {
     await db.sequelize.authenticate();
     logger.info('Database connection has been established successfully.');
 
-    // Then sync database (force: false to prevent dropping tables)
+    // Then sync database
     await db.sequelize.sync();
     logger.info('Database synced successfully.');
 
