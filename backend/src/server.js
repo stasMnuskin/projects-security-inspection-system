@@ -51,35 +51,17 @@ const swaggerDocs = swaggerJsDoc(swaggerConfig);
 // Start secret rotation
 startRotation();
 
-// Middlewares
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
-}));
+// Basic middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(loggerMiddleware);
 
-// CSRF protection setup
-const csrfProtection = csrf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.API_URL.startsWith('https'),
-    sameSite: 'strict'
-  }
-});
-
-// Routes that don't need CSRF
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
-});
-
-// CSRF Token endpoint
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
 
 // Add request logging middleware
 app.use((req, res, next) => {
@@ -90,6 +72,40 @@ app.use((req, res, next) => {
     body: req.body
   });
   next();
+});
+
+// Routes that don't need CSRF
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Basic API routes (without CSRF)
+app.get('/api', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// CSRF protection setup
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.API_URL.startsWith('https'),
+    sameSite: 'strict'
+  }
+});
+
+// CSRF Token endpoint
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
 });
 
 // WebSocket setup
@@ -198,7 +214,7 @@ async function startServer() {
     logger.info('Database synced successfully.');
 
     // Finally start the server
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server is running on port ${PORT}`);
     });
 
