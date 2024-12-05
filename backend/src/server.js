@@ -35,6 +35,7 @@ const registrationRoutes = require('./routes/registrationRoutes');
 const inspectionTypeRoutes = require('./routes/inspectionTypeRoutes');
 const siteRoutes = require('./routes/siteRoutes');
 const organizationRoutes = require('./routes/organizationRoutes');
+const userController = require('./controllers/userController');
 
 const db = require('./models');
 const cache = require('./utils/cache');
@@ -74,10 +75,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// WebSocket setup
+notificationController.setIo(io);
+
+// Int. setup
+i18n.configure({
+  locales: ['en', 'he'],
+  directory: path.join(__dirname, 'locales'),
+  defaultLocale: 'en',
+  objectNotation: true
+});
+app.use(i18n.init);
+
+
+
 // Routes that don't need CSRF
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Basic API routes (without CSRF)
 app.get('/api', (req, res) => {
   res.json({ 
     status: 'ok',
@@ -94,6 +108,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Login route without CSRF
+app.post('/api/users/login', userController.loginUser);
+
 // CSRF protection setup
 const csrfProtection = csrf({
   cookie: {
@@ -108,21 +125,9 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
-// WebSocket setup
-notificationController.setIo(io);
-
-// Int. setup
-i18n.configure({
-  locales: ['en', 'he'],
-  directory: path.join(__dirname, 'locales'),
-  defaultLocale: 'en',
-  objectNotation: true
-});
-app.use(i18n.init);
-
 // Protected routes with CSRF
 app.use('/api/auth/register', csrfProtection, registrationRoutes);
-app.use('/api/users', csrfProtection, userRoutes);
+app.use('/api/users', csrfProtection, userRoutes); // All user routes except login
 app.use('/api/analytics', csrfProtection, analyticsRoutes);
 app.use('/api/inspections', csrfProtection, inspectionRoutes);
 app.use('/api/notifications', csrfProtection, notificationRoutes);
