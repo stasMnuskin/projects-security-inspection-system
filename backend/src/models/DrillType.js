@@ -13,13 +13,6 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   DrillType.associate = function(models) {
-    DrillType.hasMany(models.Inspection, {
-      foreignKey: 'drillTypeId',
-      constraints: false,
-      scope: {
-        type: 'drill'
-      }
-    });
   };
 
   return DrillType;

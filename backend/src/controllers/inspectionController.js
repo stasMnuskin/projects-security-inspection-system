@@ -82,6 +82,7 @@ exports.getAllInspections = async (req, res, next) => {
     }
 
     const inspections = await db.Inspection.findAll({
+      attributes: ['id', 'siteId', 'inspectionTypeId', 'userId', 'type', 'formData', 'createdAt', 'updatedAt'],
       where: whereClause,
       include: includes,
       order: [['createdAt', 'DESC']]
@@ -598,12 +599,11 @@ exports.getInspectionsBySite = async (req, res, next) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // Return empty array instead of error when no inspections found
+    // Return empty array when no inspections found
     res.json(inspections || []);
     logger.info(`getInspectionsBySite function called for site: ${siteId}, type: ${type}, drillType: ${drillType}`);
   } catch (error) {
     logger.error('Error getting inspections by site:', error);
-    // Send more detailed error information
     next(new AppError(`Error fetching inspections: ${error.message}`, 500));
   }
 };
