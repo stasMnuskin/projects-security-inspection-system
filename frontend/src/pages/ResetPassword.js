@@ -137,7 +137,15 @@ function ResetPassword() {
                 }}
               />
             </FormControl>
+            <Typography variant="h9" sx={{ 
+              color: colors.text.grey,
+              textAlign: 'left',
+              marginBottom: '1rem'
+            }}>
+            הזינו את הסיסמה החדשה שלכם.
+עליכם למלא בין 6 ל8 תווים ועל הסיסמה לכלול אותיות ומספרים באנגלית בלבד
 
+            </Typography>
             <Button
               type="submit"
               variant="contained"
@@ -145,7 +153,7 @@ function ResetPassword() {
               disabled={loading}
               sx={formStyles.submitButton}
             >
-              {loading ? 'מאפס סיסמה...' : 'אפס סיסמה'}
+              {loading ? 'מאפס סיסמה...' : 'איפוס סיסמה'}
             </Button>
 
             <Link

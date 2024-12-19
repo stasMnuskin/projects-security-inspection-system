@@ -18,7 +18,9 @@ import {
   DialogActions,
   DialogContentText,
   Box,
-  TextField
+  TextField,
+  Tooltip,
+  Typography
 } from '@mui/material';
 import { 
   Delete as DeleteIcon,
@@ -28,23 +30,35 @@ import {
 import { colors } from '../styles/colors';
 import { dialogStyles } from '../styles/components';
 import { useAuth } from '../context/AuthContext';
+import { PERMISSIONS } from '../constants/roles';
 
 const FAULT_STATUSES = ['פתוח', 'בטיפול', 'סגור'];
+const MAX_TEXT_LENGTH = 15;
+
+const truncateText = (text, maxLength = MAX_TEXT_LENGTH) => {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
 
 const FaultList = ({ 
   faults, 
   onSiteClick, 
   onStatusChange, 
   onTechnicianChange,
+  onDescriptionChange,
   onDeleteFault,
-  onFaultUpdated
+  maintenanceOrgs,
+  integratorOrgs
 }) => {
   const { user } = useAuth();
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedFault, setSelectedFault] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
+  const [editingDescription, setEditingDescription] = useState('');
+  const [editingTechnician, setEditingTechnician] = useState('');
 
-  const canEditTechnicianAndStatus = ['admin', 'integrator', 'maintenance'].includes(user.role);
+  const canEditTechnicianAndStatus = user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS);
+  const canEditDescription = ['admin', 'security_officer', 'integrator', 'maintenance'].includes(user.role);
 
   const handleDeleteClick = (fault) => {
     setSelectedFault(fault);
@@ -66,15 +80,45 @@ const FaultList = ({
     setEditingCell(null);
   };
 
-  const handleTechnicianChange = async (event, faultId) => {
+  const handleTechnicianSave = async (faultId) => {
     if (onTechnicianChange) {
-      onTechnicianChange(faultId, event.target.value);
+      await onTechnicianChange(faultId, editingTechnician);
     }
     setEditingCell(null);
   };
 
-  const handleCellClick = (cellId) => {
+  const handleTechnicianKeyDown = (event, faultId) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleTechnicianSave(faultId);
+    }
+  };
+
+  const handleDescriptionChange = async (fault) => {
+    try {
+      if (onDescriptionChange) {
+        await onDescriptionChange(fault.id, editingDescription);
+      }
+    } catch (error) {
+      console.error('Error updating fault description:', error);
+    }
+    setEditingCell(null);
+  };
+
+  const handleDescriptionKeyDown = (event, fault) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleDescriptionChange(fault);
+    }
+  };
+
+  const handleCellClick = (cellId, currentValue = '') => {
     setEditingCell(cellId);
+    if (cellId.startsWith('description-')) {
+      setEditingDescription(currentValue);
+    } else if (cellId.startsWith('technician-')) {
+      setEditingTechnician(currentValue || '');
+    }
   };
 
   const handleSiteClick = (event, site) => {
@@ -112,6 +156,88 @@ const FaultList = ({
     border: `1px solid ${colors.border.orange}`,
     color: colors.text.white
   });
+
+  const renderDescription = (fault) => {
+    if (editingCell === `description-${fault.id}`) {
+      return (
+        <TextField
+          multiline
+          size="small"
+          value={editingDescription}
+          onChange={(e) => setEditingDescription(e.target.value)}
+          onBlur={() => handleDescriptionChange(fault)}
+          onKeyDown={(e) => handleDescriptionKeyDown(e, fault)}
+          autoFocus
+          fullWidth
+          sx={{ minWidth: '150px' }}
+          placeholder="לחץ Enter לשמירה, Shift+Enter לשורה חדשה"
+        />
+      );
+    }
+
+    const content = (isLong = false) => (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {canEditDescription && (
+          <EditIcon sx={{ fontSize: 16, color: colors.border.orange }} />
+        )}
+        <span style={{ 
+          color: colors.text.white,
+          cursor: isLong ? 'help' : 'inherit'
+        }}>
+          {fault.description ? (fault.description.length > MAX_TEXT_LENGTH ? truncateText(fault.description) : fault.description) : ''}
+        </span>
+      </Box>
+    );
+
+    return (
+      <Box 
+        onClick={() => canEditDescription && handleCellClick(`description-${fault.id}`, fault.description || '')}
+        sx={{ 
+          cursor: canEditDescription ? 'pointer' : 'default',
+          '&:hover': canEditDescription ? {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)'
+          } : {}
+        }}
+      >
+        {fault.description && fault.description.length > MAX_TEXT_LENGTH ? (
+          <Tooltip 
+            title={
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                {fault.description}
+              </Typography>
+            }
+            placement="top"
+            arrow
+            enterDelay={200}
+            leaveDelay={200}
+            PopperProps={{
+              sx: {
+                '& .MuiTooltip-tooltip': {
+                  backgroundColor: colors.background.black,
+                  border: `1px solid ${colors.border.grey}`,
+                  borderRadius: '4px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  maxWidth: 400,
+                  p: 1
+                },
+                '& .MuiTooltip-arrow': {
+                  color: colors.background.black,
+                  '&::before': {
+                    border: `1px solid ${colors.border.grey}`,
+                    backgroundColor: colors.background.black
+                  }
+                }
+              }
+            }}
+          >
+            {content(true)}
+          </Tooltip>
+        ) : (
+          content(false)
+        )}
+      </Box>
+    );
+  };
 
   return (
     <>
@@ -194,7 +320,7 @@ const FaultList = ({
                       </TableCell>
 
                       <TableCell 
-                        onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`)}
+                        onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`, fault.technician)}
                         sx={{ 
                           cursor: canEditTechnicianAndStatus && onTechnicianChange ? 'pointer' : 'default',
                           '&:hover': canEditTechnicianAndStatus && onTechnicianChange ? {
@@ -206,16 +332,18 @@ const FaultList = ({
                         {editingCell === `technician-${fault.id}` ? (
                           <TextField
                             size="small"
-                            value={fault.technician || ''}
-                            onChange={(e) => handleTechnicianChange(e, fault.id)}
-                            onBlur={() => setEditingCell(null)}
+                            value={editingTechnician}
+                            onChange={(e) => setEditingTechnician(e.target.value)}
+                            onBlur={() => handleTechnicianSave(fault.id)}
+                            onKeyDown={(e) => handleTechnicianKeyDown(e, fault.id)}
                             autoFocus
                             fullWidth
                             sx={{ minWidth: '120px' }}
+                            placeholder="לחץ Enter לשמירה"
                           />
                         ) : (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {!fault.technician && canEditTechnicianAndStatus && onTechnicianChange && (
+                            {canEditTechnicianAndStatus && onTechnicianChange && (
                               <EditIcon sx={{ fontSize: 16, color: colors.border.orange }} />
                             )}
                             <span style={{ color: colors.text.white }}>
@@ -266,13 +394,8 @@ const FaultList = ({
                         )}
                       </TableCell>
 
-                      <TableCell sx={{ 
-                        maxWidth: '150px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {fault.type === 'אחר' ? fault.description : ''}
+                      <TableCell>
+                        {renderDescription(fault)}
                       </TableCell>
                       {onDeleteFault && (
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
@@ -365,8 +488,10 @@ FaultList.propTypes = {
   onSiteClick: PropTypes.func.isRequired,
   onStatusChange: PropTypes.func,
   onTechnicianChange: PropTypes.func,
+  onDescriptionChange: PropTypes.func,
   onDeleteFault: PropTypes.func,
-  onFaultUpdated: PropTypes.func
+  maintenanceOrgs: PropTypes.array,
+  integratorOrgs: PropTypes.array
 };
 
 export default FaultList;

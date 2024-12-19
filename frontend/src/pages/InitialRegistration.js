@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   Box,
   Paper,
-  TextField,
+  TextField as MuiTextField,
   Typography,
   FormControl,
   Button,
@@ -12,13 +12,52 @@ import {
   FormControlLabel,
   Radio,
   RadioGroup,
-  Autocomplete
+  Autocomplete,
+  styled
 } from '@mui/material';
 import { generateRegistrationLink, getRegistrationOrganizations } from '../services/api';
 import { colors } from '../styles/colors';
 import { formStyles, pageStyles } from '../styles/components';
 import { ROLE_OPTIONS } from '../constants/roles';
 import logo from '../assets/logo-black.svg';
+
+const TextField = styled(MuiTextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    color: colors.text.white,
+    '& fieldset': {
+      borderColor: colors.border.grey
+    },
+    '&:hover fieldset': {
+      borderColor: colors.border.orange
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: colors.primary.orange
+    },
+    '& input': {
+      backgroundColor: `${colors.background.darkGrey} !important`,
+      color: `${colors.text.white} !important`,
+      WebkitTextFillColor: `${colors.text.white} !important`,
+      '&:-webkit-autofill': {
+        WebkitBoxShadow: `0 0 0 1000px ${colors.background.darkGrey} inset !important`,
+        transition: 'background-color 5000s ease-in-out 0s'
+      }
+    }
+  },
+  '& .MuiInputLabel-root': {
+    color: colors.text.grey,
+    backgroundColor: colors.background.darkGrey,
+    padding: '0 8px',
+    marginLeft: '-4px',
+    marginRight: '-4px',
+    transform: 'translate(14px, 16px) scale(1)',
+    '&.Mui-focused, &.MuiFormLabel-filled': {
+      transform: 'translate(14px, -9px) scale(0.75)'
+    },
+    '&.Mui-focused': {
+      color: colors.primary.orange
+    }
+  }
+}));
 
 function InitialRegistration() {
   const [formData, setFormData] = useState({
@@ -61,7 +100,7 @@ function InitialRegistration() {
     setLoading(true);
     setErrors({});
 
-    if (['maintenance', 'integrator'].includes(formData.role) && !formData.organizationName) {
+    if (['maintenance', 'integrator', 'entrepreneur'].includes(formData.role) && !formData.organizationName) {
       setErrors(prev => ({
         ...prev,
         organizationName: 'שדה חובה עבור תפקיד זה'
@@ -154,7 +193,12 @@ function InitialRegistration() {
                   helperText={errors.email}
                   required
                   dir="ltr"
-                  sx={formStyles.textField}
+                  sx={{
+                    ...formStyles.textField,
+                    '& .MuiInputBase-root': {
+                      backgroundColor: 'transparent'
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -167,7 +211,12 @@ function InitialRegistration() {
                   error={!!errors.name}
                   helperText={errors.name}
                   required
-                  sx={formStyles.textField}
+                  sx={{
+                    ...formStyles.textField,
+                    '& .MuiInputBase-root': {
+                      backgroundColor: 'transparent'
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -247,13 +296,25 @@ function InitialRegistration() {
                         error={!!errors.organizationName}
                         helperText={
                           errors.organizationName || 
-                          (['maintenance', 'integrator'].includes(formData.role) 
+                          (['maintenance', 'integrator', 'entrepreneur'].includes(formData.role) 
                             ? 'שדה חובה - ניתן לבחור ארגון קיים או להזין שם חדש'
                             : 'ניתן לבחור ארגון קיים או להזין שם חדש')
                         }
-                        required={['maintenance', 'integrator'].includes(formData.role)}
+                        required={['maintenance', 'integrator', 'entrepreneur'].includes(formData.role)}
                         sx={{
                           ...formStyles.textField,
+                          '& .MuiInputBase-root': {
+                            backgroundColor: 'transparent'
+                          },
+                          '& .MuiAutocomplete-option': {
+                            backgroundColor: 'transparent'
+                          },
+                          '& .MuiAutocomplete-option[aria-selected="true"]': {
+                            backgroundColor: 'transparent'
+                          },
+                          '& .MuiAutocomplete-option:hover': {
+                            backgroundColor: 'transparent'
+                          },
                           '& .MuiFormHelperText-root': {
                             fontSize: { xs: '0.8rem', sm: '0.875rem' },
                             marginX: 0
@@ -268,6 +329,11 @@ function InitialRegistration() {
                         }
                       }
                     }}
+                    PaperComponent={({ children, ...props }) => (
+                      <Paper {...props} sx={{ backgroundColor: 'transparent' }}>
+                        {children}
+                      </Paper>
+                    )}
                   />
                 </Grid>
               )}

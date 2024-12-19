@@ -21,7 +21,8 @@ import {
   updateFaultStatus, 
   updateFaultDetails,
   deleteFault,
-  getOrganizations
+  getOrganizations,
+  getFaultById
 } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import NewFaultForm from '../components/NewFaultForm';
@@ -59,18 +60,21 @@ const Faults = () => {
   const canCreateFault = user.hasPermission(PERMISSIONS.NEW_FAULT);
   const isAdmin = user.hasPermission(PERMISSIONS.ADMIN);
   const canEditMaintenanceIntegrator = isAdmin;
-  const canEditTechnicianAndStatus = isAdmin || ['integrator', 'maintenance'].includes(user.role);
+  const canEditTechnicianAndStatus = user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS);
+  const canEditDescription = ['admin', 'security_officer', 'integrator', 'maintenance'].includes(user.role);
 
   const initialDateRange = getInitialDateRange();
   const [filters, setFilters] = useState({
     startDate: initialDateRange.startDate,
     endDate: initialDateRange.endDate,
-    site: initialFilters.site || '',
+    sites: initialFilters.sites || [],
     isCritical: initialFilters.isCritical !== undefined ? initialFilters.isCritical : null,
     maintenance: '',
     integrator: '',
-    faultType: initialFilters.faultType || '',
-    status: initialFilters.status || ''
+    type: initialFilters.type || '',
+    description: initialFilters.description || '',
+    status: initialFilters.status || '',
+    id: initialFilters.id || null
   });
 
   const [newFaultDialog, setNewFaultDialog] = useState(false);
@@ -82,7 +86,6 @@ const Faults = () => {
     isCritical: false
   });
 
-  // Function to fetch organizations
   const fetchOrganizations = useCallback(async () => {
     try {
       const [maintenance, integrators] = await Promise.all([
@@ -105,6 +108,13 @@ const Faults = () => {
 
     try {
       setLoading(true);
+      if (filters.id) {
+        const fault = await getFaultById(filters.id);
+        setFaults([fault]);
+        setError(null);
+        return;
+      }
+
       const queryParams = {};
       
       if (filters.startDate) {
@@ -113,8 +123,8 @@ const Faults = () => {
       if (filters.endDate) {
         queryParams.endDate = filters.endDate.toISOString();
       }
-      if (filters.site) {
-        queryParams.site = filters.site;
+      if (filters.sites && filters.sites.length > 0) {
+        queryParams.sites = filters.sites;
       }
       if (filters.isCritical !== null) {
         queryParams.isCritical = filters.isCritical;
@@ -125,8 +135,11 @@ const Faults = () => {
       if (filters.integrator) {
         queryParams.integratorOrg = filters.integrator;
       }
-      if (filters.faultType) {
-        queryParams.faultType = filters.faultType;
+      if (filters.type === 'אחר' && filters.description) {
+        queryParams.type = 'אחר';
+        queryParams.description = filters.description;
+      } else if (filters.type) {
+        queryParams.type = filters.type;
       }
       if (filters.status) {
         queryParams.status = filters.status;
@@ -143,179 +156,195 @@ const Faults = () => {
     }
   }, [filters, canViewFaults]);
 
-// Initial data load
-useEffect(() => {
-  fetchOrganizations();
-}, [fetchOrganizations]);
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
-// Fetch faults when filters change
-useEffect(() => {
-  const timer = setTimeout(() => {
-    fetchFaults();
-  }, 300); // Add debounce to prevent rapid refetching
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchFaults();
+    }, 300);
 
-  return () => clearTimeout(timer);
-}, [fetchFaults, filters]);
+    return () => clearTimeout(timer);
+  }, [fetchFaults, filters]);
 
-const handleFilterChange = useCallback((field, value) => {
-  setFilters(prev => ({
-    ...prev,
-    [field]: value
-  }));
-}, []);
+  const handleFilterChange = useCallback((field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
 
-const showNotification = (message, severity = 'success') => {
-  setNotification({
-    open: true,
-    message,
-    severity
-  });
-};
+  const showNotification = (message, severity = 'success') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
 
-const handleCreateFault = async () => {
-  if (!canCreateFault) {
-    showNotification('אין לך הרשאה ליצור תקלה', 'error');
-    return;
-  }
-
-  try {
-    if (!newFault.siteId) {
-      showNotification('נדרש לבחור אתר', 'error');
+  const handleCreateFault = async () => {
+    if (!canCreateFault) {
+      showNotification('אין לך הרשאה ליצור תקלה', 'error');
       return;
     }
 
-    if (!newFault.type) {
-      showNotification('נדרש לבחור סוג תקלה', 'error');
+    try {
+      if (!newFault.siteId) {
+        showNotification('נדרש לבחור אתר', 'error');
+        return;
+      }
+
+      if (!newFault.type) {
+        showNotification('נדרש לבחור סוג תקלה', 'error');
+        return;
+      }
+
+      if (newFault.type === 'אחר' && !newFault.description) {
+        showNotification('נדרש תיאור לתקלה מסוג אחר', 'error');
+        return;
+      }
+
+      const createdFault = await createFault(newFault);
+      
+      setFaults(prevFaults => [
+        {
+          ...createdFault,
+          siteId: newFault.siteId,
+          site: {
+            name: newFault.site?.name || ''
+          }
+        },
+        ...prevFaults
+      ]);
+      
+      setNewFaultDialog(false);
+      setNewFault({
+        type: '',
+        description: '',
+        siteId: '',
+        site: null,
+        isCritical: false
+      });
+      
+      showNotification('התקלה נוצרה בהצלחה');
+    } catch (error) {
+      showNotification('שגיאה ביצירת תקלה', 'error');
+      console.error('Error creating fault:', error);
+    }
+  };
+
+  const handleSiteClick = (siteId) => {
+    handleFilterChange('sites', [siteId]);
+  };
+
+  const handleFaultUpdated = (updatedFault) => {
+    setFaults(prevFaults => 
+      prevFaults.map(fault => 
+        fault.id === updatedFault.id 
+          ? { ...fault, ...updatedFault }
+          : fault
+      )
+    );
+    showNotification('התקלה עודכנה בהצלחה');
+  };
+
+  const handleStatusChange = async (faultId, newStatus) => {
+    if (!canEditTechnicianAndStatus) {
+      showNotification('אין לך הרשאה לעדכן סטטוס תקלה', 'error');
       return;
     }
 
-    if (newFault.type === 'אחר' && !newFault.description) {
-      showNotification('נדרש תיאור לתקלה מסוג אחר', 'error');
+    try {
+      await updateFaultStatus(faultId, { status: newStatus });
+      handleFaultUpdated({
+        id: faultId,
+        status: newStatus,
+        closedTime: newStatus === 'סגור' ? new Date().toISOString() : null
+      });
+    } catch (error) {
+      showNotification('שגיאה בעדכון סטטוס התקלה', 'error');
+      console.error('Error updating fault status:', error);
+    }
+  };
+
+  const handleMaintenanceChange = async (faultId, organizationId) => {
+    if (!canEditMaintenanceIntegrator) {
+      showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
       return;
     }
 
-    const createdFault = await createFault(newFault);
-    
-    setFaults(prevFaults => [
-      {
-        ...createdFault,
-        siteId: newFault.siteId,
-        site: {
-          name: newFault.site?.name || ''
-        }
-      },
-      ...prevFaults
-    ]);
-    
-    setNewFaultDialog(false);
-    setNewFault({
-      type: '',
-      description: '',
-      siteId: '',
-      site: null,
-      isCritical: false
-    });
-    
-    showNotification('התקלה נוצרה בהצלחה');
-  } catch (error) {
-    showNotification('שגיאה ביצירת תקלה', 'error');
-    console.error('Error creating fault:', error);
-  }
-};
+    try {
+      await updateFaultDetails(faultId, { maintenanceOrganizationId: organizationId });
+      const maintenanceOrg = maintenanceOrgs.find(org => org.id === organizationId);
+      handleFaultUpdated({
+        id: faultId,
+        maintenanceOrganization: maintenanceOrg ? {
+          id: maintenanceOrg.id,
+          name: maintenanceOrg.name
+        } : null
+      });
+    } catch (error) {
+      showNotification('שגיאה בעדכון ארגון האחזקה', 'error');
+      console.error('Error updating maintenance organization:', error);
+    }
+  };
 
-const handleSiteClick = (siteId) => {
-  handleFilterChange('site', siteId);
-};
+  const handleIntegratorChange = async (faultId, organizationId) => {
+    if (!canEditMaintenanceIntegrator) {
+      showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
+      return;
+    }
 
-const handleFaultUpdated = (updatedFault) => {
-  setFaults(prevFaults => 
-    prevFaults.map(fault => 
-      fault.id === updatedFault.id 
-        ? { ...fault, ...updatedFault }
-        : fault
-    )
-  );
-  showNotification('התקלה עודכנה בהצלחה');
-};
+    try {
+      await updateFaultDetails(faultId, { integratorOrganizationId: organizationId });
+      const integratorOrg = integratorOrgs.find(org => org.id === organizationId);
+      handleFaultUpdated({
+        id: faultId,
+        integratorOrganization: integratorOrg ? {
+          id: integratorOrg.id,
+          name: integratorOrg.name
+        } : null
+      });
+    } catch (error) {
+      showNotification('שגיאה בעדכון ארגון האינטגרציה', 'error');
+      console.error('Error updating integrator organization:', error);
+    }
+  };
 
-const handleStatusChange = async (faultId, newStatus) => {
-  if (!canEditTechnicianAndStatus) {
-    showNotification('אין לך הרשאה לעדכן סטטוס תקלה', 'error');
+  const handleTechnicianChange = async (faultId, technicianName) => {
+    if (!canEditTechnicianAndStatus) {
+      showNotification('אין לך הרשאה לעדכן שם טכנאי', 'error');
+      return;
+    }
+
+    try {
+      await updateFaultDetails(faultId, { technician: technicianName });
+      handleFaultUpdated({
+        id: faultId,
+        technician: technicianName
+      });
+    } catch (error) {
+      showNotification('שגיאה בעדכון שם הטכנאי', 'error');
+      console.error('Error updating technician:', error);
+    }
+  };
+
+const handleDescriptionChange = async (faultId, description) => {
+  if (!canEditDescription) {
+    showNotification('אין לך הרשאה לעדכן הערות', 'error');
     return;
   }
 
   try {
-    await updateFaultStatus(faultId, { status: newStatus });
+    await updateFaultDetails(faultId, { description });
     handleFaultUpdated({
       id: faultId,
-      status: newStatus,
-      closedTime: newStatus === 'סגור' ? new Date().toISOString() : null
+      description
     });
   } catch (error) {
-    showNotification('שגיאה בעדכון סטטוס התקלה', 'error');
-    console.error('Error updating fault status:', error);
-  }
-};
-
-const handleMaintenanceChange = async (faultId, organizationId) => {
-  if (!canEditMaintenanceIntegrator) {
-    showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
-    return;
-  }
-
-  try {
-    await updateFaultDetails(faultId, { maintenanceOrganizationId: organizationId });
-    const maintenanceOrg = maintenanceOrgs.find(org => org.id === organizationId);
-    handleFaultUpdated({
-      id: faultId,
-      maintenanceOrganization: maintenanceOrg ? {
-        id: maintenanceOrg.id,
-        name: maintenanceOrg.name
-      } : null
-    });
-  } catch (error) {
-    showNotification('שגיאה בעדכון ארגון האחזקה', 'error');
-    console.error('Error updating maintenance organization:', error);
-  }
-};
-
-const handleIntegratorChange = async (faultId, organizationId) => {
-  if (!canEditMaintenanceIntegrator) {
-    showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
-    return;
-  }
-
-  try {
-    await updateFaultDetails(faultId, { integratorOrganizationId: organizationId });
-    const integratorOrg = integratorOrgs.find(org => org.id === organizationId);
-    handleFaultUpdated({
-      id: faultId,
-      integratorOrganization: integratorOrg ? {
-        id: integratorOrg.id,
-        name: integratorOrg.name
-      } : null
-    });
-  } catch (error) {
-    showNotification('שגיאה בעדכון ארגון האינטגרציה', 'error');
-    console.error('Error updating integrator organization:', error);
-  }
-};
-
-const handleTechnicianChange = async (faultId, technicianName) => {
-  if (!canEditTechnicianAndStatus) {
-    showNotification('אין לך הרשאה לעדכן שם טכנאי', 'error');
-    return;
-  }
-
-  try {
-    await updateFaultDetails(faultId, { technician: technicianName });
-    handleFaultUpdated({
-      id: faultId,
-      technician: technicianName
-    });
-  } catch (error) {
-    showNotification('שגיאה בעדכון שם הטכנאי', 'error');
-    console.error('Error updating technician:', error);
+    showNotification('שגיאה בעדכון הערות', 'error');
+    console.error('Error updating description:', error);
   }
 };
 
@@ -365,7 +394,6 @@ return (
         </Alert>
       )}
 
-      {/* Content with Loading Overlay */}
       <Box position="relative">
         {loading && (
           <Box
@@ -385,82 +413,82 @@ return (
         )}
 
         <Box sx={{ mt: 3 }}>
-          <FaultList 
-            faults={faults}
-            onSiteClick={handleSiteClick}
-            onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
-            onMaintenanceOrgChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
-            onIntegratorOrgChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
-            onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
-            onDeleteFault={isAdmin ? handleDeleteFault : null}
-            onFaultUpdated={handleFaultUpdated}
-            maintenanceOrgs={maintenanceOrgs}
-            integratorOrgs={integratorOrgs}
-          />
+<FaultList 
+  faults={faults}
+  onSiteClick={handleSiteClick}
+  onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
+  onMaintenanceOrgChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
+  onIntegratorOrgChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
+  onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
+  onDescriptionChange={canEditDescription ? handleDescriptionChange : null}
+  onDeleteFault={isAdmin ? handleDeleteFault : null}
+  maintenanceOrgs={maintenanceOrgs}
+  integratorOrgs={integratorOrgs}
+/>
+</Box>
         </Box>
-      </Box>
 
-      <Dialog
-        open={newFaultDialog}
-        onClose={() => setNewFaultDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        sx={dialogStyles.dialog}
-      >
-        <DialogTitle sx={dialogStyles.dialogTitle}>
-          תקלה חדשה
-          <IconButton
-            onClick={() => setNewFaultDialog(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: colors.text.grey,
-              '&:hover': {
-                color: colors.text.white,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-              }
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={dialogStyles.dialogContent}>
-          <NewFaultForm onFaultDataChange={setNewFault} />
-        </DialogContent>
-        <DialogActions sx={dialogStyles.dialogActions}>
-          <Button
-            onClick={() => setNewFaultDialog(false)}
-            sx={dialogStyles.cancelButton}
-          >
-            ביטול
-          </Button>
-          <Button
-            onClick={handleCreateFault}
-            variant="contained"
-            sx={dialogStyles.submitButton}
-          >
-            צור
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={notification.severity}
-          onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        <Dialog
+          open={newFaultDialog}
+          onClose={() => setNewFaultDialog(false)}
+          maxWidth="sm"
+          fullWidth
+          sx={dialogStyles.dialog}
         >
-          {notification.message}
-        </Alert>
-      </Snackbar>
+          <DialogTitle sx={dialogStyles.dialogTitle}>
+            תקלה חדשה
+            <IconButton
+              onClick={() => setNewFaultDialog(false)}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: colors.text.grey,
+                '&:hover': {
+                  color: colors.text.white,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={dialogStyles.dialogContent}>
+            <NewFaultForm onFaultDataChange={setNewFault} />
+          </DialogContent>
+          <DialogActions sx={dialogStyles.dialogActions}>
+            <Button
+              onClick={() => setNewFaultDialog(false)}
+              sx={dialogStyles.cancelButton}
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={handleCreateFault}
+              variant="contained"
+              sx={dialogStyles.submitButton}
+            >
+              צור
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            severity={notification.severity}
+            onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      </Box>
     </Box>
-  </Box>
-);
+  );
 };
 
 export default Faults;

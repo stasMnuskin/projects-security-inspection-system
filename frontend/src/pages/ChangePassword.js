@@ -95,7 +95,7 @@ function ChangePassword() {
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
               >
-                שנה סיסמה
+                שינוי סיסמה
               </Button>
               {error && (
                 <Typography color="error" align="center">

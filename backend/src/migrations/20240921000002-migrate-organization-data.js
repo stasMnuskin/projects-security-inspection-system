@@ -5,30 +5,39 @@ module.exports = {
     try {
       // Get all users with their organizations
       const users = await queryInterface.sequelize.query(
-        `SELECT id, role, organization FROM "Users" WHERE role IN ('integrator', 'maintenance') AND organization IS NOT NULL`,
+        `SELECT id, role, organization FROM "Users" WHERE role IN ('integrator', 'maintenance', 'entrepreneur') AND (organization IS NOT NULL OR role = 'entrepreneur')`,
         { type: Sequelize.QueryTypes.SELECT, transaction }
       );
 
       // Group users by organization and role
       const organizationsByName = {};
       users.forEach(user => {
-        if (!organizationsByName[user.organization]) {
-          organizationsByName[user.organization] = {
+        const orgName = user.organization || user.name; // Use user's name as org name for entrepreneurs without org
+        if (!organizationsByName[orgName]) {
+          organizationsByName[orgName] = {
             integrators: [],
-            maintenance: []
+            maintenance: [],
+            entrepreneurs: []
           };
         }
         if (user.role === 'integrator') {
-          organizationsByName[user.organization].integrators.push(user.id);
-        } else {
-          organizationsByName[user.organization].maintenance.push(user.id);
+          organizationsByName[orgName].integrators.push(user.id);
+        } else if (user.role === 'maintenance') {
+          organizationsByName[orgName].maintenance.push(user.id);
+        } else if (user.role === 'entrepreneur') {
+          organizationsByName[orgName].entrepreneurs.push(user.id);
         }
       });
 
       // Create organizations
       for (const [orgName, data] of Object.entries(organizationsByName)) {
         // Determine organization type based on users
-        const type = data.integrators.length > 0 ? 'integrator' : 'maintenance';
+        let type = 'general';
+        if (data.integrators.length > 0) {
+          type = 'integrator';
+        } else if (data.maintenance.length > 0) {
+          type = 'maintenance';
+        }
         
         // Create organization
         const [organization] = await queryInterface.sequelize.query(
@@ -44,7 +53,7 @@ module.exports = {
         const organizationId = organization[0].id;
 
         // Update users with organization ID
-        const userIds = [...data.integrators, ...data.maintenance];
+        const userIds = [...data.integrators, ...data.maintenance, ...data.entrepreneurs];
         await queryInterface.sequelize.query(
           `UPDATE "Users" SET "organizationId" = :organizationId WHERE id IN (:userIds)`,
           {

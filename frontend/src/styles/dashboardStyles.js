@@ -19,7 +19,8 @@ export const dashboardStyles = {
   },
   filterIcon: {
     color: colors.text.white,
-    marginLeft: { xs: '0', sm: '8px' }
+    marginLeft: { xs: '0', sm: '8px' },
+    fontSize: '24px'
   },
   filterText: {
     color: colors.text.white,
@@ -29,10 +30,13 @@ export const dashboardStyles = {
   filterSelect: {
     backgroundColor: colors.background.darkGrey,
     color: colors.text.white,
-    minWidth: { xs: '100%', sm: '120px' },
+    minWidth: { xs: '100%', sm: '200px' },
     '& .MuiOutlinedInput-root': {
       color: colors.text.white,
       backgroundColor: colors.background.darkGrey,
+      minHeight: { xs: '48px', md: '40px' },
+      display: 'flex',
+      alignItems: 'center',
       '& fieldset': {
         borderColor: colors.border.grey,
         borderRadius: '4px'
@@ -44,19 +48,26 @@ export const dashboardStyles = {
         borderColor: colors.primary.orange
       }
     },
-    '& .MuiSelect-select': {
-      padding: { xs: '12px', sm: '8px 12px' }, 
+    '& .MuiSelect-select, & .MuiInputBase-input': {
+      padding: { xs: '8px 14px', md: '6px 14px' }
     },
     '& .MuiSvgIcon-root': {
-      color: colors.text.grey
+      color: colors.text.grey,
+      fontSize: '24px'
+    },
+    '& .MuiAutocomplete-endAdornment': {
+      top: 'calc(50% - 16px)'
     }
   },
   datePicker: {
     backgroundColor: colors.background.darkGrey,
-    minWidth: { xs: '100%', sm: '120px' },
+    minWidth: { xs: '100%', sm: '200px' },
     '& .MuiOutlinedInput-root': {
       color: colors.text.white,
       backgroundColor: colors.background.darkGrey,
+      minHeight: { xs: '48px', md: '40px' },
+      display: 'flex',
+      alignItems: 'center',
       '& fieldset': {
         borderColor: colors.border.grey,
         borderRadius: '4px'
@@ -69,11 +80,12 @@ export const dashboardStyles = {
       }
     },
     '& .MuiInputBase-input': {
-      padding: { xs: '12px', sm: '8px 12px' }, 
-      color: colors.text.white
+      color: colors.text.white,
+      padding: { xs: '8px 14px', md: '6px 14px' }
     },
     '& .MuiSvgIcon-root': {
-      color: colors.text.grey
+      color: colors.text.grey,
+      fontSize: '24px'
     }
   },
   overviewContainer: {

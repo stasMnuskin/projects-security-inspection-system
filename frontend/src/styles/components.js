@@ -124,8 +124,11 @@ let theme = createTheme({
             color: colors.text.grey,
           },
           '@media (max-width:600px)': {
-            minHeight: '44px',
+            minHeight: '48px !important',
           },
+          '@media (min-width:960px)': {
+            minHeight: '40px !important',
+          }
         },
       },
     },
@@ -143,8 +146,11 @@ let theme = createTheme({
             },
           },
           '@media (max-width:600px)': {
-            minHeight: '40px',
+            minHeight: '48px !important',
           },
+          '@media (min-width:960px)': {
+            minHeight: '40px !important',
+          }
         },
       },
     },
@@ -174,7 +180,6 @@ let theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          backgroundColor: colors.background.darkGreyOpaque,
           color: colors.text.white,
           '& .MuiOutlinedInput-notchedOutline': {
             borderColor: colors.border.grey,
@@ -189,8 +194,11 @@ let theme = createTheme({
             color: colors.text.grey,
           },
           '@media (max-width:600px)': {
-            minHeight: '44px',
+            minHeight: '48px !important',
           },
+          '@media (min-width:960px)': {
+            minHeight: '40px !important',
+          }
         },
       },
     },
@@ -202,9 +210,12 @@ let theme = createTheme({
           padding: '8px 16px',
           borderRadius: '4px',
           '@media (max-width:600px)': {
-            minHeight: '44px',
+            minHeight: '48px !important',
             fontSize: '1rem',
           },
+          '@media (min-width:960px)': {
+            minHeight: '40px !important',
+          }
         },
         contained: {
           backgroundColor: colors.primary.orange,
@@ -239,10 +250,8 @@ let theme = createTheme({
 
 theme = responsiveFontSizes(theme);
 
-// Export the theme
 export { theme };
 
-// Unified dialog styles
 export const dialogStyles = {
   dialog: {
     '& .MuiDialog-paper': {
@@ -293,7 +302,6 @@ export const dialogStyles = {
       width: '100%'
     },
     '& .MuiInputBase-root': {
-      backgroundColor: colors.background.darkGreyOpaque,
       color: colors.text.white,
       '& .MuiOutlinedInput-notchedOutline': {
         borderColor: colors.border.grey
@@ -307,6 +315,14 @@ export const dialogStyles = {
     },
     '& .MuiInputLabel-root': {
       color: colors.text.grey,
+      backgroundColor: colors.background.darkGrey,
+      padding: '0 8px',
+      marginLeft: '-4px',
+      marginRight: '-4px',
+      transform: 'translate(14px, 16px) scale(1)',
+      '&.Mui-focused, &.MuiFormLabel-filled': {
+        transform: 'translate(14px, -9px) scale(0.75)'
+      },
       '&.Mui-focused': {
         color: colors.primary.orange
       }
@@ -548,8 +564,8 @@ export const formStyles = {
     },
     fontWeight: 500
   },
+
   textField: {
-    backgroundColor: colors.background.darkGrey,
     '& .MuiOutlinedInput-root': {
       color: colors.text.white,
       '& fieldset': {
@@ -560,12 +576,34 @@ export const formStyles = {
       },
       '&.Mui-focused fieldset': {
         borderColor: colors.primary.orange
+      },
+      '& input': {
+        backgroundColor: `${colors.background.darkGrey} !important`,
+        color: `${colors.text.white} !important`
+      },
+      '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
+        WebkitBoxShadow: `0 0 0 1000px ${colors.background.darkGrey} inset !important`,
+        WebkitTextFillColor: `${colors.text.white} !important`,
+        caretColor: `${colors.text.white} !important`,
+        backgroundColor: `${colors.background.darkGrey} !important`
       }
     },
     '& .MuiInputLabel-root': {
-      color: colors.text.grey
+      color: colors.text.grey,
+      backgroundColor: colors.background.darkGrey,
+      padding: '0 8px',
+      marginLeft: '-4px',
+      marginRight: '-4px',
+      transform: 'translate(14px, 16px) scale(1)',
+      '&.Mui-focused, &.MuiFormLabel-filled': {
+        transform: 'translate(14px, -9px) scale(0.75)'
+      },
+      '&.Mui-focused': {
+        color: colors.primary.orange
+      }
     }
   },
+
   submitButton: {
     backgroundColor: colors.primary.orange,
     color: colors.text.white,

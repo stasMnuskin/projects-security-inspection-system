@@ -111,7 +111,12 @@ exports.createSite = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          include: [{
+            model: Organization,
+            as: 'organization',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: User,
@@ -143,7 +148,12 @@ exports.getAllSites = async (req, res, next) => {
       {
         model: User,
         as: 'entrepreneur',
-        attributes: ['id', 'name', 'email']
+        attributes: ['id', 'name', 'email'],
+        include: [{
+          model: Organization,
+          as: 'organization',
+          attributes: ['id', 'name', 'type']
+        }]
       },
       {
         model: User,
@@ -198,7 +208,12 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          include: [{
+            model: Organization,
+            as: 'organization',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: User,
@@ -228,7 +243,12 @@ exports.getSite = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          include: [{
+            model: Organization,
+            as: 'organization',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: User,
@@ -340,7 +360,12 @@ exports.updateSite = async (req, res, next) => {
         {
           model: User,
           as: 'entrepreneur',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email'],
+          include: [{
+            model: Organization,
+            as: 'organization',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: User,

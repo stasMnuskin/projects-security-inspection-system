@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Autocomplete, TextField } from '@mui/material';
+import { Box, Autocomplete, TextField, Chip } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { dashboardStyles } from '../styles/dashboardStyles';
 import { colors } from '../styles/colors';
@@ -23,7 +23,9 @@ const FAULT_CRITICALITY = [
 const FilterBar = ({ 
   filters, 
   onFilterChange, 
-  variant = 'faults'
+  variant = 'faults',
+  userRole,
+  disableAutoFetch = false
 }) => {
   const { user, loading: authLoading } = useAuth();
   const [options, setOptions] = useState({
@@ -138,14 +140,20 @@ const FilterBar = ({
     loadOptions();
   }, [user, variant, authLoading]);
 
-  // Set initial organization filter
+  // Set initial filters
   useEffect(() => {
+    // Set organization filter
     if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
       onFilterChange('maintenance', user.organizationId);
     } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
       onFilterChange('integrator', user.organizationId);
     }
-  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, onFilterChange]);
+
+    // Set initial sites filter 
+    if (filters.sites === null && options.sites.length > 0) {
+      onFilterChange('sites', options.sites.map(site => site.id));
+    }
+  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, filters.sites, options.sites, onFilterChange]);
 
   const formatOrganizationName = (org) => org ? org.name : '';
 
@@ -204,16 +212,18 @@ const FilterBar = ({
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center',
-        minWidth: 'auto !important',
-        maxWidth: 'none !important'
+        justifyContent: 'center'
       }}>
-        <FilterListIcon sx={{ color: colors.text.white }} />
+        <FilterListIcon sx={{ 
+          color: colors.text.white,
+          fontSize: '16px'
+        }} />
       </Box>
 
       {variant !== 'drills' && (
         <>
-          <Box>
-            <Autocomplete
+      <Box sx={{ width: '100%' }}>
+          <Autocomplete
               {...commonAutocompleteProps}
               options={options.integrators}
               getOptionLabel={formatOrganizationName}
@@ -225,7 +235,7 @@ const FilterBar = ({
             />
           </Box>
 
-          <Box>
+          <Box sx={{ width: '100%' }}>
             <Autocomplete
               {...commonAutocompleteProps}
               options={options.maintenance}
@@ -241,7 +251,7 @@ const FilterBar = ({
       )}
 
       {variant === 'faults' && (
-        <Box>
+        <Box sx={{ width: '100%' }}>
           <Autocomplete
             {...commonAutocompleteProps}
             options={FAULT_CRITICALITY}
@@ -254,8 +264,8 @@ const FilterBar = ({
       )}
 
       {variant === 'drills' && (
-        <Box>
-          <Autocomplete
+      <Box sx={{ width: '100%' }}>
+        <Autocomplete
             {...commonAutocompleteProps}
             options={options.drillTypes}
             value={filters.drillType || null}
@@ -265,8 +275,8 @@ const FilterBar = ({
         </Box>
       )}
 
-      <Box>
-        <Autocomplete
+      <Box sx={{ width: '100%' }}>
+          <Autocomplete
           {...commonAutocompleteProps}
           options={options.securityOfficers}
           getOptionLabel={(user) => user?.name || ''}
@@ -277,19 +287,43 @@ const FilterBar = ({
         />
       </Box>
 
-      <Box>
-        <Autocomplete
-          {...commonAutocompleteProps}
-          options={options.sites}
-          getOptionLabel={(option) => option.name || ''}
-          value={options.sites.find(site => site.id === filters.site) || null}
-          onChange={(_, newValue) => onFilterChange('site', newValue?.id || '')}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          renderInput={(params) => renderTextField(params, "אתר")}
-        />
+      <Box sx={{ width: '100%' }}>
+          <Autocomplete
+            {...commonAutocompleteProps}
+            multiple
+            options={[{ id: 'all', name: 'כל האתרים' }, ...options.sites]}
+            getOptionLabel={(option) => option.name || ''}
+            value={filters.sites === null 
+              ? []  // Empty on initial load
+              : filters.sites?.length === options.sites.length
+                ? []  // Empty when all sites are selected
+                : options.sites.filter(site => filters.sites?.includes(site.id)) || []
+            }
+            onChange={(_, newValue) => {
+              if (newValue.some(v => v.id === 'all') || filters.sites === null) {
+                onFilterChange('sites', options.sites.map(site => site.id));
+              } else {
+                onFilterChange('sites', newValue.map(site => site.id));
+              }
+            }}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => renderTextField(params, "אתר")}
+            renderTags={(tagValue, getTagProps) =>
+              tagValue.map((option, index) => {
+                const { key, ...otherProps } = getTagProps({ index });
+                return (
+                  <Chip
+                    key={option.id}
+                    label={option.name}
+                    {...otherProps}
+                  />
+                );
+              })
+            }
+          />
       </Box>
 
-      <Box>
+      <Box sx={{ width: '100%' }}>
         <DateRangeSelector
           startDate={filters.startDate}
           endDate={filters.endDate}
@@ -305,7 +339,7 @@ FilterBar.propTypes = {
   filters: PropTypes.shape({
     startDate: PropTypes.instanceOf(Date),
     endDate: PropTypes.instanceOf(Date),
-    site: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    sites: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
     isCritical: PropTypes.bool,
     securityOfficer: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     maintenance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -313,7 +347,9 @@ FilterBar.propTypes = {
     drillType: PropTypes.string
   }).isRequired,
   onFilterChange: PropTypes.func.isRequired,
-  variant: PropTypes.oneOf(['faults', 'inspections', 'drills', 'dashboard'])
+  variant: PropTypes.oneOf(['faults', 'inspections', 'drills', 'dashboard']),
+  userRole: PropTypes.string,
+  disableAutoFetch: PropTypes.bool
 };
 
 export default FilterBar;

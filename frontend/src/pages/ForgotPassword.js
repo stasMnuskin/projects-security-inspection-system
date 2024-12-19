@@ -96,7 +96,7 @@ function ForgotPassword() {
               disabled={loading}
               sx={formStyles.submitButton}
             >
-              {loading ? 'שולח...' : 'שלח מייל לאיפוס סיסמה'}
+              {loading ? 'שולח...' : 'איפוס סיסמה'}
             </Button>
 
             <Link

@@ -2,6 +2,7 @@ const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
+const { PERMISSIONS } = require('../constants/roles');
 
 // Get fault types from the model's ENUM definition
 exports.getFaultTypes = async (req, res, next) => {
@@ -57,14 +58,17 @@ exports.getOpenFaults = async (req, res, next) => {
     });
 
     const formattedFaults = faults.map((fault, index) => ({
+      id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name
+        name: fault.site.name,
+        serviceOrganizations: fault.site.serviceOrganizations
       },
       type: fault.type,
       description: fault.description,
       fault: fault.type === 'אחר' ? fault.description : fault.type,
-      serialNumber: index + 1
+      serialNumber: index + 1,
+      isCritical: fault.isCritical
     }));
 
     res.json(formattedFaults);
@@ -89,16 +93,27 @@ exports.getRecurringFaults = async (req, res, next) => {
       attributes: [
         'type',
         'description',
+        'siteId',
         [db.sequelize.fn('COUNT', '*'), 'count']
       ],
-      group: ['type', 'description'],
+      include: [{
+        model: db.Site,
+        as: 'site',
+        attributes: ['name', 'id']
+      }],
+      group: ['type', 'description', 'site.id', 'site.name'],
       having: db.sequelize.literal('COUNT(*) > 1'),
       order: [[db.sequelize.literal('count'), 'DESC']]
     });
 
     const formattedFaults = faults.map((fault, index) => ({
+      type: fault.type,
+      description: fault.description,
+      site: {
+        id: fault.site.id,
+        name: fault.site.name
+      },
       count: parseInt(fault.get('count')),
-      fault: fault.type === 'אחר' ? fault.description : fault.type,
       serialNumber: index + 1
     }));
 
@@ -128,9 +143,11 @@ exports.getCriticalFaults = async (req, res, next) => {
     });
 
     const formattedFaults = faults.map((fault, index) => ({
+      id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name
+        name: fault.site.name,
+        serviceOrganizations: fault.site.serviceOrganizations
       },
       type: fault.type,
       description: fault.description,
@@ -148,7 +165,7 @@ exports.getCriticalFaults = async (req, res, next) => {
 exports.getAllFaults = async (req, res, next) => {
   try {
     const { role, id: userId, organizationId } = req.user;
-    const { startDate, endDate, site, isCritical, maintenanceOrg, integratorOrg, faultType, status } = req.query;
+    const { startDate, endDate, sites, isCritical, maintenanceOrg, integratorOrg, type, description, status, faultType } = req.query;
 
     let whereClause = {};
 
@@ -174,16 +191,12 @@ exports.getAllFaults = async (req, res, next) => {
       whereClause.status = status;
     }
 
-    if (faultType) {
-      whereClause[Op.or] = [
-        { type: faultType },
-        {
-          [Op.and]: [
-            { type: 'אחר' },
-            { description: faultType }
-          ]
-        }
-      ];
+    // טיפול בפילטרים type ו-description
+    if (type === 'אחר' && description) {
+      whereClause.type = 'אחר';
+      whereClause.description = description;
+    } else if (type) {
+      whereClause.type = type;
     }
 
     let siteWhere = {};
@@ -191,8 +204,9 @@ exports.getAllFaults = async (req, res, next) => {
       siteWhere.entrepreneurId = userId;
     }
     
-    if (site) {
-      siteWhere.id = site;
+    if (sites) {
+      const siteIds = Array.isArray(sites) ? sites : [sites];
+      siteWhere.id = { [Op.in]: siteIds };
     }
 
     const includes = [
@@ -305,7 +319,12 @@ exports.createFault = async (req, res, next) => {
         {
           model: db.Site,
           as: 'site',
-          attributes: ['name']
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.Organization,
+            as: 'serviceOrganizations',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: db.Organization,
@@ -335,7 +354,9 @@ exports.createFault = async (req, res, next) => {
     const formattedFault = {
       id: createdFault.id,
       site: {
-        name: createdFault.site.name
+        id: createdFault.site.id,
+        name: createdFault.site.name,
+        serviceOrganizations: createdFault.site.serviceOrganizations
       },
       maintenanceOrganization: {
         id: createdFault.maintenanceOrganization?.id,
@@ -408,7 +429,13 @@ exports.updateFaultStatus = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
-    if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
+    
+    if (!req.user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS)) {
+      return next(new AppError('אין לך הרשאה לעדכן סטטוס תקלה', 403));
+    }
+
+    // If user is from an organization, verify they belong to the fault's organizations
+    if (req.user.organizationId) {
       const userOrgId = req.user.organizationId;
       const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
                        fault.integratorOrganizationId === userOrgId;
@@ -432,7 +459,9 @@ exports.updateFaultStatus = async (req, res, next) => {
     const formattedFault = {
       id: fault.id,
       site: {
-        name: fault.site.name
+        id: fault.site.id,
+        name: fault.site.name,
+        serviceOrganizations: fault.site.serviceOrganizations
       },
       maintenanceOrganization: {
         id: fault.maintenanceOrganization?.id,
@@ -471,7 +500,7 @@ exports.updateFaultStatus = async (req, res, next) => {
 exports.updateFaultDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { technician, maintenanceOrganizationId, integratorOrganizationId } = req.body;
+    const { technician, maintenanceOrganizationId, integratorOrganizationId, description } = req.body;
 
     const fault = await db.Fault.findByPk(id, {
       include: [
@@ -520,6 +549,10 @@ exports.updateFaultDetails = async (req, res, next) => {
       fault.technician = technician;
     }
 
+    if (description !== undefined) {
+      fault.description = description;
+    }
+
     if (maintenanceOrganizationId !== undefined) {
       if (maintenanceOrganizationId) {
         const org = await db.Organization.findOne({
@@ -554,7 +587,12 @@ exports.updateFaultDetails = async (req, res, next) => {
         {
           model: db.Site,
           as: 'site',
-          attributes: ['name']
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.Organization,
+            as: 'serviceOrganizations',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: db.Organization,
@@ -584,7 +622,9 @@ exports.updateFaultDetails = async (req, res, next) => {
     const formattedFault = {
       id: updatedFault.id,
       site: {
-        name: updatedFault.site.name
+        id: updatedFault.site.id,
+        name: updatedFault.site.name,
+        serviceOrganizations: updatedFault.site.serviceOrganizations
       },
       maintenanceOrganization: {
         id: updatedFault.maintenanceOrganization?.id,
@@ -651,7 +691,12 @@ exports.getFaultById = async (req, res, next) => {
         {
           model: db.Site,
           as: 'site',
-          attributes: ['name']
+          attributes: ['id', 'name'],
+          include: [{
+            model: db.Organization,
+            as: 'serviceOrganizations',
+            attributes: ['id', 'name', 'type']
+          }]
         },
         {
           model: db.Organization,
@@ -685,7 +730,9 @@ exports.getFaultById = async (req, res, next) => {
     const formattedFault = {
       id: fault.id,
       site: {
-        name: fault.site.name
+        id: fault.site.id,
+        name: fault.site.name,
+        serviceOrganizations: fault.site.serviceOrganizations
       },
       maintenanceOrganization: {
         id: fault.maintenanceOrganization?.id,

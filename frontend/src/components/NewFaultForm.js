@@ -43,7 +43,6 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
           getSites(),
           getFaultTypes()
         ]);
-
         const sitesWithEntrepreneurs = sitesData.map(site => {
           const entrepreneur = entrepreneursData.find(e => e.id === site.entrepreneurId);
           return {
@@ -68,6 +67,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
 
   const handleEntrepreneurChange = (_, value) => {
     setSelectedEntrepreneur(value);
+    console.log(value);
     setSelectedSite(null);
     if (value) {
       const entrepreneurSites = allSites.filter(site => site.entrepreneurId === value.id);
@@ -108,7 +108,6 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
     setFaultData(updatedData);
     onFaultDataChange(updatedData);
   };
-
   return (
     <Box sx={{ display: 'grid', gap: 2, mt: 2, position: 'relative' }}>
       {onClose && (
@@ -133,11 +132,14 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
         פרטי התקלה
       </Typography>
 
-      {/* Entrepreneur Selection */}
+      {/* Entrepreneur Selection - Modified to handle null organization */}
       <Autocomplete
         loading={loading}
         options={entrepreneurs}
-        getOptionLabel={(option) => option?.name || 'בחר יזם'}
+        getOptionLabel={(option) => {
+          if (!option) return 'בחר יזם';
+          return option.organization?.name || option.name;
+        }}
         value={selectedEntrepreneur}
         onChange={handleEntrepreneurChange}
         isOptionEqualToValue={(option, value) => option?.id === value?.id}
@@ -273,10 +275,8 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
     </Box>
   );
 };
-
 NewFaultForm.propTypes = {
   onFaultDataChange: PropTypes.func.isRequired,
   onClose: PropTypes.func
 };
-
 export default NewFaultForm;

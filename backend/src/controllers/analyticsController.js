@@ -85,7 +85,7 @@ exports.getDashboardOverview = async (req, res, next) => {
         include: [{
           model: db.Site,
           as: 'site',
-          attributes: ['name']
+          attributes: ['id', 'name']
         }],
         order: [['reportedTime', 'DESC']]
       }),
@@ -101,7 +101,7 @@ exports.getDashboardOverview = async (req, res, next) => {
         include: [{
           model: db.Site,
           as: 'site',
-          attributes: ['name']
+          attributes: ['id', 'name']
         }],
         order: [['reportedTime', 'DESC']]
       }),
@@ -113,11 +113,17 @@ exports.getDashboardOverview = async (req, res, next) => {
           ...userFilters
         },
         attributes: [
-          'type',
-          'description',
+          [db.sequelize.col('Fault.type'), 'type'],
+          [db.sequelize.col('Fault.description'), 'description'],
+          [db.sequelize.col('Fault.siteId'), 'siteId'],
           [db.sequelize.fn('COUNT', '*'), 'count']
         ],
-        group: ['type', 'description'],
+        include: [{
+          model: db.Site,
+          as: 'site',
+          attributes: ['id', 'name']
+        }],
+        group: ['Fault.type', 'Fault.description', 'Fault.siteId', 'site.id', 'site.name'],
         having: db.sequelize.literal('COUNT(*) > 1'),
         order: [[db.sequelize.literal('count'), 'DESC']]
       })
@@ -130,15 +136,24 @@ exports.getDashboardOverview = async (req, res, next) => {
       },
       faults: {
         open: openFaults.map((fault, index) => ({
+          id: fault.id,
           serialNumber: index + 1,
-          site: { name: fault.site.name },
+          site: { 
+            id: fault.site.id,
+            name: fault.site.name 
+          },
           type: fault.type,
           description: fault.description,
-          fault: fault.type === 'אחר' ? fault.description : fault.type
+          fault: fault.type === 'אחר' ? fault.description : fault.type,
+          isCritical: fault.isCritical
         })),
         critical: criticalFaults.map((fault, index) => ({
+          id: fault.id,
           serialNumber: index + 1,
-          site: { name: fault.site.name },
+          site: { 
+            id: fault.site.id,
+            name: fault.site.name 
+          },
           type: fault.type,
           description: fault.description,
           fault: fault.type === 'אחר' ? fault.description : fault.type
@@ -148,7 +163,11 @@ exports.getDashboardOverview = async (req, res, next) => {
           count: parseInt(fault.get('count')),
           type: fault.type,
           description: fault.description,
-          fault: fault.type === 'אחר' ? fault.description : fault.type
+          fault: fault.type === 'אחר' ? fault.description : fault.type,
+          site: {
+            id: fault.site.id,
+            name: fault.site.name
+          }
         }))
       }
     };

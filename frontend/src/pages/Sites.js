@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '../context/AuthContext';
 import { getSites, createSite, updateSite, deleteSite } from '../services/api';
 import { colors } from '../styles/colors';
@@ -77,7 +78,7 @@ function Sites({ mode = 'list', onModeChange }) {
   useEffect(() => {
     const filtered = sites.filter(site => 
       site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      site.entrepreneur?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (site.entrepreneur?.organization?.name || site.entrepreneur?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.serviceOrganizations?.some(org => org.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -215,7 +216,7 @@ function Sites({ mode = 'list', onModeChange }) {
               <TableRow key={site.id}>
                 <TableCell sx={{ color: colors.text.white }}>{site.name}</TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
-                  {site.entrepreneur?.name || '-'}
+                  {site.entrepreneur?.organization?.name || site.entrepreneur?.name || '-'}
                 </TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
                   {SITE_TYPES.find(t => t.value === site.type)?.label}
@@ -231,12 +232,12 @@ function Sites({ mode = 'list', onModeChange }) {
                 </TableCell>
                 {user.hasPermission(PERMISSIONS.ADMIN) && (
                   <TableCell>
-                    <Button
+                    <IconButton
                       onClick={(e) => handleActionsClick(e, site)}
-                      sx={{ color: colors.text.white }}
+                      sx={{ color: colors.border.orange }}
                     >
-                      פעולות
-                    </Button>
+                      <EditIcon />
+                    </IconButton>
                   </TableCell>
                 )}
               </TableRow>

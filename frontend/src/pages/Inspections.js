@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Container, 
   Typography, 
   Paper, 
   Box, 
@@ -16,7 +15,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button
+  Button,
+  Tooltip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterBar from '../components/FilterBar';
@@ -27,6 +27,56 @@ import { subMonths } from 'date-fns';
 import { colors } from '../styles/colors';
 import { PERMISSIONS } from '../constants/roles';
 
+const truncateText = (text, maxLength = 15) => {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
+
+const renderTooltipText = (value) => {
+  if (!value || !value.trim() || value.length <= 15) return value;
+  
+  return (
+    <Tooltip 
+      title={
+        <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+          {value}
+        </Typography>
+      }
+      placement="top"
+      arrow
+      enterDelay={200}
+      leaveDelay={200}
+      PopperProps={{
+        sx: {
+          '& .MuiTooltip-tooltip': {
+            backgroundColor: colors.background.black,
+            border: `1px solid ${colors.border.grey}`,
+            borderRadius: '4px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            maxWidth: 400,
+            p: 1
+          },
+          '& .MuiTooltip-arrow': {
+            color: colors.background.black,
+            '&::before': {
+              border: `1px solid ${colors.border.grey}`,
+              backgroundColor: colors.background.black
+            }
+          }
+        }
+      }}
+    >
+      <span style={{ 
+        cursor: 'help',
+        borderBottom: `1px dotted ${colors.text.grey}`,
+        color: colors.text.white
+      }}>
+        {truncateText(value)}
+      </span>
+    </Tooltip>
+  );
+};
+
 const Inspections = () => {
   const [loading, setLoading] = useState(true);
   const [inspections, setInspections] = useState([]);
@@ -35,7 +85,7 @@ const Inspections = () => {
   const [inspectionToDelete, setInspectionToDelete] = useState(null);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    site: '',
+    sites: null, // Use null to indicate initial state
     startDate: subMonths(new Date(), 6),
     endDate: new Date(),
     securityOfficer: '',
@@ -44,10 +94,11 @@ const Inspections = () => {
   });
   const { user } = useAuth();
 
-  // Load enabled fields for inspections when site changes
-  const loadEnabledFields = useCallback(async (siteId) => {
+  // Load enabled fields for inspections when sites change
+  const loadEnabledFields = useCallback(async (sites) => {
     try {
-      const response = await getEnabledFields(siteId, 'inspection');
+      if (!sites) return; // Only return if sites is null (initial state)
+      const response = await getEnabledFields(sites[0], 'inspection');
       const fields = response.data.fields;
       
       // Define the order of columns
@@ -87,8 +138,8 @@ const Inspections = () => {
   }, [user]);
 
   useEffect(() => {
-    loadEnabledFields(filters.site);
-  }, [filters.site, loadEnabledFields]);
+    loadEnabledFields(filters.sites);
+  }, [filters.sites, loadEnabledFields]);
 
   // Handle delete click
   const handleDeleteClick = (inspection, event) => {
@@ -132,8 +183,14 @@ const Inspections = () => {
       }
 
       let response;
-      if (filters.site) {
-        response = await getInspectionsBySite(filters.site, queryParams);
+      if (filters.sites && filters.sites.length > 0) {
+        // Fetch inspections for all selected sites
+        const inspectionPromises = filters.sites.map(siteId => 
+          getInspectionsBySite(siteId, queryParams)
+        );
+        const responses = await Promise.all(inspectionPromises);
+        // Combine and deduplicate inspections from all sites
+        response = Array.from(new Set(responses.flat()));
       } else {
         response = await getInspections();
       }
@@ -185,7 +242,8 @@ const Inspections = () => {
         if (value === 'תקין' || value === 'לא תקין') {
           return value;
         }
-        return value.toString();
+        // Apply tooltip to any text that's longer than 15 characters
+        return renderTooltipText(value.toString());
     }
   };
 
@@ -262,15 +320,15 @@ const Inspections = () => {
         activeSection="inspections"  
         userInfo={{ name: user.name }}
       />
-      <Container maxWidth="lg">
-        <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
+      <Box sx={{ flexGrow: 1, p: 3 }}>
+        <Typography variant="h4" sx={{ color: colors.text.white, mb: 3 }}>
           ביקורות
         </Typography>
 
         <FilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
-          variant="inspections"
+          variant="dashboard"
           userRole={user.role}
           disableAutoFetch={true}
         />
@@ -320,7 +378,7 @@ const Inspections = () => {
             </Button>
           </DialogActions>
         </Dialog>
-      </Container>
+      </Box>
     </Box>
   );
 };

@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 exports.getAllInspections = async (req, res, next) => {
   try {
     const { role, id: userId, organizationId } = req.user;
-    const { startDate, endDate, site, type, maintenanceOrg, integratorOrg, securityOfficer } = req.query;
+    const { startDate, endDate, sites, type, maintenanceOrg, integratorOrg, securityOfficer } = req.query;
 
     let whereClause = {};
 
@@ -36,8 +36,11 @@ exports.getAllInspections = async (req, res, next) => {
       siteWhere.entrepreneurId = userId;
     }
     
-    if (site) {
-      siteWhere.id = site;
+    if (sites) {
+      const siteIds = Array.isArray(sites) ? sites : [sites];
+      siteWhere.id = {
+        [db.Sequelize.Op.in]: siteIds
+      };
     }
 
     // Build includes with proper filtering

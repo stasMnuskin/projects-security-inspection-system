@@ -33,6 +33,8 @@ const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
+const DRILL_STATUSES = ['הצלחה', 'כישלון', 'הצלחה חלקית'];
+
 const InspectionForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -236,7 +238,8 @@ const InspectionForm = () => {
     setFormData(prev => ({
       ...prev,
       status,
-      ...(status === 'תקין' && prev.drill_type !== 'אחר' ? { notes: '' } : {})
+      // Clear notes if status is 'הצלחה' and drill type isn't 'אחר'
+      ...(status === 'הצלחה' && prev.drill_type !== 'אחר' ? { notes: '' } : {})
     }));
   };
 
@@ -260,8 +263,10 @@ const InspectionForm = () => {
 
       // Notes are required if:
       // 1. Drill type is 'אחר' OR
-      // 2. Status is 'לא תקין'
-      const notesRequired = formData.drill_type === 'אחר' || formData.status === 'לא תקין';
+      // 2. Status is 'כישלון' or 'הצלחה חלקית'
+      const notesRequired = formData.drill_type === 'אחר' || 
+                          formData.status === 'כישלון' || 
+                          formData.status === 'הצלחה חלקית';
       if (notesRequired && !formData.notes?.trim()) {
         errors.notes = 'יש להזין הערות';
       }
@@ -282,147 +287,147 @@ const InspectionForm = () => {
           securityOfficer: user.name,
           date: new Date().toISOString().split('T')[0],
           time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-        };
-
-        const inspectionData = {
-          siteId: selectedSite.id,
-          inspectionTypeId: selectedType.id,
-          formData: updatedFormData,
-          type: 'drill'
-        };
-
-        await createInspection(inspectionData);
-        setSuccessMessage('התרגיל נשמר בהצלחה');
-        
-        // Navigate back after success
-        setTimeout(() => {
-          navigate('/drills');
-        }, 2000);
-      } catch (error) {
-        console.error('Error submitting drill:', error);
-        setError(error instanceof AppError ? error.message : 'Failed to submit drill');
-      }
-    } else {
-      // For inspections, continue to main form
-      setShowInitialDialog(false);
-    }
   };
 
-  const handleInputChange = (fieldId, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
-    // Clear validation error for this field
-    setValidationErrors(prev => ({
-      ...prev,
-      [fieldId]: undefined
-    }));
+  const inspectionData = {
+    siteId: selectedSite.id,
+    inspectionTypeId: selectedType.id,
+    formData: updatedFormData,
+    type: 'drill'
   };
 
-  // Validate form data
-  const validateForm = () => {
-    const errors = {};
+  await createInspection(inspectionData);
+  setSuccessMessage('התרגיל נשמר בהצלחה');
+  
+  // Navigate back after success
+  setTimeout(() => {
+    navigate('/drills');
+  }, 2000);
+} catch (error) {
+  console.error('Error submitting drill:', error);
+  setError(error instanceof AppError ? error.message : 'Failed to submit drill');
+}
+} else {
+// For inspections, continue to main form
+setShowInitialDialog(false);
+}
+};
 
-    // Validate selections
-    if (!selectedSite) {
-      errors.site = 'יש לבחור אתר';
-    }
+const handleInputChange = (fieldId, value) => {
+setFormData(prev => ({
+...prev,
+[fieldId]: value
+}));
+// Clear validation error for this field
+setValidationErrors(prev => ({
+...prev,
+[fieldId]: undefined
+}));
+};
 
-    if (!selectedType) {
-      errors.type = isDrill ? 'יש לבחור סוג תרגיל' : 'יש לבחור סוג';
-    }
+// Validate form data
+const validateForm = () => {
+const errors = {};
 
-    // Validate form fields
-    formStructure?.forEach(field => {
-      if (field.required && !formData[field.id]) {
-        errors[field.id] = 'שדה חובה';
-        return;
+// Validate selections
+if (!selectedSite) {
+errors.site = 'יש לבחור אתר';
+}
+
+if (!selectedType) {
+errors.type = isDrill ? 'יש לבחור סוג תרגיל' : 'יש לבחור סוג';
+}
+
+// Validate form fields
+formStructure?.forEach(field => {
+if (field.required && !formData[field.id]) {
+  errors[field.id] = 'שדה חובה';
+  return;
+}
+
+if (field.requiredIf) {
+  const { field: dependentField, value: dependentValue } = field.requiredIf;
+  if (formData[dependentField] === dependentValue && !formData[field.id]?.trim()) {
+    errors[field.id] = 'שדה חובה';
+    return;
+  }
+}
+
+if (formData[field.id]) {
+  const value = formData[field.id];
+  
+  switch (field.type) {
+    case 'text':
+    case 'textarea':
+      if (typeof value !== 'string') {
+        errors[field.id] = 'ערך חייב להיות טקסט';
       }
+      break;
 
-      if (field.requiredIf) {
-        const { field: dependentField, value: dependentValue } = field.requiredIf;
-        if (formData[dependentField] === dependentValue && !formData[field.id]?.trim()) {
-          errors[field.id] = 'שדה חובה';
-          return;
-        }
+    case 'select':
+      if (!field.options?.includes(value)) {
+        errors[field.id] = `ערך לא חוקי בשדה ${field.label}`;
       }
+      break;
 
-      if (formData[field.id]) {
-        const value = formData[field.id];
-        
-        switch (field.type) {
-          case 'text':
-          case 'textarea':
-            if (typeof value !== 'string') {
-              errors[field.id] = 'ערך חייב להיות טקסט';
-            }
-            break;
-
-          case 'select':
-            if (!field.options?.includes(value)) {
-              errors[field.id] = `ערך לא חוקי בשדה ${field.label}`;
-            }
-            break;
-
-          case 'boolean':
-            if (!['תקין', 'לא תקין'].includes(value)) {
-              errors[field.id] = `ערך לא חוקי בשדה ${field.label}`;
-            }
-            break;
-          default:
-            errors[field.id] = 'סוג שדה לא נתמך';
-            break;
-        }
+    case 'boolean':
+      if (!['תקין', 'לא תקין'].includes(value)) {
+        errors[field.id] = `ערך לא חוקי בשדה ${field.label}`;
       }
-    });
+      break;
+    default:
+      errors[field.id] = 'סוג שדה לא נתמך';
+      break;
+  }
+}
+});
 
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+setValidationErrors(errors);
+return Object.keys(errors).length === 0;
+};
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+const handleSubmit = async (event) => {
+event.preventDefault();
 
-    if (!canCreate) {
-      setError(`אין לך הרשאה ליצור ${isDrill ? 'תרגיל' : 'ביקורת'}`);
-      return;
-    }
+if (!canCreate) {
+setError(`אין לך הרשאה ליצור ${isDrill ? 'תרגיל' : 'ביקורת'}`);
+return;
+}
 
-    if (!validateForm()) {
-      setError('יש למלא את כל השדות הנדרשים');
-      return;
-    }
+if (!validateForm()) {
+setError('יש למלא את כל השדות הנדרשים');
+return;
+}
 
-    try {
-      // Update formData with site name before submitting
-      const updatedFormData = {
-        ...formData,
-        site: selectedSite.name,
-        securityOfficer: user.name,
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-      };
+try {
+// Update formData with site name before submitting
+const updatedFormData = {
+  ...formData,
+  site: selectedSite.name,
+  securityOfficer: user.name,
+  date: new Date().toISOString().split('T')[0],
+  time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+};
 
-      const inspectionData = {
-        siteId: selectedSite.id,
-        inspectionTypeId: selectedType.id,
-        formData: updatedFormData,
-        type: isDrill ? 'drill' : 'inspection'
-      };
+const inspectionData = {
+  siteId: selectedSite.id,
+  inspectionTypeId: selectedType.id,
+  formData: updatedFormData,
+  type: isDrill ? 'drill' : 'inspection'
+};
 
-      await createInspection(inspectionData);
-      setSuccessMessage(`ה${isDrill ? 'תרגיל' : 'ביקורת'} נשמר/ה בהצלחה`);
-      
-      // Navigate back after success
-      setTimeout(() => {
-        navigate(isDrill ? '/drills' : '/inspections');
-      }, 2000);
-    } catch (error) {
-      console.error('Error submitting inspection:', error);
-      setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill ? 'drill' : 'inspection'}`);
-    }
-  };
+await createInspection(inspectionData);
+setSuccessMessage(`ה${isDrill ? 'תרגיל' : 'ביקורת'} נשמר/ה בהצלחה`);
+
+// Navigate back after success
+setTimeout(() => {
+  navigate(isDrill ? '/drills' : '/inspections');
+}, 2000);
+} catch (error) {
+console.error('Error submitting inspection:', error);
+setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill ? 'drill' : 'inspection'}`);
+}
+};
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -451,31 +456,34 @@ const InspectionForm = () => {
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
 
-  {/* Entrepreneur Selection */}
-  <Autocomplete
-    options={entrepreneurs}
-    getOptionLabel={(option) => option?.name || ''}  
-    value={selectedEntrepreneur}
-    onChange={handleEntrepreneurChange}
-    renderInput={(params) => (
-      <TextField
-        {...params}
-        label="יזם"
-        error={!!validationErrors.entrepreneur}
-        helperText={validationErrors.entrepreneur}
-        sx={{
-          '& .MuiOutlinedInput-root': {
-            color: colors.text.white
-          },
-          '& .MuiInputLabel-root': {
-            color: colors.text.grey
-          }
-        }}
-      />
-    )}
-  />
+              {/* Entrepreneur Selection - Modified to show organization name */}
+              <Autocomplete
+                options={entrepreneurs}
+                getOptionLabel={(option) => {
+                  if (!option) return '';
+                  return option.organization?.name || option.name;
+                }}
+                value={selectedEntrepreneur}
+                onChange={handleEntrepreneurChange}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="יזם"
+                    error={!!validationErrors.entrepreneur}
+                    helperText={validationErrors.entrepreneur}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: colors.text.white
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: colors.text.grey
+                      }
+                    }}
+                  />
+                )}
+              />
 
-  {/* Site Selection */}
+              {/* Site Selection */}
   <Autocomplete
                 options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
                 getOptionLabel={(option) => option?.name || ''}
@@ -552,54 +560,60 @@ const InspectionForm = () => {
                 </TextField>
               )}
 
-              {/* Status Selection - Only show if drill type is selected and not 'אחר' */}
-              {isDrill && formData.drill_type && formData.drill_type !== 'אחר' && (
-                <TextField
-                  select
-                  fullWidth
-                  label="סטטוס"
-                  value={formData.status || ''}
-                  onChange={handleStatusChange}
-                  required
-                  error={!!validationErrors.status}
-                  helperText={validationErrors.status}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
-                  }}
-                >
-                  <MenuItem value="תקין">תקין</MenuItem>
-                  <MenuItem value="לא תקין">לא תקין</MenuItem>
-                </TextField>
-              )}
+      {/* Status Selection - Only show if drill type is selected and not 'אחר' */}
+      {isDrill && formData.drill_type && formData.drill_type !== 'אחר' && (
+        <TextField
+          select
+          fullWidth
+          label="סטטוס"
+          value={formData.status || ''}
+          onChange={handleStatusChange}
+          required
+          error={!!validationErrors.status}
+          helperText={validationErrors.status}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              color: colors.text.white
+            },
+            '& .MuiInputLabel-root': {
+              color: colors.text.grey
+            }
+          }}
+        >
+          {DRILL_STATUSES.map(status => (
+            <MenuItem key={status} value={status}>{status}</MenuItem>
+          ))}
+        </TextField>
+      )}
 
-              {/* Notes - Only show if drill type is 'אחר' or status is 'לא תקין' */}
-              {isDrill && (formData.drill_type === 'אחר' || formData.status === 'לא תקין') && (
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  label="הערות"
-                  value={formData.notes || ''}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  required
-                  error={!!validationErrors.notes}
-                  helperText={validationErrors.notes}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
-                  }}
-                />
-              )}
-            </Box>
+      {/* Notes - Show if drill type is 'אחר' or status requires notes */}
+      {isDrill && (
+        formData.drill_type === 'אחר' || 
+        formData.status === 'כישלון' || 
+        formData.status === 'הצלחה חלקית'
+      ) && (
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          label="הערות"
+          value={formData.notes || ''}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
+          required
+          error={!!validationErrors.notes}
+          helperText={validationErrors.notes}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              color: colors.text.white
+            },
+            '& .MuiInputLabel-root': {
+              color: colors.text.grey
+            }
+          }}
+        />
+      )}
+
+</Box>
           </DialogContent>
           <DialogActions>
             <Button 
@@ -701,6 +715,7 @@ const InspectionForm = () => {
             {error || successMessage}
           </Alert>
         </Snackbar>
+
       </Container>
     </Box>
   );

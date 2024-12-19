@@ -152,7 +152,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
             <Autocomplete
               value={entrepreneurs.find(e => e.id === siteDetails.entrepreneurId) || null}
               options={entrepreneurs}
-              getOptionLabel={(option) => option.name}
+              getOptionLabel={(option) => option.organization?.name || option.name || ''}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,

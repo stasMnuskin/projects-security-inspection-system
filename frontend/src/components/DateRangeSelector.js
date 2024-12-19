@@ -52,10 +52,19 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
               <TextField 
                 {...params}
                 {...commonTextFieldProps}
-                sx={dashboardStyles.datePicker}
+                sx={{
+                  ...dashboardStyles.datePicker,
+                  '& .MuiInputBase-root': {
+                    minHeight: { xs: '48px !important', md: '40px !important' }
+                  }
+                }}
                 InputProps={{
+                  ...commonTextFieldProps.InputProps,
                   ...params.InputProps,
-                  ...commonTextFieldProps.InputProps
+                  sx: {
+                    ...params.InputProps?.sx,
+                    minHeight: { xs: '48px !important', md: '40px !important' }
+                  }
                 }}
               />
             )
@@ -72,10 +81,19 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
               <TextField 
                 {...params}
                 {...commonTextFieldProps}
-                sx={dashboardStyles.datePicker}
+                sx={{
+                  ...dashboardStyles.datePicker,
+                  '& .MuiInputBase-root': {
+                    minHeight: { xs: '48px !important', md: '40px !important' }
+                  }
+                }}
                 InputProps={{
+                  ...commonTextFieldProps.InputProps,
                   ...params.InputProps,
-                  ...commonTextFieldProps.InputProps
+                  sx: {
+                    ...params.InputProps?.sx,
+                    minHeight: { xs: '48px !important', md: '40px !important' }
+                  }
                 }}
               />
             )

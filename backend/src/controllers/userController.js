@@ -182,11 +182,18 @@ exports.getEntrepreneurs = async (req, res, next) => {
     const users = await User.findAll({
       where: { role: ROLES.entrepreneur },
       attributes: ['id', 'name', 'email'],
-      include: [{
-        model: Site,
-        as: 'sites',
-        attributes: ['id', 'name', 'type']
-      }]
+      include: [
+        {
+          model: Organization,
+          as: 'organization',
+          attributes: ['id', 'name', 'type']
+        },
+        {
+          model: Site,
+          as: 'sites',
+          attributes: ['id', 'name', 'type']
+        }
+      ]
     });
     res.json(users);
   } catch (error) {

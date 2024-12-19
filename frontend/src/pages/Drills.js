@@ -35,7 +35,7 @@ const Drills = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [drillToDelete, setDrillToDelete] = useState(null);
   const [filters, setFilters] = useState({
-    site: '',
+    sites: [],
     startDate: (() => {
       const date = new Date();
       date.setMonth(date.getMonth() - 6);
@@ -76,297 +76,310 @@ const Drills = () => {
     return text.substring(0, maxLength) + '...';
   };
 
-  const formatValue = (value, columnId) => {
-    if (value === undefined || value === null) return '-';
-    
-    switch (columnId) {
-      case 'date':
-        return formatDate(value);
-      case 'status':
-        return value === 'תקין' 
-          ? <span style={{ color: colors.text.success }}>תקין</span>
-          : <span style={{ color: colors.text.error }}>לא תקין</span>;
-      case 'notes':
-        if (!value.trim()) return '-';
-        return (
-          <Tooltip 
-            title={
-              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-                {value}
-              </Typography>
-            }
-            placement="top"
-            arrow
-            enterDelay={200}
-            leaveDelay={200}
-            PopperProps={{
-              sx: {
-                '& .MuiTooltip-tooltip': {
-                  backgroundColor: colors.background.black,
+const formatValue = (value, columnId) => {
+  if (value === undefined || value === null) return '-';
+  
+  switch (columnId) {
+    case 'date':
+      return formatDate(value);
+    case 'status':
+      switch (value) {
+        case 'הצלחה':
+          return <span>הצלחה</span>;
+        case 'כישלון':
+          return <span>כישלון</span>;
+        case 'הצלחה חלקית':
+          return <span>הצלחה חלקית</span>;
+        default:
+          return value;
+      }
+    case 'notes':
+      if (!value.trim()) return '-';
+      return (
+        <Tooltip 
+          title={
+            <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+              {value}
+            </Typography>
+          }
+          placement="top"
+          arrow
+          enterDelay={200}
+          leaveDelay={200}
+          PopperProps={{
+            sx: {
+              '& .MuiTooltip-tooltip': {
+                backgroundColor: colors.background.black,
+                border: `1px solid ${colors.border.grey}`,
+                borderRadius: '4px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                maxWidth: 400,
+                p: 1
+              },
+              '& .MuiTooltip-arrow': {
+                color: colors.background.black,
+                '&::before': {
                   border: `1px solid ${colors.border.grey}`,
-                  borderRadius: '4px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  maxWidth: 400,
-                  p: 1
-                },
-                '& .MuiTooltip-arrow': {
-                  color: colors.background.black,
-                  '&::before': {
-                    border: `1px solid ${colors.border.grey}`,
-                    backgroundColor: colors.background.black
-                  }
+                  backgroundColor: colors.background.black
                 }
               }
-            }}
-          >
-            <span style={{ 
-              cursor: 'help',
-              borderBottom: `1px dotted ${colors.text.grey}`
-            }}>
-              {truncateText(value)}
-            </span>
-          </Tooltip>
-        );
-      default:
-        return value.toString();
-    }
-  };
-
-  const getValue = (drill, column) => {
-    return column.getValue(drill);
-  };
-
-  const fetchDrills = useCallback(async () => {
-    try {
-      setLoading(true);
-      const queryParams = {
-        type: 'drill'
-      };
-      
-      if (filters.startDate) {
-        queryParams.startDate = filters.startDate.toISOString();
-      }
-      if (filters.endDate) {
-        queryParams.endDate = filters.endDate.toISOString();
-      }
-      if (filters.securityOfficer) {
-        queryParams.securityOfficer = filters.securityOfficer;
-      }
-      if (filters.drillType) {
-        queryParams.drillType = filters.drillType;
-      }
-
-      let response;
-      if (filters.site) {
-        response = await getDrillsBySite(filters.site, queryParams);
-      } else {
-        response = await getInspections();
-      }
-
-      const filteredDrills = (response || [])
-        .filter(item => item.type === 'drill')
-        .sort((a, b) => {
-          const dateA = new Date(a.formData?.date);
-          const dateB = new Date(b.formData?.date);
-          return dateB - dateA;
-        });
-
-      setDrills(filteredDrills);
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching drills:', error);
-      setError('שגיאה בטעינת תרגילים');
-      setDrills([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  const handleFilterChange = useCallback((field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  }, []);
-
-  // Fetch data when filters change
-  useEffect(() => {
-    fetchDrills();
-  }, [filters, fetchDrills]);
-
-  const handleDeleteClick = (drill, event) => {
-    event.stopPropagation();
-    setDrillToDelete(drill);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    try {
-      await deleteInspection(drillToDelete.id);
-      await fetchDrills();
-      setDeleteDialogOpen(false);
-      setDrillToDelete(null);
-    } catch (error) {
-      console.error('Error deleting drill:', error);
-      setError('שגיאה במחיקת התרגיל');
-    }
-  };
-
-  const renderTable = () => {
-    if (loading) {
-      return (
-        <Box display="flex" justifyContent="center" p={3}>
-          <CircularProgress sx={{ color: colors.primary.orange }} />
-        </Box>
-      );
-    }
-
-    if (drills.length === 0) {
-      return (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 1,
-            mt: 3
+            }
           }}
         >
-          <Typography variant="h6" sx={{ color: colors.text.white }}>
-            לא נמצאו תרגילים
-          </Typography>
-          <Typography variant="body1" sx={{ color: colors.text.grey }}>
-            {`בטווח התאריכים ${formatDate(filters.startDate)} - ${formatDate(filters.endDate)}`}
-          </Typography>
-        </Box>
+          <span style={{ 
+            cursor: 'help',
+            borderBottom: `1px dotted ${colors.text.grey}`
+          }}>
+            {truncateText(value)}
+          </span>
+        </Tooltip>
       );
+    default:
+      return value.toString();
+  }
+};
+
+const getValue = (drill, column) => {
+  return column.getValue(drill);
+};
+
+const fetchDrills = useCallback(async () => {
+  try {
+    setLoading(true);
+    const queryParams = {
+      type: 'drill'
+    };
+    
+    if (filters.startDate) {
+      queryParams.startDate = filters.startDate.toISOString();
+    }
+    if (filters.endDate) {
+      queryParams.endDate = filters.endDate.toISOString();
+    }
+    if (filters.securityOfficer) {
+      queryParams.securityOfficer = filters.securityOfficer;
+    }
+    if (filters.drillType) {
+      queryParams.drillType = filters.drillType;
     }
 
+    let response;
+    if (filters.sites && filters.sites.length > 0) {
+      // Fetch drills for all selected sites
+      const drillPromises = filters.sites.map(siteId => 
+        getDrillsBySite(siteId, queryParams)
+      );
+      const responses = await Promise.all(drillPromises);
+      // Combine and deduplicate drills from all sites
+      response = Array.from(new Set(responses.flat()));
+    } else {
+      response = await getInspections();
+    }
+
+    const filteredDrills = (response || [])
+      .filter(item => item.type === 'drill')
+      .sort((a, b) => {
+        const dateA = new Date(a.formData?.date);
+        const dateB = new Date(b.formData?.date);
+        return dateB - dateA;
+      });
+
+    setDrills(filteredDrills);
+    setError(null);
+  } catch (error) {
+    console.error('Error fetching drills:', error);
+    setError('שגיאה בטעינת תרגילים');
+    setDrills([]);
+  } finally {
+    setLoading(false);
+  }
+}, [filters]);
+
+const handleFilterChange = useCallback((field, value) => {
+  setFilters(prev => ({
+    ...prev,
+    [field]: value
+  }));
+}, []);
+
+// Fetch data when filters change
+useEffect(() => {
+  fetchDrills();
+}, [filters, fetchDrills]);
+
+const handleDeleteClick = (drill, event) => {
+  event.stopPropagation();
+  setDrillToDelete(drill);
+  setDeleteDialogOpen(true);
+};
+
+const handleDeleteConfirm = async () => {
+  try {
+    await deleteInspection(drillToDelete.id);
+    await fetchDrills();
+    setDeleteDialogOpen(false);
+    setDrillToDelete(null);
+  } catch (error) {
+    console.error('Error deleting drill:', error);
+    setError('שגיאה במחיקת התרגיל');
+  }
+};
+
+const renderTable = () => {
+  if (loading) {
     return (
-      <TableContainer component={Paper} sx={{ backgroundColor: colors.background.black }}>
-        <Table>
-          <TableHead>
-            <TableRow>
+      <Box display="flex" justifyContent="center" p={3}>
+        <CircularProgress sx={{ color: colors.primary.orange }} />
+      </Box>
+    );
+  }
+
+  if (drills.length === 0) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 1,
+          mt: 3
+        }}
+      >
+        <Typography variant="h6" sx={{ color: colors.text.white }}>
+          לא נמצאו תרגילים
+        </Typography>
+        <Typography variant="body1" sx={{ color: colors.text.grey }}>
+          {`בטווח התאריכים ${formatDate(filters.startDate)} - ${formatDate(filters.endDate)}`}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <TableContainer component={Paper} sx={{ backgroundColor: colors.background.black }}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            {columns.map((column) => (
+              <TableCell 
+                key={column.id} 
+                sx={{ 
+                  color: colors.text.white, 
+                  fontWeight: 'bold',
+                  backgroundColor: filters.drillType && column.id === 'drillType' 
+                    ? colors.background.darkGrey 
+                    : 'inherit'
+                }}
+              >
+                {column.label}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {drills.map((drill) => (
+            <TableRow 
+              key={drill.id}
+            >
               {columns.map((column) => (
                 <TableCell 
-                  key={column.id} 
+                  key={`${drill.id}-${column.id}`} 
                   sx={{ 
-                    color: colors.text.white, 
-                    fontWeight: 'bold',
-                    backgroundColor: filters.drillType && column.id === 'drillType' 
-                      ? colors.background.darkGrey 
+                    color: colors.text.white,
+                    backgroundColor: filters.drillType && column.id === 'drillType'
+                      ? colors.background.darkGrey
                       : 'inherit'
                   }}
                 >
-                  {column.label}
+                  {column.id === 'actions' && user.hasPermission(PERMISSIONS.ADMIN) ? (
+                    <IconButton
+                      onClick={(e) => handleDeleteClick(drill, e)}
+                      sx={{ 
+                        color: colors.text.error,
+                        '&:hover': {
+                          color: colors.text.errorHover
+                        }
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  ) : (
+                    formatValue(getValue(drill, column), column.id)
+                  )}
                 </TableCell>
               ))}
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {drills.map((drill) => (
-              <TableRow 
-                key={drill.id}
-              >
-                {columns.map((column) => (
-                  <TableCell 
-                    key={`${drill.id}-${column.id}`} 
-                    sx={{ 
-                      color: colors.text.white,
-                      backgroundColor: filters.drillType && column.id === 'drillType'
-                        ? colors.background.darkGrey
-                        : 'inherit'
-                    }}
-                  >
-                    {column.id === 'actions' && user.hasPermission(PERMISSIONS.ADMIN) ? (
-                      <IconButton
-                        onClick={(e) => handleDeleteClick(drill, e)}
-                        sx={{ 
-                          color: colors.text.error,
-                          '&:hover': {
-                            color: colors.text.errorHover
-                          }
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    ) : (
-                      formatValue(getValue(drill, column), column.id)
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    );
-  };
-
-  return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar 
-        activeSection="drills"
-        userInfo={{ name: user.name }}
-      />
-      <Container maxWidth="lg">
-        <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
-          תרגילים
-        </Typography>
-
-        <FilterBar
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          variant="drills"
-          disableAutoFetch={true}
-        />
-        {error ? (
-          <Typography color="error" align="center" sx={{ mt: 2 }}>
-            {error}
-          </Typography>
-        ) : (
-          renderTable()
-        )}
-
-        <Dialog
-          open={deleteDialogOpen}
-          onClose={() => setDeleteDialogOpen(false)}
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.background.black,
-              color: colors.text.white
-            }
-          }}
-        >
-          <DialogTitle>אישור מחיקה</DialogTitle>
-          <DialogContent>
-            <Typography>
-              האם אתה בטוח שברצונך למחוק את התרגיל?
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => setDeleteDialogOpen(false)}
-              sx={{ color: colors.text.white }}
-            >
-              ביטול
-            </Button>
-            <Button 
-              onClick={handleDeleteConfirm}
-              sx={{ 
-                color: colors.text.error,
-                '&:hover': {
-                  color: colors.text.errorHover
-                }
-              }}
-            >
-              מחק
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Container>
-    </Box>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
+};
+
+return (
+  <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Sidebar 
+      activeSection="drills"
+      userInfo={{ name: user.name }}
+    />
+    <Container maxWidth="lg">
+      <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>
+        תרגילים
+      </Typography>
+
+      <FilterBar
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        variant="drills"
+        disableAutoFetch={true}
+      />
+      {error ? (
+        <Typography color="error" align="center" sx={{ mt: 2 }}>
+          {error}
+        </Typography>
+      ) : (
+        renderTable()
+      )}
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.background.black,
+            color: colors.text.white
+          }
+        }}
+      >
+        <DialogTitle>אישור מחיקה</DialogTitle>
+        <DialogContent>
+          <Typography>
+            האם אתה בטוח שברצונך למחוק את התרגיל?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{ color: colors.text.white }}
+          >
+            ביטול
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            sx={{ 
+              color: colors.text.error,
+              '&:hover': {
+                color: colors.text.errorHover
+              }
+            }}
+          >
+            מחק
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  </Box>
+);
 };
 
 export default Drills;

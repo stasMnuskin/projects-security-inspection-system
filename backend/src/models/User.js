@@ -36,9 +36,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       validate: {
         isValidForRole(value) {
-          // organizationId is required only for integrator and maintenance roles
-          if (['integrator', 'maintenance'].includes(this.role) && !value) {
-            throw new Error('Organization is required for integrator and maintenance roles');
+          // organizationId is required for entrepreneur, integrator and maintenance roles
+          if (['entrepreneur', 'integrator', 'maintenance'].includes(this.role) && !value) {
+            throw new Error('Organization is required for entrepreneur, integrator and maintenance roles');
           }
         }
       }

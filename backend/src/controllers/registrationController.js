@@ -35,16 +35,16 @@ exports.generateRegistrationLink = async (req, res, next) => {
       return next(new AppError('תפקיד לא תקין', 400, 'INVALID_ROLE'));
     }
 
+    // Organization is now required for entrepreneurs, integrators, and maintenance roles
+    if ((role === 'entrepreneur' || role === 'integrator' || role === 'maintenance') && !organizationName) {
+      return next(new AppError('נדרש שם ארגון למשתמש מסוג יזם, אינטגרטור או אחזקה', 400, 'ORGANIZATION_REQUIRED'));
+    }
+
     let organizationId = null;
 
     if (organizationName) {
       // For integrator and maintenance roles, handle organization with type validation
       if (role === 'integrator' || role === 'maintenance') {
-        if (!organizationName) {
-          return next(new AppError('נדרש שם ארגון למשתמש מסוג אינטגרטור או אחזקה', 400, 'ORGANIZATION_REQUIRED'));
-        }
-
-        // Find or create organization
         let organization = await Organization.findOne({
           where: { name: organizationName }
         });
@@ -66,7 +66,7 @@ exports.generateRegistrationLink = async (req, res, next) => {
 
         organizationId = organization.id;
       } else {
-        // For other roles, handle general type organizations
+        // For entrepreneurs and other roles, handle general type organizations
         let organization = await Organization.findOne({
           where: { name: organizationName }
         });
