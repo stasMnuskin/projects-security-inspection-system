@@ -12,7 +12,7 @@ module.exports = {
       // Group users by organization and role
       const organizationsByName = {};
       users.forEach(user => {
-        const orgName = user.organization || user.name; // Use user's name as org name for entrepreneurs without org
+        const orgName = user.organization || user.name; 
         if (!organizationsByName[orgName]) {
           organizationsByName[orgName] = {
             integrators: [],
