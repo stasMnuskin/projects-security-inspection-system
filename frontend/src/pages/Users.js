@@ -286,7 +286,7 @@ function Users() {
   }
 
   return (
-    <Container maxWidth="lg" sx={formStyles.container}>
+    <Box>
       <Grid container spacing={3}>
         {/* Left Panel - User List */}
         <Grid item xs={12} md={4}>
@@ -574,7 +574,7 @@ function Users() {
           {notification.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 }
 

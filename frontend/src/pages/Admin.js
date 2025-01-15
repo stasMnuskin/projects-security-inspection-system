@@ -9,6 +9,7 @@ import Sites from './Sites';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
+import { formStyles } from '../styles/components';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -116,7 +117,9 @@ const AdminPage = () => {
           <Typography variant="h4" sx={contentStyles.pageTitle}>
             {getPageTitle()}
           </Typography>
-          {renderContent()}
+          <Container maxWidth="lg" sx={formStyles.container}>
+            {renderContent()}
+          </Container>
         </Box>
       </Box>
     </Box>
