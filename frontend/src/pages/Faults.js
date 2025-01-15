@@ -160,6 +160,13 @@ const Faults = () => {
     fetchOrganizations();
   }, [fetchOrganizations]);
 
+  // Show dialog when accessing /faults/new
+  useEffect(() => {
+    if (location.pathname === '/faults/new' && canCreateFault) {
+      setNewFaultDialog(true);
+    }
+  }, [location.pathname, canCreateFault]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchFaults();

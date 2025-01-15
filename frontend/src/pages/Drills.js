@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -29,6 +30,7 @@ import { PERMISSIONS } from '../constants/roles';
 
 const Drills = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [drills, setDrills] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -177,7 +179,17 @@ const fetchDrills = useCallback(async () => {
     }
 
     const filteredDrills = (response || [])
-      .filter(item => item.type === 'drill')
+      .filter(item => {
+        // First filter by type
+        if (item.type !== 'drill') return false;
+        
+        // Then filter by drill type if specified
+        if (filters.drillType && item.formData?.drill_type !== filters.drillType) {
+          return false;
+        }
+        
+        return true;
+      })
       .sort((a, b) => {
         const dateA = new Date(a.formData?.date);
         const dateB = new Date(b.formData?.date);
@@ -321,6 +333,7 @@ return (
     <Sidebar 
       activeSection="drills"
       userInfo={{ name: user.name }}
+      onNewFault={() => navigate('/faults/new')}
     />
     <Container maxWidth="lg">
       <Typography variant="h4" gutterBottom sx={{ color: colors.text.white }}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Typography, 
   Paper, 
@@ -78,6 +79,7 @@ const renderTooltipText = (value) => {
 };
 
 const Inspections = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [inspections, setInspections] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -319,6 +321,7 @@ const Inspections = () => {
       <Sidebar 
         activeSection="inspections"  
         userInfo={{ name: user.name }}
+        onNewFault={() => navigate('/faults/new')}
       />
       <Box sx={{ flexGrow: 1, p: 3 }}>
         <Typography variant="h4" sx={{ color: colors.text.white, mb: 3 }}>
