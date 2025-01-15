@@ -97,7 +97,7 @@ const Sidebar = ({
       {
         id: 'users',
         icon: GroupIcon,
-        text: 'משתמשים',
+        text: 'משתמשיpם',
         onClick: () => {
           onSectionChange('users');
           navigate('/admin/users');

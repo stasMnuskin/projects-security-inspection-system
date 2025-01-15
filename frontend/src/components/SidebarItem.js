@@ -12,6 +12,7 @@ const SidebarItem = ({
 }) => {
   const baseStyles = {
     display: 'flex',
+    
     alignItems: 'center',
     gap: 2,
     padding: '0.75rem 1rem',
