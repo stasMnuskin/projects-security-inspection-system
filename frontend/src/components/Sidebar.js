@@ -7,6 +7,7 @@ import SidebarItem from './SidebarItem';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
 import HomeIcon from '@mui/icons-material/Home';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -67,7 +68,13 @@ const Sidebar = ({
     if (!user.name) return null;
 
     return (
-      <Box sx={sidebarStyles.userInfo}>
+      <Box sx={{
+        ...sidebarStyles.userInfo,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        justifyContent: 'flex-start'
+      }}>
         <Avatar sx={{ bgcolor: 'primary.main' }}>
           <PersonOutlineIcon />
         </Avatar>
@@ -78,17 +85,6 @@ const Sidebar = ({
           <Typography sx={sidebarStyles.userDate}>
             {currentDate}
           </Typography>
-        </Box>
-        <Box sx={{ marginLeft: 'auto' }}>
-          <IconButton 
-            onClick={() => navigate('/')} 
-            sx={{ 
-              color: 'inherit',
-              '&:hover': { opacity: 0.8 }
-            }}
-          >
-            <HomeIcon />
-          </IconButton>
         </Box>
       </Box>
     );
@@ -283,8 +279,13 @@ const Sidebar = ({
 
   return (
     <Box sx={sidebarStyles.sidebar}>
-      {/* Logo and Logout */}
-      <Box sx={sidebarStyles.headerContainer}>
+      {/* Logo */}
+      <Box sx={{
+        ...sidebarStyles.headerContainer,
+        display: 'flex',
+        justifyContent: 'flex-start',
+        padding: '1rem'
+      }}>
         <Box 
           component="img" 
           src={logo} 
@@ -294,18 +295,37 @@ const Sidebar = ({
             filter: 'brightness(0) invert(1)'
           }} 
         />
+      </Box>
+
+      {renderUserInfo()}
+
+      {/* Navigation */}
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'flex-start',
+        gap: '0.5rem',
+        padding: '0.5rem 1rem',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+      }}>
+        <IconButton 
+          onClick={() => navigate('/')}
+          sx={{ color: 'inherit', '&:hover': { opacity: 0.8 } }}
+        >
+          <HomeIcon />
+        </IconButton>
+        <IconButton 
+          onClick={() => navigate(-1)}
+          sx={{ color: 'inherit', '&:hover': { opacity: 0.8 } }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
         <IconButton 
           onClick={handleLogout}
-          sx={{ 
-            color: 'inherit',
-            '&:hover': { opacity: 0.8 }
-          }}
+          sx={{ color: 'inherit', '&:hover': { opacity: 0.8 } }}
         >
           <LogoutIcon />
         </IconButton>
       </Box>
-
-      {renderUserInfo()}
       
       <Box sx={sidebarStyles.menuContainer}>
         {getItems().map((item) => (

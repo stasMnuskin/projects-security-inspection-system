@@ -12,7 +12,6 @@ import {
   Typography,
   Box,
   IconButton,
-  Tooltip
 } from '@mui/material';
 import { 
   KeyboardArrowLeft as NextIcon,
@@ -120,24 +119,13 @@ const FaultTable = ({ title, headers, data, columns, onRowClick }) => {
                     <TableCell key={index}>
                       {column === 'fault' ? (
                         title === 'תקלות נפוצות' ? (
-                          <Tooltip 
-                            title={
-                              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-                                {`אתר: ${row.site?.name || ''}`}
-                              </Typography>
-                            }
-                            placement="top"
-                            arrow
+                          <Box 
+                            sx={{ 
+                              color: colors.text.white
+                            }}
                           >
-                            <Box 
-                              sx={{ 
-                                color: colors.text.white,
-                                cursor: 'help'
-                              }}
-                            >
-                              {truncateText(row.type === 'אחר' ? row.description : row.type)}
-                            </Box>
-                          </Tooltip>
+                            {truncateText(row.fault)}
+                          </Box>
                         ) : (
                           <Box 
                             sx={{ 
@@ -187,16 +175,14 @@ FaultTable.propTypes = {
 
 const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [] }) => {
   const navigate = useNavigate();
+  
+  console.log('Recurring Faults:', recurringFaults);
 
   const handleRecurringFaultClick = (row) => {
     const filters = {
       type: row.type,
       description: row.type === 'אחר' ? row.description : null
     };
-
-    if (row.site?.id) {
-      filters.site = row.site.id;
-    }
 
     navigate('/faults', { 
       state: { 
@@ -228,22 +214,33 @@ const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [
   const tables = [
     {
       title: 'תקלות נפוצות',
-      headers: ['מס"ד', 'תקלה', 'כמות'],
+      headers: ['מס"ד', 'רכיב', 'כמות'],
       columns: ['serialNumber', 'fault', 'count'],
-      data: recurringFaults,
+      data: recurringFaults.map(fault => ({
+        type: fault.type,
+        description: fault.description,
+        fault: fault.type === 'אחר' ? fault.description : fault.type,
+        count: parseInt(fault.count),
+        serialNumber: fault.serialNumber
+      }))
+      .sort((a, b) => b.count - a.count)
+      .map((fault, index) => ({
+        ...fault,
+        serialNumber: index + 1
+      })),
       onRowClick: handleRecurringFaultClick
     },
     {
       title: 'תקלות פתוחות',
-      headers: ['מס"ד', 'תקלה', 'אתר'],
+      headers: ['מס"ד', 'רכיב', 'אתר'],
       columns: ['serialNumber', 'fault', 'site'],
       data: openFaults,
       onRowClick: handleOpenFaultClick
     },
     {
       title: 'תקלות משביתות',
-      headers: ['מס"ד', 'תקלה', 'אתר'],
-      columns: ['serialNumber', 'fault', 'site'],
+      headers: ['אתר', 'רכיב', 'מס"ד'],
+      columns: ['site', 'fault', 'serialNumber'],
       data: criticalFaults,
       onRowClick: handleCriticalFaultClick
     }

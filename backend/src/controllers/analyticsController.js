@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 exports.getDashboardOverview = async (req, res, next) => {
   try {
     const { role, id: userId } = req.user;
-    const { startDate, endDate, site, maintenance, securityOfficer, integrator } = req.query;
+    const { startDate, endDate, sites: selectedSites, maintenance, securityOfficer, integrator } = req.query;
 
     let dateRange = {};
     if (startDate && endDate) {
@@ -29,27 +29,39 @@ exports.getDashboardOverview = async (req, res, next) => {
       };
     }
 
+    // Build site query with organization filtering
     let siteQuery = {};
     if (role === 'entrepreneur') {
       siteQuery.entrepreneurId = userId;
     }
-    if (site) {
-      siteQuery.id = site;
+    if (selectedSites) {
+      const siteIds = Array.isArray(selectedSites) ? selectedSites : [selectedSites];
+      siteQuery.id = { [Op.in]: siteIds };
+    }
+
+    const siteInclude = [];
+    if (maintenance || integrator) {
+      siteInclude.push({
+        model: db.Organization,
+        as: 'serviceOrganizations',
+        where: {
+          [Op.or]: [
+            maintenance ? { id: maintenance, type: 'maintenance' } : null,
+            integrator ? { id: integrator, type: 'integrator' } : null
+          ].filter(Boolean)
+        },
+        required: true
+      });
     }
 
     const sites = await db.Site.findAll({
       where: siteQuery,
+      include: siteInclude,
       attributes: ['id']
     });
     const siteIds = sites.map(site => site.id);
 
     let userFilters = {};
-    if (maintenance) {
-      userFilters.maintenanceUserId = maintenance;
-    }
-    if (integrator) {
-      userFilters.integratorUserId = integrator;
-    }
     if (securityOfficer) {
       userFilters.securityOfficerId = securityOfficer;
     }
@@ -195,17 +207,19 @@ exports.getFilterOptions = async (req, res, next) => {
       });
     }
 
-    const getUsersByRole = async (role) => {
-      return await db.User.findAll({
-        where: { role, status: 'active' },
+    const [securityOfficers, maintenanceOrgs, integratorOrgs] = await Promise.all([
+      db.User.findAll({
+        where: { role: 'security_officer', status: 'active' },
         attributes: ['id', 'firstName', 'lastName']
-      });
-    };
-
-    const [securityOfficers, maintenance, integrators] = await Promise.all([
-      getUsersByRole('security_officer'),
-      getUsersByRole('maintenance'),
-      getUsersByRole('integrator')
+      }),
+      db.Organization.findAll({
+        where: { type: 'maintenance' },
+        attributes: ['id', 'name']
+      }),
+      db.Organization.findAll({
+        where: { type: 'integrator' },
+        attributes: ['id', 'name']
+      })
     ]);
 
     res.json({
@@ -217,14 +231,8 @@ exports.getFilterOptions = async (req, res, next) => {
         id: user.id,
         name: `${user.firstName} ${user.lastName}`
       })),
-      maintenance: maintenance.map(user => ({
-        id: user.id,
-        name: `${user.firstName} ${user.lastName}`
-      })),
-      integrators: integrators.map(user => ({
-        id: user.id,
-        name: `${user.firstName} ${user.lastName}`
-      }))
+      maintenance: maintenanceOrgs,
+      integrators: integratorOrgs
     });
   } catch (error) {
     logger.error('Error in getFilterOptions:', error);

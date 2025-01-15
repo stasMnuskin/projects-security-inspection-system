@@ -238,8 +238,6 @@ const InspectionForm = () => {
     setFormData(prev => ({
       ...prev,
       status,
-      // Clear notes if status is 'הצלחה' and drill type isn't 'אחר'
-      ...(status === 'הצלחה' && prev.drill_type !== 'אחר' ? { notes: '' } : {})
     }));
   };
 
@@ -586,22 +584,22 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
         </TextField>
       )}
 
-      {/* Notes - Show if drill type is 'אחר' or status requires notes */}
-      {isDrill && (
-        formData.drill_type === 'אחר' || 
-        formData.status === 'כישלון' || 
-        formData.status === 'הצלחה חלקית'
-      ) && (
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          label="הערות"
-          value={formData.notes || ''}
-          onChange={(e) => handleInputChange('notes', e.target.value)}
-          required
-          error={!!validationErrors.notes}
-          helperText={validationErrors.notes}
+      {/* Notes - Always show when drill type is selected, but required only in specific cases */}
+{isDrill && formData.drill_type && (
+  <TextField
+    fullWidth
+    multiline
+    rows={4}
+    label={`הערות${(formData.drill_type === 'אחר' || 
+      formData.status === 'כישלון' || 
+      formData.status === 'הצלחה חלקית') ? ' *' : ''}`}
+    value={formData.notes || ''}
+    onChange={(e) => handleInputChange('notes', e.target.value)}
+    required={formData.drill_type === 'אחר' || 
+      formData.status === 'כישלון' || 
+      formData.status === 'הצלחה חלקית'}
+    error={!!validationErrors.notes}
+    helperText={validationErrors.notes}
           sx={{
             '& .MuiOutlinedInput-root': {
               color: colors.text.white

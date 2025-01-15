@@ -20,11 +20,11 @@ const SidebarItem = ({
     transition: 'all 0.2s ease',
     position: 'relative',
     ...(isSubItem && {
-      paddingRight: '2rem',
+      paddingLeft: '2rem',
       '&::before': {
         content: '""',
         position: 'absolute',
-        right: '1rem',
+        left: '1rem',
         top: 0,
         width: '1px',
         height: '100%',

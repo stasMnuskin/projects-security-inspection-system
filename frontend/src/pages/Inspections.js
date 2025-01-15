@@ -97,7 +97,7 @@ const Inspections = () => {
   // Load enabled fields for inspections when sites change
   const loadEnabledFields = useCallback(async (sites) => {
     try {
-      if (!sites) return; // Only return if sites is null (initial state)
+      if (!sites) return; 
       const response = await getEnabledFields(sites[0], 'inspection');
       const fields = response.data.fields;
       
@@ -192,7 +192,7 @@ const Inspections = () => {
         // Combine and deduplicate inspections from all sites
         response = Array.from(new Set(responses.flat()));
       } else {
-        response = await getInspections();
+        response = await getInspections(queryParams);
       }
 
       const filteredInspections = (response || []).filter(item => item.type === 'inspection');
@@ -328,7 +328,7 @@ const Inspections = () => {
         <FilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
-          variant="dashboard"
+          variant="inspections"
           userRole={user.role}
           disableAutoFetch={true}
         />

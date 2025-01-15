@@ -169,9 +169,9 @@ exports.sendPasswordResetConfirmation = async (userData) => {
 
 exports.sendOpenFaultReminder = async (fault, adminEmail) => {
   const template = emailTemplates.openFaultReminder(fault);
-  await sendEmail({
-    to: adminEmail,
-    subject: template.subject,
-    text: template.text
-  });
+  // await sendEmail({
+  //   to: adminEmail,
+  //   subject: template.subject,
+  //   text: template.text
+  // });
 };

@@ -43,28 +43,31 @@ exports.getAllInspections = async (req, res, next) => {
       };
     }
 
-    // Build includes with proper filtering
+    const siteInclude = {
+      model: db.Site,
+      where: siteWhere,
+      attributes: ['id', 'name'],
+      include: [
+        {
+          model: db.Organization,
+          as: 'serviceOrganizations',
+          attributes: ['id', 'name', 'type']
+        }
+      ]
+    };
+
+    if (maintenanceOrg || integratorOrg) {
+      siteInclude.include[0].where = {
+        [db.Sequelize.Op.or]: [
+          maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
+          integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
+        ].filter(Boolean)
+      };
+      siteInclude.include[0].required = true;
+    }
+
     const includes = [
-      {
-        model: db.Site,
-        where: siteWhere,
-        attributes: ['id', 'name'],
-        include: [
-          {
-            model: db.Organization,
-            as: 'serviceOrganizations',
-            attributes: ['id', 'name', 'type'],
-            ...(maintenanceOrg || integratorOrg ? {
-              where: {
-                [db.Sequelize.Op.or]: [
-                  maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
-                  integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
-                ].filter(Boolean)
-              }
-            } : {})
-          }
-        ]
-      },
+      siteInclude,
       { 
         model: db.InspectionType, 
         attributes: ['id', 'name', 'type', 'formStructure']

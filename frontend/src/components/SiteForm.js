@@ -8,10 +8,10 @@ import {
   Grid,
   Autocomplete,
   IconButton,
-  Chip,
   Typography,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { getEntrepreneurs, getUsers, getOrganizations } from '../services/api';
@@ -199,9 +199,10 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           <FormControl fullWidth>
             <Autocomplete
               multiple
-              value={integratorOrgs.filter(org => siteDetails.integratorOrganizationIds.includes(org.id))}
               options={integratorOrgs}
               getOptionLabel={(option) => option.name}
+              value={integratorOrgs.filter(org => siteDetails.integratorOrganizationIds.includes(org.id))}
+              disableCloseOnSelect
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
@@ -209,25 +210,32 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 }));
               }}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    label={option.name}
-                    {...getTagProps({ index })}
-                    sx={{
-                      backgroundColor: colors.background.darkGrey,
-                      color: colors.text.white,
-                      fontSize: { xs: '0.8rem', sm: '0.9rem' }
-                    }}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key, ...chipProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      label={option.name}
+                      {...chipProps}
+                      sx={{
+                        backgroundColor: colors.background.darkGrey,
+                        color: colors.text.white,
+                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                      }}
+                    />
+                  );
+                })
               }
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="חברות אינטגרציה"
-                  sx={commonTextFieldStyles}
-                />
-              )}
+              renderInput={(params) => {
+                console.log('Integrator params:', params);
+                return (
+                  <TextField 
+                    {...params} 
+                    label="חברות אינטגרציה"
+                    sx={commonTextFieldStyles}
+                  />
+                );
+              }}
             />
           </FormControl>
         </Grid>
@@ -236,9 +244,11 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           <FormControl fullWidth>
             <Autocomplete
               multiple
-              value={maintenanceOrgs.filter(org => siteDetails.maintenanceOrganizationIds.includes(org.id))}
               options={maintenanceOrgs}
               getOptionLabel={(option) => option.name}
+              value={siteDetails.maintenanceOrganizationIds.length > 0 
+                ? maintenanceOrgs.filter(org => siteDetails.maintenanceOrganizationIds.includes(org.id))
+                : []}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
@@ -246,25 +256,32 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                 }));
               }}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    label={option.name}
-                    {...getTagProps({ index })}
-                    sx={{
-                      backgroundColor: colors.background.darkGrey,
-                      color: colors.text.white,
-                      fontSize: { xs: '0.8rem', sm: '0.9rem' }
-                    }}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key, ...chipProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      label={option.name}
+                      {...chipProps}
+                      sx={{
+                        backgroundColor: colors.background.darkGrey,
+                        color: colors.text.white,
+                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                      }}
+                    />
+                  );
+                })
               }
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="חברות אחזקה"
-                  sx={commonTextFieldStyles}
-                />
-              )}
+              renderInput={(params) => {
+                console.log('Maintenance params:', params);
+                return (
+                  <TextField 
+                    {...params} 
+                    label="חברות אחזקה"
+                    sx={commonTextFieldStyles}
+                  />
+                );
+              }}
             />
           </FormControl>
         </Grid>

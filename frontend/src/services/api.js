@@ -150,7 +150,7 @@ export const getInspectionTypes = () => apiCall('get', '/inspection-types');
 export const getInspectionFormStructure = (siteId, inspectionTypeId) => 
   apiCall('get', `/inspections/form-structure/${siteId}/${inspectionTypeId}`);
 export const getLatestInspections = (filters) => apiCall('get', '/inspections/latest', { params: filters });
-export const getInspections = () => apiCall('get', '/inspections');
+export const getInspections = (filters = {}) => apiCall('get', '/inspections', { params: filters });
 export const createInspection = (inspectionData) => apiCall('post', '/inspections', inspectionData);
 export const getInspection = (inspectionId) => apiCall('get', `/inspections/${inspectionId}`);
 export const updateInspection = (inspectionId, inspectionData) => apiCall('put', `/inspections/${inspectionId}`, inspectionData);

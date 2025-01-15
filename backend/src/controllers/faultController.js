@@ -84,35 +84,26 @@ exports.getRecurringFaults = async (req, res, next) => {
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    const faults = await db.Fault.findAll({
+    const recurringFaults = await db.Fault.findAll({
       where: {
         siteId: { [Op.in]: siteIds },
-        reportedTime: { [Op.gte]: oneMonthAgo }
+        reportedTime: { [Op.gte]: oneMonthAgo },
+        status: { [Op.in]: ['פתוח', 'סגור', 'בטיפול'] }
       },
-      attributes: [
-        'type',
-        'description',
-        'siteId',
-        [db.sequelize.fn('COUNT', '*'), 'count']
-      ],
-      include: [{
-        model: db.Site,
-        as: 'site',
-        attributes: ['name', 'id']
-      }],
-      group: ['type', 'description', 'site.id', 'site.name'],
-      having: db.sequelize.literal('COUNT(*) > 1'),
-      order: [[db.sequelize.literal('count'), 'DESC']]
+  attributes: [
+    'type',
+    'description',
+    [db.sequelize.fn('COUNT', db.sequelize.col('siteId')), 'count']
+  ],
+  group: ['type', 'description', 'siteId'],
+      having: db.sequelize.where(db.sequelize.fn('COUNT', db.sequelize.col('id')), '>', 1),
+      order: [[db.sequelize.fn('COUNT', db.sequelize.col('id')), 'DESC']]
     });
 
-    const formattedFaults = faults.map((fault, index) => ({
+    const formattedFaults = recurringFaults.map((fault, index) => ({
       type: fault.type,
       description: fault.description,
-      site: {
-        id: fault.site.id,
-        name: fault.site.name
-      },
+      site: null,
       count: parseInt(fault.get('count')),
       serialNumber: index + 1
     }));

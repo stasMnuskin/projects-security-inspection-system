@@ -234,7 +234,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
       {/* Description field - appears after selecting type */}
       {faultData.type && (
         <TextField
-          label={faultData.type === 'אחר' ? 'תיאור (חובה)' : 'תיאור (אופציונלי)'}
+          label={faultData.type === 'אחר' ? 'הערות (חובה)' : 'הערות (אופציונלי)'}
           multiline
           rows={4}
           value={faultData.description}
