@@ -122,7 +122,8 @@ exports.getDashboardOverview = async (req, res, next) => {
         where: {
           siteId: { [Op.in]: siteIds },
           reportedTime: dateRange,
-          ...userFilters
+          ...userFilters,
+          status: { [Op.in]: ['פתוח', 'בטיפול', 'סגור'] } 
         },
         attributes: [
           [db.sequelize.col('Fault.type'), 'type'],
@@ -136,7 +137,6 @@ exports.getDashboardOverview = async (req, res, next) => {
           attributes: ['id', 'name']
         }],
         group: ['Fault.type', 'Fault.description', 'Fault.siteId', 'site.id', 'site.name'],
-        having: db.sequelize.literal('COUNT(*) > 1'),
         order: [[db.sequelize.literal('count'), 'DESC']]
       })
     ]);
@@ -170,16 +170,34 @@ exports.getDashboardOverview = async (req, res, next) => {
           description: fault.description,
           fault: fault.type === 'אחר' ? fault.description : fault.type
         })),
-        recurring: recurringFaults.map((fault, index) => ({
-          serialNumber: index + 1,
-          count: parseInt(fault.get('count')),
-          type: fault.type,
-          description: fault.description,
-          fault: fault.type === 'אחר' ? fault.description : fault.type,
-          site: {
-            id: fault.site.id,
-            name: fault.site.name
+        recurring: recurringFaults.reduce((acc, fault) => {
+          const key = fault.type === 'אחר' ? 
+            `${fault.type}-${fault.description}` : 
+            fault.type;
+          
+          const existing = acc.find(item => 
+            fault.type === 'אחר' ? 
+              (item.type === fault.type && item.description === fault.description) : 
+              item.type === fault.type
+          );
+          
+          if (existing) {
+            existing.count += parseInt(fault.get('count'));
+          } else {
+            acc.push({
+              type: fault.type,
+              description: fault.description,
+              fault: fault.type === 'אחר' ? fault.description : fault.type,
+              count: parseInt(fault.get('count'))
+            });
           }
+          
+          return acc;
+        }, [])
+        .sort((a, b) => b.count - a.count)
+        .map((fault, index) => ({
+          ...fault,
+          serialNumber: index + 1
         }))
       }
     };
