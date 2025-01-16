@@ -137,7 +137,6 @@ exports.getDashboardOverview = async (req, res, next) => {
           attributes: ['id', 'name']
         }],
         group: ['Fault.type', 'Fault.description', 'Fault.siteId', 'site.id', 'site.name'],
-        having: db.sequelize.literal('COUNT(*) > 1'),
         order: [[db.sequelize.literal('count'), 'DESC']]
       })
     ]);
@@ -171,7 +170,8 @@ exports.getDashboardOverview = async (req, res, next) => {
           description: fault.description,
           fault: fault.type === 'אחר' ? fault.description : fault.type
         })),
-        recurring: recurringFaults.reduce((acc, fault) => {
+        recurring: recurringFaults
+        .reduce((acc, fault) => {
           const key = fault.type === 'אחר' ? 
             `${fault.type}-${fault.description}` : 
             fault.type;
@@ -196,6 +196,7 @@ exports.getDashboardOverview = async (req, res, next) => {
           return acc;
         }, [])
         .sort((a, b) => b.count - a.count)
+        .filter(fault => fault.count > 1)
         .map((fault, index) => ({
           ...fault,
           serialNumber: index + 1
