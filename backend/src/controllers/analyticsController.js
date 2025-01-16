@@ -137,6 +137,7 @@ exports.getDashboardOverview = async (req, res, next) => {
           attributes: ['id', 'name']
         }],
         group: ['Fault.type', 'Fault.description', 'Fault.siteId', 'site.id', 'site.name'],
+        having: db.sequelize.literal('COUNT(*) > 1'),
         order: [[db.sequelize.literal('count'), 'DESC']]
       })
     ]);
