@@ -2,8 +2,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Autocomplete, TextField, Chip } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { dashboardStyles } from '../styles/dashboardStyles';
-import { colors } from '../styles/colors';
+import { filterStyles } from '../styles/components';
 import { useAuth } from '../context/AuthContext';
 import DateRangeSelector from './DateRangeSelector';
 import { 
@@ -36,7 +35,6 @@ const FilterBar = ({
     drillTypes: []
   });
 
-  // Load filter options
   useEffect(() => {
     if (authLoading || !user) {
       return;
@@ -46,15 +44,12 @@ const FilterBar = ({
       try {
         let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
         
-        // Load sites based on user role
         if (user.role === 'entrepreneur') {
           try {
-            // Get entrepreneur's sites
             const entrepreneurSites = await getSitesByEntrepreneur(user.id);
             if (Array.isArray(entrepreneurSites)) {
               sitesData = entrepreneurSites;
               
-              // Get site IDs for loading organizations
               const siteIds = entrepreneurSites.map(site => site.id);
               if (siteIds.length > 0) {
                 try {
@@ -77,7 +72,6 @@ const FilterBar = ({
             sitesData = [];
           }
         } else {
-          // Load all data for non-entrepreneurs
           try {
             const [sites, maintenance, integrators] = await Promise.all([
               getSites(),
@@ -95,7 +89,6 @@ const FilterBar = ({
           }
         }
 
-        // Load security officers
         try {
           securityOfficersData = await getSecurityOfficers();
         } catch (error) {
@@ -103,7 +96,6 @@ const FilterBar = ({
           securityOfficersData = [];
         }
 
-        // Update options state
         setOptions(prev => ({
           ...prev,
           sites: sitesData || [],
@@ -112,7 +104,6 @@ const FilterBar = ({
           integrators: integratorOrgs || []
         }));
 
-        // Load drill types for drills variant
         if (variant === 'drills') {
           try {
             const inspectionTypesData = await getInspectionTypes();
@@ -140,16 +131,13 @@ const FilterBar = ({
     loadOptions();
   }, [user, variant, authLoading]);
 
-  // Set initial filters
   useEffect(() => {
-    // Set organization filter
     if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
       onFilterChange('maintenance', user.organizationId);
     } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
       onFilterChange('integrator', user.organizationId);
     }
 
-    // Set initial sites filter 
     if (filters.sites === null && options.sites.length > 0) {
       onFilterChange('sites', options.sites.map(site => site.id));
     }
@@ -192,38 +180,25 @@ const FilterBar = ({
     <TextField
       {...params}
       label={label}
-      sx={{
-        ...dashboardStyles.filterSelect,
-        width: '100%',
-        '& .MuiInputBase-root': {
-          width: '100%'
-        }
-      }}
+      sx={filterStyles.filterSelect}
       onKeyDown={preventSubmit}
     />
   );
 
   return (
     <Box 
-      sx={dashboardStyles.filterBar}
+      sx={filterStyles.filterBar}
       onKeyDown={preventSubmit}
       role="presentation"
     >
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <FilterListIcon sx={{ 
-          color: colors.text.white,
-          fontSize: '16px'
-        }} />
+      <Box>
+        <FilterListIcon sx={filterStyles.filterIcon} />
       </Box>
 
       {variant !== 'drills' && (
         <>
-      <Box sx={{ width: '100%' }}>
-          <Autocomplete
+          <Box>
+            <Autocomplete
               {...commonAutocompleteProps}
               options={options.integrators}
               getOptionLabel={formatOrganizationName}
@@ -235,7 +210,7 @@ const FilterBar = ({
             />
           </Box>
 
-          <Box sx={{ width: '100%' }}>
+          <Box>
             <Autocomplete
               {...commonAutocompleteProps}
               options={options.maintenance}
@@ -251,7 +226,7 @@ const FilterBar = ({
       )}
 
       {variant === 'faults' && (
-        <Box sx={{ width: '100%' }}>
+        <Box>
           <Autocomplete
             {...commonAutocompleteProps}
             options={FAULT_CRITICALITY}
@@ -264,8 +239,8 @@ const FilterBar = ({
       )}
 
       {variant === 'drills' && (
-      <Box sx={{ width: '100%' }}>
-        <Autocomplete
+        <Box>
+          <Autocomplete
             {...commonAutocompleteProps}
             options={options.drillTypes}
             value={filters.drillType || null}
@@ -275,8 +250,8 @@ const FilterBar = ({
         </Box>
       )}
 
-      <Box sx={{ width: '100%' }}>
-          <Autocomplete
+      <Box>
+        <Autocomplete
           {...commonAutocompleteProps}
           options={options.securityOfficers}
           getOptionLabel={(user) => user?.name || ''}
@@ -287,43 +262,43 @@ const FilterBar = ({
         />
       </Box>
 
-      <Box sx={{ width: '100%' }}>
-          <Autocomplete
-            {...commonAutocompleteProps}
-            multiple
-            options={[{ id: 'all', name: 'כל האתרים' }, ...options.sites]}
-            getOptionLabel={(option) => option.name || ''}
-            value={filters.sites === null 
-              ? []  // Empty on initial load
-              : filters.sites?.length === options.sites.length
-                ? []  // Empty when all sites are selected
-                : options.sites.filter(site => filters.sites?.includes(site.id)) || []
+      <Box>
+        <Autocomplete
+          {...commonAutocompleteProps}
+          multiple
+          options={[{ id: 'all', name: 'כל האתרים' }, ...options.sites]}
+          getOptionLabel={(option) => option.name || ''}
+          value={filters.sites === null 
+            ? []
+            : filters.sites?.length === options.sites.length
+              ? []
+              : options.sites.filter(site => filters.sites?.includes(site.id)) || []
+          }
+          onChange={(_, newValue) => {
+            if (newValue.some(v => v.id === 'all') || filters.sites === null) {
+              onFilterChange('sites', options.sites.map(site => site.id));
+            } else {
+              onFilterChange('sites', newValue.map(site => site.id));
             }
-            onChange={(_, newValue) => {
-              if (newValue.some(v => v.id === 'all') || filters.sites === null) {
-                onFilterChange('sites', options.sites.map(site => site.id));
-              } else {
-                onFilterChange('sites', newValue.map(site => site.id));
-              }
-            }}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => renderTextField(params, "אתר")}
-            renderTags={(tagValue, getTagProps) =>
-              tagValue.map((option, index) => {
-                const { key, ...otherProps } = getTagProps({ index });
-                return (
-                  <Chip
-                    key={option.id}
-                    label={option.name}
-                    {...otherProps}
-                  />
-                );
-              })
-            }
-          />
+          }}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          renderInput={(params) => renderTextField(params, "אתר")}
+          renderTags={(tagValue, getTagProps) =>
+            tagValue.map((option, index) => {
+              const { key, ...otherProps } = getTagProps({ index });
+              return (
+                <Chip
+                  key={option.id}
+                  label={option.name}
+                  {...otherProps}
+                />
+              );
+            })
+          }
+        />
       </Box>
 
-      <Box sx={{ width: '100%' }}>
+      <Box>
         <DateRangeSelector
           startDate={filters.startDate}
           endDate={filters.endDate}

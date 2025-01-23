@@ -1,93 +1,19 @@
 import { colors } from './colors';
 
-export const dashboardStyles = {
-  filterBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: { xs: '8px', sm: '12px' },
-    padding: { xs: '8px', sm: '12px 16px' },
-    backgroundColor: colors.background.darkGrey,
-    borderRadius: '8px',
-    border: `2px solid ${colors.primary.orange}`,
-    marginBottom: { xs: '12px', sm: '20px' },
-    flexDirection: { xs: 'column', sm: 'row-reverse' },
-    justifyContent: 'flex-start',
+const dashboardStyles = {
+  // Main container styles
+  mainContainer: {
+    flexGrow: 1, 
+    p: 3,
+    overflowX: 'hidden',
     width: '100%',
-    '& > *:first-of-type': {
-      order: 1
-    }
+    maxWidth: '100%'
   },
-  filterIcon: {
+  pageTitle: {
     color: colors.text.white,
-    marginLeft: { xs: '0', sm: '8px' },
-    fontSize: '24px'
+    marginBottom: 3
   },
-  filterText: {
-    color: colors.text.white,
-    fontSize: { xs: '0.875rem', sm: '1rem' },
-    fontWeight: 'normal'
-  },
-  filterSelect: {
-    backgroundColor: colors.background.darkGrey,
-    color: colors.text.white,
-    minWidth: { xs: '100%', sm: '200px' },
-    '& .MuiOutlinedInput-root': {
-      color: colors.text.white,
-      backgroundColor: colors.background.darkGrey,
-      minHeight: { xs: '48px', md: '40px' },
-      display: 'flex',
-      alignItems: 'center',
-      '& fieldset': {
-        borderColor: colors.border.grey,
-        borderRadius: '4px'
-      },
-      '&:hover fieldset': {
-        borderColor: colors.border.orange
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: colors.primary.orange
-      }
-    },
-    '& .MuiSelect-select, & .MuiInputBase-input': {
-      padding: { xs: '8px 14px', md: '6px 14px' }
-    },
-    '& .MuiSvgIcon-root': {
-      color: colors.text.grey,
-      fontSize: '24px'
-    },
-    '& .MuiAutocomplete-endAdornment': {
-      top: 'calc(50% - 16px)'
-    }
-  },
-  datePicker: {
-    backgroundColor: colors.background.darkGrey,
-    minWidth: { xs: '100%', sm: '200px' },
-    '& .MuiOutlinedInput-root': {
-      color: colors.text.white,
-      backgroundColor: colors.background.darkGrey,
-      minHeight: { xs: '48px', md: '40px' },
-      display: 'flex',
-      alignItems: 'center',
-      '& fieldset': {
-        borderColor: colors.border.grey,
-        borderRadius: '4px'
-      },
-      '&:hover fieldset': {
-        borderColor: colors.border.orange
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: colors.primary.orange
-      }
-    },
-    '& .MuiInputBase-input': {
-      color: colors.text.white,
-      padding: { xs: '8px 14px', md: '6px 14px' }
-    },
-    '& .MuiSvgIcon-root': {
-      color: colors.text.grey,
-      fontSize: '24px'
-    }
-  },
+  // Overview section styles
   overviewContainer: {
     display: 'flex',
     flexDirection: { xs: 'column', sm: 'row' },
@@ -103,6 +29,13 @@ export const dashboardStyles = {
     backgroundColor: colors.background.black,
     padding: { xs: '12px', sm: '16px' },
     borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+      backgroundColor: colors.background.darkGrey
+    },
     '& h6': {
       color: colors.text.grey,
       marginBottom: { xs: '4px', sm: '8px' },
@@ -115,6 +48,20 @@ export const dashboardStyles = {
       fontWeight: 'bold'
     }
   },
+  // Loading overlay styles
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    bgcolor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1
+  },
+  // Fault tables styles
   faultTablesContainer: {
     display: 'grid',
     gridTemplateColumns: {
@@ -159,3 +106,5 @@ export const dashboardStyles = {
     }
   }
 };
+
+export { dashboardStyles };

@@ -106,9 +106,9 @@ const Dashboard = () => {
       />
 
       {/* Main Content */}
-      <Box sx={{ flexGrow: 1, p: 3 }}>
+      <Box sx={dashboardStyles.mainContainer}>
         {/* Header */}
-        <Typography variant="h4" sx={{ color: colors.text.white, mb: 3 }}>
+        <Typography variant="h4" sx={dashboardStyles.pageTitle}>
           דשבורד
         </Typography>
 
@@ -128,18 +128,7 @@ const Dashboard = () => {
         {/* Content with Loading Overlay */}
         <Box position="relative">
           {loading && (
-            <Box
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              bgcolor="rgba(0, 0, 0, 0.3)"
-              zIndex={1}
-            >
+            <Box sx={dashboardStyles.loadingOverlay}>
               <CircularProgress sx={{ color: colors.primary.orange }} />
             </Box>
           )}
@@ -147,32 +136,14 @@ const Dashboard = () => {
           {/* Overview */}
           <Box sx={dashboardStyles.overviewContainer}>
             <Box 
-              sx={{
-                ...dashboardStyles.overviewBox,
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                  backgroundColor: colors.background.darkGrey
-                }
-              }}
+              sx={dashboardStyles.overviewBox}
               onClick={() => handleBoxClick('/inspections')}
             >
               <Typography variant="h6">ביקורות</Typography>
               <Typography variant="h3">{dashboardData.overview.inspections}</Typography>
             </Box>
             <Box 
-              sx={{
-                ...dashboardStyles.overviewBox,
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                  backgroundColor: colors.background.darkGrey
-                }
-              }}
+              sx={dashboardStyles.overviewBox}
               onClick={() => handleBoxClick('/drills')}
             >
               <Typography variant="h6">תרגילים</Typography>

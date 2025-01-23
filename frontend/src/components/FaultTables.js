@@ -175,8 +175,6 @@ FaultTable.propTypes = {
 
 const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [] }) => {
   const navigate = useNavigate();
-  
-  console.log('Recurring Faults:', recurringFaults);
 
   const handleRecurringFaultClick = (row) => {
     const filters = {
@@ -214,7 +212,7 @@ const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [
   const tables = [
     {
       title: 'תקלות נפוצות',
-      headers: ['מס"ד', 'רכיב', 'כמות'],
+      headers: ['מס"ד', 'תקלה', 'כמות'],
       columns: ['serialNumber', 'fault', 'count'],
       data: recurringFaults.map(fault => ({
         type: fault.type,
@@ -232,15 +230,15 @@ const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [
     },
     {
       title: 'תקלות פתוחות',
-      headers: ['מס"ד', 'רכיב', 'אתר'],
-      columns: ['serialNumber', 'fault', 'site'],
+      headers: ['מס"ד', 'אתר', 'תקלה'],
+      columns: ['serialNumber', 'site', 'fault'],
       data: openFaults,
       onRowClick: handleOpenFaultClick
     },
     {
       title: 'תקלות משביתות',
-      headers: ['אתר', 'רכיב', 'מס"ד'],
-      columns: ['site', 'fault', 'serialNumber'],
+      headers: ['מס"ד', 'אתר', 'תקלה'],
+      columns: ['serialNumber', 'site', 'fault'],
       data: criticalFaults,
       onRowClick: handleCriticalFaultClick
     }

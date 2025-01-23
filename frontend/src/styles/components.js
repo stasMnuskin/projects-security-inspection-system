@@ -1,5 +1,6 @@
 import { colors } from './colors';
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
+import { heIL } from '@mui/material/locale';
 
 // Create base theme
 let theme = createTheme({
@@ -10,7 +11,7 @@ let theme = createTheme({
       main: colors.primary.orange,
     },
     background: {
-      default: colors.background.black,
+    flexWrap: 'wrap',
       paper: colors.background.darkGreyOpaque,
     },
     text: {
@@ -122,14 +123,25 @@ let theme = createTheme({
           },
           '& .MuiSelect-icon': {
             color: colors.text.grey,
-          },
-          '@media (max-width:600px)': {
-            minHeight: '48px !important',
-          },
-          '@media (min-width:960px)': {
-            minHeight: '40px !important',
           }
         },
+        select: {
+          color: colors.text.white,
+          textAlign: 'center',
+          padding: '6px 8px',
+          height: '24px',
+          lineHeight: '24px',
+          fontSize: '0.875rem',
+          verticalAlign: 'middle',
+          '&.MuiSelect-select': {
+            color: `${colors.text.white} !important`,
+            textAlign: 'center'
+          },
+          '&.Mui-focused': {
+            color: `${colors.text.white} !important`,
+            backgroundColor: 'transparent'
+          }
+        }
       },
     },
     MuiMenuItem: {
@@ -246,7 +258,7 @@ let theme = createTheme({
       },
     },
   },
-});
+}, heIL); // Add Hebrew locale
 
 theme = responsiveFontSizes(theme);
 
@@ -564,7 +576,6 @@ export const formStyles = {
     },
     fontWeight: 500
   },
-
   textField: {
     '& .MuiOutlinedInput-root': {
       color: colors.text.white,
@@ -603,7 +614,6 @@ export const formStyles = {
       }
     }
   },
-
   submitButton: {
     backgroundColor: colors.primary.orange,
     color: colors.text.white,
@@ -674,6 +684,154 @@ export const contentStyles = {
       '@media (min-width:600px)': {
         fontSize: '0.875rem',
       },
+    }
+  }
+};
+
+export const filterStyles = {
+  filterBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '12px',
+    backgroundColor: colors.background.darkGrey,
+    borderRadius: '8px',
+    border: `2px solid ${colors.primary.orange}`,
+    marginBottom: { xs: '12px', sm: '20px' },
+    flexDirection: { xs: 'column', sm: 'row-reverse' },
+    flexWrap: { xs: 'wrap', sm: 'nowrap' },
+    width: '100%',
+    '& > div': {
+      flex: { xs: '1 1 100%', sm: '0.8 1 0' },
+      minWidth: { xs: '100%', sm: '90px' },
+      '& .MuiOutlinedInput-root': {
+        height: '36px',
+        '& .MuiInputBase-input': {
+          color: colors.text.white,
+          textAlign: 'center',
+          padding: '6px 8px',
+          height: '24px',
+          lineHeight: '24px',
+          fontSize: '0.875rem',
+          verticalAlign: 'middle',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }
+      }
+    },
+    '& > div:first-of-type': {
+      order: 1,
+      width: { xs: '100%', sm: '12px' },
+      minWidth: { xs: '100%', sm: '12px' },
+      maxWidth: { xs: '100%', sm: '12px' },
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 0,
+      margin: '2px',
+      alignSelf: 'center'
+    },
+    '& > div:last-child': {
+      flex: { xs: '1 1 100%', sm: '1.5 1 0' }
+    }
+  },
+  filterIcon: {
+    color: colors.text.white,
+    fontSize: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%'
+  },
+  filterSelect: {
+    backgroundColor: colors.background.darkGrey,
+    width: '100%',
+    '& .MuiOutlinedInput-root': {
+      color: colors.text.white,
+      backgroundColor: colors.background.darkGrey,
+      height: '36px',
+      display: 'flex',
+      alignItems: 'center',
+      '& fieldset': {
+        borderColor: colors.border.grey,
+        borderRadius: '4px'
+      },
+      '&:hover fieldset': {
+        borderColor: colors.border.orange
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: colors.primary.orange
+      }
+    },
+    '& .MuiInputBase-input, & .MuiAutocomplete-input': {
+      color: `${colors.text.white} !important`,
+      textAlign: 'center !important',
+      padding: '6px 8px !important',
+      height: '24px !important',
+      lineHeight: '24px !important',
+      fontSize: '0.875rem !important',
+      verticalAlign: 'middle !important',
+      display: 'flex !important',
+      alignItems: 'center !important',
+      justifyContent: 'center !important'
+    },
+    '& .MuiSvgIcon-root': {
+      color: colors.text.grey,
+      fontSize: '14px'
+    }
+  },
+  datePicker: {
+    backgroundColor: colors.background.darkGrey,
+    width: '100%',
+    minWidth: { xs: '100%', sm: '220px' },
+    '& .MuiOutlinedInput-root': {
+      color: colors.text.white,
+      backgroundColor: colors.background.darkGrey,
+      height: '36px',
+      display: 'flex',
+      alignItems: 'center',
+      '& fieldset': {
+        borderColor: colors.border.grey,
+        borderRadius: '4px'
+      },
+      '&:hover fieldset': {
+        borderColor: colors.border.orange
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: colors.primary.orange
+      },
+      '& .MuiInputBase-input': {
+        color: colors.text.white,
+        textAlign: 'center',
+        padding: '6px 8px',
+        height: '24px',
+        lineHeight: '24px',
+        fontSize: '0.875rem',
+        verticalAlign: 'middle'
+      }
+    },
+    '& .MuiButtonBase-root': {
+      padding: '4px',
+      marginRight: 0,
+      '& .MuiSvgIcon-root': {
+        color: colors.text.grey,
+        fontSize: '16px',
+        cursor: 'pointer',
+        '&:hover': {
+          color: colors.text.white
+        }
+      }
+    }
+  },
+  dateRangeContainer: {
+    display: 'flex',
+    flexDirection: { xs: 'column', sm: 'row' },
+    gap: '4px',
+    '& > div': {
+      flex: { xs: '1 1 100%', sm: '1.5 1 0' },
+      minWidth: { xs: '100%', sm: '130px' }
     }
   }
 };

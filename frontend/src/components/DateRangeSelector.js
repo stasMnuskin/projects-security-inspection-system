@@ -1,10 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Box, TextField } from '@mui/material';
+import { Box, TextField, InputAdornment } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import heLocale from 'date-fns/locale/he';
-import { dashboardStyles } from '../styles/dashboardStyles';
+import { filterStyles } from '../styles/components';
 
 const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateChange }) => {
   const preventSubmit = (event) => {
@@ -21,23 +22,13 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
         event.preventDefault();
         event.stopPropagation();
       }
-    },
-    InputProps: {
-      onKeyDown: preventSubmit
     }
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={heLocale}>
       <Box 
-        sx={{ 
-          display: 'flex', 
-          gap: 1,
-          width: '100%',
-          '& > *': {
-            flex: 1
-          }
-        }}
+        sx={filterStyles.dateRangeContainer}
         onKeyDown={preventSubmit}
         role="presentation"
       >
@@ -52,21 +43,13 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
               <TextField 
                 {...params}
                 {...commonTextFieldProps}
-                sx={{
-                  ...dashboardStyles.datePicker,
-                  '& .MuiInputBase-root': {
-                    minHeight: { xs: '48px !important', md: '40px !important' }
-                  }
-                }}
-                InputProps={{
-                  ...commonTextFieldProps.InputProps,
-                  ...params.InputProps,
-                  sx: {
-                    ...params.InputProps?.sx,
-                    minHeight: { xs: '48px !important', md: '40px !important' }
-                  }
-                }}
+                sx={filterStyles.datePicker}
               />
+            ),
+            openPickerButton: ({ onClick }) => (
+              <InputAdornment position="end" sx={{ cursor: 'pointer' }} onClick={onClick}>
+                <CalendarTodayIcon />
+              </InputAdornment>
             )
           }}
         />
@@ -81,21 +64,13 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
               <TextField 
                 {...params}
                 {...commonTextFieldProps}
-                sx={{
-                  ...dashboardStyles.datePicker,
-                  '& .MuiInputBase-root': {
-                    minHeight: { xs: '48px !important', md: '40px !important' }
-                  }
-                }}
-                InputProps={{
-                  ...commonTextFieldProps.InputProps,
-                  ...params.InputProps,
-                  sx: {
-                    ...params.InputProps?.sx,
-                    minHeight: { xs: '48px !important', md: '40px !important' }
-                  }
-                }}
+                sx={filterStyles.datePicker}
               />
+            ),
+            openPickerButton: ({ onClick }) => (
+              <InputAdornment position="end" sx={{ cursor: 'pointer' }} onClick={onClick}>
+                <CalendarTodayIcon />
+              </InputAdornment>
             )
           }}
         />
