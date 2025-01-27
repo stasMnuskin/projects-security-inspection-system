@@ -57,6 +57,13 @@ router.get('/integrators',
   userController.getIntegrators
 );
 
+// Get users by role
+router.get('/by-role',
+  auth,
+  check('role').isIn(Object.values(ROLES)),
+  userController.getUsersByRole
+);
+
 // Allow access to entrepreneurs list for site management
 router.get('/entrepreneurs', auth, userController.getEntrepreneurs);
 

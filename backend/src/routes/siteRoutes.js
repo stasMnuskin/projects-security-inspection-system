@@ -13,6 +13,13 @@ const validateOrganizationId = (value) => {
   return Number.isInteger(Number(value));
 };
 
+// Helper function to validate user IDs array
+const validateUserIds = (value) => {
+  if (!value) return true;
+  if (!Array.isArray(value)) return false;
+  return value.every(id => Number.isInteger(Number(id)));
+};
+
 // All routes require authentication
 router.use(auth);
 
@@ -29,18 +36,22 @@ router.post('/',
     check('entrepreneurId')
       .isInt()
       .withMessage('מזהה יזם לא תקין'),
-    check('integratorOrganizationId')
+    check('integratorOrganizationIds')
       .optional()
-      .custom(validateOrganizationId)
-      .withMessage('מזהה ארגון אינטגרציה לא תקין'),
-    check('maintenanceOrganizationId')
+      .custom(validateUserIds)
+      .withMessage('מזהי ארגוני אינטגרציה לא תקינים'),
+    check('maintenanceOrganizationIds')
       .optional()
-      .custom(validateOrganizationId)
-      .withMessage('מזהה ארגון אחזקה לא תקין'),
+      .custom(validateUserIds)
+      .withMessage('מזהי ארגוני אחזקה לא תקינים'),
     check('controlCenterUserId')
       .optional({ nullable: true })
       .isInt()
       .withMessage('מזהה איש מוקד לא תקין'),
+    check('notificationRecipientIds')
+      .optional()
+      .custom(validateUserIds)
+      .withMessage('מזהי משתמשים לא תקינים'),
     check('customFields')
       .optional()
       .isArray()
@@ -93,18 +104,22 @@ router.put('/:id',
       .optional()
       .isInt()
       .withMessage('מזהה יזם לא תקין'),
-    check('integratorOrganizationId')
+    check('integratorOrganizationIds')
       .optional()
-      .custom(validateOrganizationId)
-      .withMessage('מזהה ארגון אינטגרציה לא תקין'),
-    check('maintenanceOrganizationId')
+      .custom(validateUserIds)
+      .withMessage('מזהי ארגוני אינטגרציה לא תקינים'),
+    check('maintenanceOrganizationIds')
       .optional()
-      .custom(validateOrganizationId)
-      .withMessage('מזהה ארגון אחזקה לא תקין'),
+      .custom(validateUserIds)
+      .withMessage('מזהי ארגוני אחזקה לא תקינים'),
     check('controlCenterUserId')
       .optional({ nullable: true })
       .isInt()
       .withMessage('מזהה איש מוקד לא תקין'),
+    check('notificationRecipientIds')
+      .optional()
+      .custom(validateUserIds)
+      .withMessage('מזהי משתמשים לא תקינים'),
     check('customFields')
       .optional()
       .isArray()

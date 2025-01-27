@@ -558,4 +558,28 @@ exports.updateRolePermissions = async (req, res, next) => {
   }
 };
 
+exports.getUsersByRole = async (req, res, next) => {
+  try {
+    const { role } = req.query;
+    if (!role || !Object.values(ROLES).includes(role)) {
+      return next(new AppError('סוג משתמש לא תקין', 400));
+    }
+
+    const users = await User.findAll({
+      where: { role },
+      attributes: ['id', 'name', 'email'],
+      include: [{
+        model: Organization,
+        as: 'organization',
+        attributes: ['id', 'name', 'type']
+      }]
+    });
+
+    res.json(users);
+  } catch (error) {
+    logger.error('Error fetching users by role:', error);
+    next(new AppError('שגיאה בשליפת משתמשים', 500));
+  }
+};
+
 module.exports = exports;

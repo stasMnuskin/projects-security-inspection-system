@@ -186,4 +186,13 @@ export const getUsersByOrganizationType = async (type) => {
   const response = await api.get(`/users/by-organization-type/${type}`);
   return response.data;
 };
+
+// User Management by Role for Notifications
+export const getUsersByRole = (role) => apiCall('get', '/users/by-role', { params: { role } });
+
+// Site Notification Recipients
+export const getSiteNotificationRecipients = (siteId) => apiCall('get', `/sites/${siteId}/notification-recipients`);
+export const updateSiteNotificationRecipients = (siteId, recipientIds) => 
+  apiCall('put', `/sites/${siteId}/notification-recipients`, { notificationRecipientIds: recipientIds });
+
 export default api;

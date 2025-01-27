@@ -264,6 +264,129 @@ theme = responsiveFontSizes(theme);
 
 export { theme };
 
+export const notificationRecipientsStyles = {
+  button: {
+    color: colors.text.white,
+    borderColor: colors.border.grey,
+    '&:hover': {
+      borderColor: colors.border.orange,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)'
+    }
+  },
+  dialog: {
+    '& .MuiDialog-paper': {
+      backgroundColor: colors.background.darkGrey,
+      color: colors.text.white,
+      minWidth: { xs: '90%', sm: 400 },
+      maxWidth: { xs: '90%', sm: 500 },
+      overflowX: 'hidden'
+    }
+  },
+  dialogTitle: {
+    borderBottom: `1px solid ${colors.border.grey}`,
+    '& .MuiTypography-root': {
+      fontSize: { xs: '1.1rem', sm: '1.25rem' }
+    }
+  },
+  dialogContent: {
+    padding: '0 !important',
+    overflowX: 'hidden'
+  },
+  rolesList: {
+    padding: 0,
+    width: '100%',
+    '& .MuiListItem-root': {
+      borderBottom: `1px solid ${colors.border.grey}`,
+      '&:hover': {
+        backgroundColor: colors.background.hover
+      }
+    },
+    '& .MuiListItemText-primary': {
+      fontSize: { xs: '0.9rem', sm: '1rem' },
+      color: colors.text.white
+    }
+  },
+  usersList: {
+    padding: 0,
+    width: '100%',
+    '& .MuiFormControlLabel-root': {
+      margin: 0,
+      width: '100%',
+      padding: '8px 16px',
+      boxSizing: 'border-box'
+    },
+    '& .MuiFormControlLabel-label': {
+      fontSize: { xs: '0.85rem', sm: '0.95rem' },
+      color: colors.text.white
+    }
+  },
+  searchField: {
+    margin: '16px',
+    width: 'calc(100% - 32px)',
+    '& .MuiOutlinedInput-root': {
+      color: colors.text.white,
+      '& fieldset': {
+        borderColor: colors.border.grey,
+      },
+      '&:hover fieldset': {
+        borderColor: colors.border.orange,
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: colors.primary.orange,
+      }
+    },
+    '& .MuiInputLabel-root': {
+      color: colors.text.grey,
+      '&.Mui-focused': {
+        color: colors.primary.orange,
+      }
+    },
+    '& .MuiInputAdornment-root': {
+      color: colors.text.grey
+    }
+  },
+  checkbox: {
+    color: colors.text.orange,
+    '&.Mui-checked': {
+      color: colors.text.orange
+    }
+  },
+  noUsers: {
+    padding: '16px',
+    color: colors.text.grey,
+    fontSize: { xs: '0.85rem', sm: '0.95rem' }
+  },
+  backButton: {
+    color: colors.text.white,
+    borderBottom: `1px solid ${colors.border.grey}`,
+    borderRadius: 0,
+    padding: '12px 16px',
+    justifyContent: 'flex-start',
+    width: '100%',
+    '&:hover': {
+      backgroundColor: colors.background.hover
+    },
+    '& .MuiSvgIcon-root': {
+      marginLeft: '8px'
+    }
+  },
+  dialogActions: {
+    padding: '16px 24px',
+    backgroundColor: colors.background.darkGrey,
+    borderTop: `1px solid ${colors.border.grey}`,
+    '@media (max-width:600px)': {
+      padding: '12px 16px',
+    }
+  },
+  saveButton: {
+    backgroundColor: colors.primary.orange,
+    color: colors.text.white,
+    '&:hover': {
+      backgroundColor: colors.primary.orangeHover
+    }
+  }
+};
+
 export const dialogStyles = {
   dialog: {
     '& .MuiDialog-paper': {

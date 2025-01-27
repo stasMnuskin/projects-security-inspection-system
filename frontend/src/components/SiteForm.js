@@ -14,9 +14,11 @@ import {
   Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { getEntrepreneurs, getUsers, getOrganizations } from '../services/api';
 import { colors } from '../styles/colors';
-import { dialogStyles } from '../styles/components';
+import { dialogStyles, notificationRecipientsStyles } from '../styles/components';
+import NotificationRecipientsDialog from './NotificationRecipientsDialog';
 
 const SITE_TYPES = [
   { value: 'radar', label: 'מכ"מ' },
@@ -26,6 +28,7 @@ const SITE_TYPES = [
 function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const [entrepreneurs, setEntrepreneurs] = useState([]);
   const [integratorOrgs, setIntegratorOrgs] = useState([]);
@@ -38,7 +41,8 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     entrepreneurId: '',
     integratorOrganizationIds: [],
     maintenanceOrganizationIds: [],
-    controlCenterUserId: null
+    controlCenterUserId: null,
+    notificationRecipientIds: []
   });
 
   const [customFields, setCustomFields] = useState([]);
@@ -85,7 +89,8 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           .map(org => org.id) || [],
         maintenanceOrganizationIds: initialData.serviceOrganizations
           ?.filter(org => org.type === 'maintenance')
-          .map(org => org.id) || []
+          .map(org => org.id) || [],
+        notificationRecipientIds: initialData.notificationRecipients?.map(user => user.id) || []
       });
       setCustomFields(initialData.customFields || []);
     }
@@ -99,6 +104,13 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     const newFields = [...customFields];
     newFields[index][field] = value;
     setCustomFields(newFields);
+  };
+
+  const handleNotificationRecipientsChange = (recipientIds) => {
+    setSiteDetails(prev => ({
+      ...prev,
+      notificationRecipientIds: recipientIds
+    }));
   };
 
   const handleSubmit = () => {
@@ -226,16 +238,13 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   );
                 })
               }
-              renderInput={(params) => {
-                console.log('Integrator params:', params);
-                return (
-                  <TextField 
-                    {...params} 
-                    label="חברות אינטגרציה"
-                    sx={commonTextFieldStyles}
-                  />
-                );
-              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  label="חברות אינטגרציה"
+                  sx={commonTextFieldStyles}
+                />
+              )}
             />
           </FormControl>
         </Grid>
@@ -272,16 +281,13 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
                   );
                 })
               }
-              renderInput={(params) => {
-                console.log('Maintenance params:', params);
-                return (
-                  <TextField 
-                    {...params} 
-                    label="חברות אחזקה"
-                    sx={commonTextFieldStyles}
-                  />
-                );
-              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  label="חברות אחזקה"
+                  sx={commonTextFieldStyles}
+                />
+              )}
             />
           </FormControl>
         </Grid>
@@ -307,6 +313,24 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
               )}
             />
           </FormControl>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Button
+            variant="outlined"
+            onClick={() => setDialogOpen(true)}
+            startIcon={<NotificationsIcon />}
+            sx={notificationRecipientsStyles.button}
+            fullWidth
+          >
+            דיווח
+          </Button>
+          <NotificationRecipientsDialog
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            selectedRecipients={siteDetails.notificationRecipientIds}
+            onChange={handleNotificationRecipientsChange}
+          />
         </Grid>
 
         {customFields.length > 0 && (
@@ -409,6 +433,11 @@ SiteForm.propTypes = {
       type: PropTypes.string
     })),
     controlCenterUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    notificationRecipients: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.number,
+      name: PropTypes.string,
+      email: PropTypes.string
+    })),
     customFields: PropTypes.arrayOf(PropTypes.shape({
       name: PropTypes.string,
       value: PropTypes.string

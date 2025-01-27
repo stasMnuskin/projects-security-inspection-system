@@ -39,6 +39,21 @@ const validateOrganizations = async (organizationIds, type, errorPrefix) => {
   return organizations;
 };
 
+const validateNotificationRecipients = async (recipientIds) => {
+  if (!recipientIds || !Array.isArray(recipientIds)) return [];
+
+  const users = await User.findAll({
+    where: { id: recipientIds },
+    attributes: ['id', 'name', 'email', 'role']
+  });
+
+  if (users.length !== recipientIds.length) {
+    throw new AppError('חלק מהמשתמשים שנבחרו לא נמצאו', 404, 'USERS_NOT_FOUND');
+  }
+
+  return users;
+};
+
 exports.createSite = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -53,7 +68,8 @@ exports.createSite = async (req, res, next) => {
       integratorOrganizationIds,
       maintenanceOrganizationIds,
       controlCenterUserId,
-      customFields 
+      customFields,
+      notificationRecipientIds
     } = req.body;
 
     // Validate site type
@@ -72,6 +88,9 @@ exports.createSite = async (req, res, next) => {
     if (controlCenterUserId) {
       await validateUser(controlCenterUserId, 'control_center', 'איש מוקד');
     }
+
+    // Validate notification recipients if provided
+    const notificationRecipients = await validateNotificationRecipients(notificationRecipientIds);
 
     // Validate custom fields format
     if (customFields) {
@@ -103,6 +122,11 @@ exports.createSite = async (req, res, next) => {
       await site.setServiceOrganizations(organizationIds);
     }
 
+    // Set up notification recipients
+    if (notificationRecipients.length > 0) {
+      await site.setNotificationRecipients(notificationRecipients.map(user => user.id));
+    }
+
     logger.info(`New site created: ${site.name} for entrepreneur: ${entrepreneurId}`);
 
     // Fetch the created site with all associations
@@ -127,6 +151,11 @@ exports.createSite = async (req, res, next) => {
           model: Organization,
           as: 'serviceOrganizations',
           attributes: ['id', 'name', 'type']
+        },
+        {
+          model: User,
+          as: 'notificationRecipients',
+          attributes: ['id', 'name', 'email', 'role']
         }
       ]
     });
@@ -164,6 +193,11 @@ exports.getAllSites = async (req, res, next) => {
         model: Organization,
         as: 'serviceOrganizations',
         attributes: ['id', 'name', 'type']
+      },
+      {
+        model: User,
+        as: 'notificationRecipients',
+        attributes: ['id', 'name', 'email', 'role']
       }
     ];
     
@@ -224,6 +258,11 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
           model: Organization,
           as: 'serviceOrganizations',
           attributes: ['id', 'name', 'type']
+        },
+        {
+          model: User,
+          as: 'notificationRecipients',
+          attributes: ['id', 'name', 'email', 'role']
         }
       ],
       order: [['name', 'ASC']]
@@ -259,6 +298,11 @@ exports.getSite = async (req, res, next) => {
           model: Organization,
           as: 'serviceOrganizations',
           attributes: ['id', 'name', 'type']
+        },
+        {
+          model: User,
+          as: 'notificationRecipients',
+          attributes: ['id', 'name', 'email', 'role']
         }
       ]
     });
@@ -298,7 +342,8 @@ exports.updateSite = async (req, res, next) => {
       integratorOrganizationIds,
       maintenanceOrganizationIds,
       controlCenterUserId,
-      customFields 
+      customFields,
+      notificationRecipientIds
     } = req.body;
 
     // Update basic fields
@@ -339,6 +384,12 @@ exports.updateSite = async (req, res, next) => {
       site.controlCenterUserId = controlCenterUserId;
     }
 
+    // Update notification recipients if provided
+    if (notificationRecipientIds !== undefined) {
+      const notificationRecipients = await validateNotificationRecipients(notificationRecipientIds);
+      await site.setNotificationRecipients(notificationRecipients.map(user => user.id));
+    }
+
     // Update custom fields if provided
     if (customFields) {
       if (!Array.isArray(customFields)) {
@@ -376,6 +427,11 @@ exports.updateSite = async (req, res, next) => {
           model: Organization,
           as: 'serviceOrganizations',
           attributes: ['id', 'name', 'type']
+        },
+        {
+          model: User,
+          as: 'notificationRecipients',
+          attributes: ['id', 'name', 'email', 'role']
         }
       ]
     });

@@ -374,6 +374,9 @@ exports.createFault = async (req, res, next) => {
       lastUpdatedTime: createdFault.lastUpdatedTime
     };
 
+    // Send email notification for new fault
+    await require('../utils/emailFaultProcessor').processNewFault(createdFault);
+
     logger.info(`New fault created for site ${siteId}`);
     res.status(201).json(formattedFault);
   } catch (error) {
@@ -443,6 +446,9 @@ exports.updateFaultStatus = async (req, res, next) => {
     if (status === 'סגור') {
       fault.closedTime = new Date();
       fault.closedBy = req.user.name;
+      
+      // Send email notification for fault closure
+      await require('../utils/emailFaultProcessor').processFaultClosure(fault);
     }
 
     await fault.save();

@@ -11,7 +11,8 @@ logger.info('Starting server with configuration:', {
 });
 
 require('./jobs/emailProcessor');
-require('./jobs/faultReminderJob'); 
+const { scheduleJob } = require('./jobs/faultReminderJob');
+scheduleJob(); // Start the fault reminder job
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');

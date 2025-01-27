@@ -77,6 +77,14 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'siteId',
       as: 'serviceOrganizations'
     });
+
+    // Site has many notification recipients (users who receive fault notifications)
+    Site.belongsToMany(models.User, {
+      through: models.SiteNotificationRecipients,
+      foreignKey: 'siteId',
+      otherKey: 'userId',
+      as: 'notificationRecipients'
+    });
   };
 
   return Site;

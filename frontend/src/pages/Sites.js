@@ -311,7 +311,7 @@ function Sites({ mode = 'list', onModeChange }) {
             initialData={selectedSite}
             onSubmit={handleFormSubmit}
             onCancel={handleFormClose}
-            submitLabel={loading ? 'שומר...' : selectedSite ? 'עדכן' : 'שמור'}
+            submitLabel={loading ? 'שומר...' : selectedSite ? 'עדכן' : 'שמירה'}
           />
         </DialogContent>
       </Dialog>
