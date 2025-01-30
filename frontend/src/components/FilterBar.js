@@ -41,6 +41,12 @@ const FilterBar = ({
     }
 
     const loadOptions = async () => {
+      console.log('Loading options for FilterBar...', {
+        userRole: user?.role,
+        userId: user?.id,
+        organizationId: user?.organizationId,
+        variant
+      });
       try {
         let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
         
@@ -79,8 +85,9 @@ const FilterBar = ({
               getOrganizations('integrator')
             ]);
             sitesData = sites;
-            maintenanceOrgs = maintenance;
-            integratorOrgs = integrators;
+            // Filter out organizations without active users
+            maintenanceOrgs = maintenance.filter(org => org.activeUsersCount > 0);
+            integratorOrgs = integrators.filter(org => org.activeUsersCount > 0);
           } catch (error) {
             console.error('Error loading sites and organizations:', error);
             sitesData = [];
@@ -96,13 +103,27 @@ const FilterBar = ({
           securityOfficersData = [];
         }
 
-        setOptions(prev => ({
-          ...prev,
-          sites: sitesData || [],
-          securityOfficers: securityOfficersData || [],
-          maintenance: maintenanceOrgs || [],
-          integrators: integratorOrgs || []
-        }));
+        console.log('Sites loaded:', {
+          sitesCount: sitesData?.length,
+          sites: sitesData,
+          maintenanceOrgsCount: maintenanceOrgs?.length,
+          integratorOrgsCount: integratorOrgs?.length
+        });
+        setOptions(prev => {
+          const newOptions = {
+            ...prev,
+            sites: sitesData || [],
+            securityOfficers: securityOfficersData || [],
+            maintenance: maintenanceOrgs || [],
+            integrators: integratorOrgs || []
+          };
+          console.log('New options state:', {
+            sitesCount: newOptions.sites.length,
+            maintenanceCount: newOptions.maintenance.length,
+            integratorsCount: newOptions.integrators.length
+          });
+          return newOptions;
+        });
 
         if (variant === 'drills') {
           try {
@@ -132,16 +153,32 @@ const FilterBar = ({
   }, [user, variant, authLoading]);
 
   useEffect(() => {
+    console.log('FilterBar effect running with:', {
+      userRole: user?.role,
+      organizationId: user?.organizationId,
+      filters,
+      optionsSites: options.sites,
+      disableAutoFetch,
+      filtersId: filters.id,
+      filtersSites: filters.sites
+    });
+
     if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
+      console.log('Setting maintenance organization:', user.organizationId);
       onFilterChange('maintenance', user.organizationId);
     } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
+      console.log('Setting integrator organization:', user.organizationId);
       onFilterChange('integrator', user.organizationId);
     }
 
-    if (filters.sites === null && options.sites.length > 0) {
+    if (!filters.id && filters.sites === null && options.sites.length > 0 && !disableAutoFetch) {
+      console.log('Auto-setting sites filter with all sites:', {
+        sitesCount: options.sites.length,
+        siteIds: options.sites.map(site => site.id)
+      });
       onFilterChange('sites', options.sites.map(site => site.id));
     }
-  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, filters.sites, options.sites, onFilterChange]);
+  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, filters.sites, filters.id, options.sites, onFilterChange, disableAutoFetch, filters]);
 
   const formatOrganizationName = (org) => org ? org.name : '';
 

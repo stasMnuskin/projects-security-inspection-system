@@ -8,12 +8,14 @@ const VALID_SITE_TYPES = ['radar', 'inductive_fence'];
 const validateUser = async (userId, role, errorPrefix) => {
   if (!userId) return null;
   
-  const user = await User.findByPk(userId);
+  const user = await User.findOne({
+    where: { 
+      id: userId,
+      role
+    }
+  });
   if (!user) {
     throw new AppError(`${errorPrefix} לא נמצא`, 404, 'USER_NOT_FOUND');
-  }
-  if (user.role !== role) {
-    throw new AppError(`המשתמש שנבחר אינו ${errorPrefix}`, 400, 'INVALID_USER_ROLE');
   }
   return user;
 };
@@ -21,19 +23,26 @@ const validateUser = async (userId, role, errorPrefix) => {
 const validateOrganizations = async (organizationIds, type, errorPrefix) => {
   if (!organizationIds || organizationIds.length === 0) return [];
 
+  // First find organizations by ID and type
   const organizations = await Organization.findAll({
-    where: { id: organizationIds }
+    where: { 
+      id: organizationIds,
+      type
+    },
+    include: [{
+      model: User,
+      as: 'employees',
+      where: {
+        deletedAt: null,
+        role: type
+      },
+      required: true
+    }]
   });
 
-  // Check if all organizations were found
+  // Check if all organizations were found with active users
   if (organizations.length !== organizationIds.length) {
-    throw new AppError(`חלק מה${errorPrefix} לא נמצאו`, 404, 'ORGANIZATION_NOT_FOUND');
-  }
-
-  // Check if all organizations are of the correct type
-  const invalidOrgs = organizations.filter(org => org.type !== type);
-  if (invalidOrgs.length > 0) {
-    throw new AppError(`חלק מהארגונים שנבחרו אינם מסוג ${errorPrefix}`, 400, 'INVALID_ORGANIZATION_TYPE');
+    throw new AppError(`חלק מה${errorPrefix} לא נמצאו או אין להם משתמשים פעילים`, 404, 'ORGANIZATION_NOT_FOUND');
   }
 
   return organizations;
@@ -43,16 +52,45 @@ const validateNotificationRecipients = async (recipientIds) => {
   if (!recipientIds || !Array.isArray(recipientIds)) return [];
 
   const users = await User.findAll({
-    where: { id: recipientIds },
+    where: { 
+      id: recipientIds
+    },
     attributes: ['id', 'name', 'email', 'role']
   });
 
   if (users.length !== recipientIds.length) {
-    throw new AppError('חלק מהמשתמשים שנבחרו לא נמצאו', 404, 'USERS_NOT_FOUND');
+    throw new AppError('חלק מהמשתמשים שנבחרו לא נמצאו או נמחקו מהמערכת', 404, 'USERS_NOT_FOUND');
   }
 
   return users;
 };
+
+const getBaseInclude = () => [
+  {
+    model: User.scope('withOrganization'),
+    as: 'entrepreneur',
+    attributes: ['id', 'name', 'email'],
+    required: false
+  },
+  {
+    model: User,
+    as: 'controlCenter',
+    attributes: ['id', 'name'],
+    required: false
+  },
+  {
+    model: Organization.scope('withActiveUsers'),
+    as: 'serviceOrganizations',
+    attributes: ['id', 'name', 'type'],
+    required: false
+  },
+  {
+    model: User,
+    as: 'notificationRecipients',
+    attributes: ['id', 'name', 'email', 'role'],
+    required: false
+  }
+];
 
 exports.createSite = async (req, res, next) => {
   try {
@@ -131,33 +169,7 @@ exports.createSite = async (req, res, next) => {
 
     // Fetch the created site with all associations
     const createdSite = await Site.findByPk(site.id, {
-      include: [
-        {
-          model: User,
-          as: 'entrepreneur',
-          attributes: ['id', 'name', 'email'],
-          include: [{
-            model: Organization,
-            as: 'organization',
-            attributes: ['id', 'name', 'type']
-          }]
-        },
-        {
-          model: User,
-          as: 'controlCenter',
-          attributes: ['id', 'name']
-        },
-        {
-          model: Organization,
-          as: 'serviceOrganizations',
-          attributes: ['id', 'name', 'type']
-        },
-        {
-          model: User,
-          as: 'notificationRecipients',
-          attributes: ['id', 'name', 'email', 'role']
-        }
-      ]
+      include: getBaseInclude()
     });
 
     res.status(201).json({
@@ -173,33 +185,6 @@ exports.createSite = async (req, res, next) => {
 exports.getAllSites = async (req, res, next) => {
   try {
     let where = {};
-    const include = [
-      {
-        model: User,
-        as: 'entrepreneur',
-        attributes: ['id', 'name', 'email'],
-        include: [{
-          model: Organization,
-          as: 'organization',
-          attributes: ['id', 'name', 'type']
-        }]
-      },
-      {
-        model: User,
-        as: 'controlCenter',
-        attributes: ['id', 'name']
-      },
-      {
-        model: Organization,
-        as: 'serviceOrganizations',
-        attributes: ['id', 'name', 'type']
-      },
-      {
-        model: User,
-        as: 'notificationRecipients',
-        attributes: ['id', 'name', 'email', 'role']
-      }
-    ];
     
     // Only entrepreneurs are restricted to their own sites
     if (req.user.role === 'entrepreneur') {
@@ -209,7 +194,7 @@ exports.getAllSites = async (req, res, next) => {
     // Include entrepreneur data for all sites
     const sites = await Site.findAll({
       where,
-      include,
+      include: getBaseInclude(),
       order: [['name', 'ASC']]
     });
 
@@ -230,41 +215,15 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
       return next(new AppError('אין הרשאה לצפות באתרים של יזם אחר', 403, 'FORBIDDEN'));
     }
 
-    // Verify entrepreneur exists
-    const entrepreneur = await User.findByPk(entrepreneurId);
+    // Verify entrepreneur exists (including deleted)
+    const entrepreneur = await User.scope('withDeleted').findByPk(entrepreneurId);
     if (!entrepreneur) {
       return next(new AppError('יזם לא נמצא', 404, 'ENTREPRENEUR_NOT_FOUND'));
     }
 
     const sites = await Site.findAll({
       where: { entrepreneurId },
-      include: [
-        {
-          model: User,
-          as: 'entrepreneur',
-          attributes: ['id', 'name', 'email'],
-          include: [{
-            model: Organization,
-            as: 'organization',
-            attributes: ['id', 'name', 'type']
-          }]
-        },
-        {
-          model: User,
-          as: 'controlCenter',
-          attributes: ['id', 'name']
-        },
-        {
-          model: Organization,
-          as: 'serviceOrganizations',
-          attributes: ['id', 'name', 'type']
-        },
-        {
-          model: User,
-          as: 'notificationRecipients',
-          attributes: ['id', 'name', 'email', 'role']
-        }
-      ],
+      include: getBaseInclude(),
       order: [['name', 'ASC']]
     });
 
@@ -278,33 +237,7 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
 exports.getSite = async (req, res, next) => {
   try {
     const site = await Site.findByPk(req.params.id, {
-      include: [
-        {
-          model: User,
-          as: 'entrepreneur',
-          attributes: ['id', 'name', 'email'],
-          include: [{
-            model: Organization,
-            as: 'organization',
-            attributes: ['id', 'name', 'type']
-          }]
-        },
-        {
-          model: User,
-          as: 'controlCenter',
-          attributes: ['id', 'name']
-        },
-        {
-          model: Organization,
-          as: 'serviceOrganizations',
-          attributes: ['id', 'name', 'type']
-        },
-        {
-          model: User,
-          as: 'notificationRecipients',
-          attributes: ['id', 'name', 'email', 'role']
-        }
-      ]
+      include: getBaseInclude()
     });
 
     if (!site) {
@@ -407,33 +340,7 @@ exports.updateSite = async (req, res, next) => {
     logger.info(`Site updated: ${site.name}`);
 
     const updatedSite = await Site.findByPk(site.id, {
-      include: [
-        {
-          model: User,
-          as: 'entrepreneur',
-          attributes: ['id', 'name', 'email'],
-          include: [{
-            model: Organization,
-            as: 'organization',
-            attributes: ['id', 'name', 'type']
-          }]
-        },
-        {
-          model: User,
-          as: 'controlCenter',
-          attributes: ['id', 'name']
-        },
-        {
-          model: Organization,
-          as: 'serviceOrganizations',
-          attributes: ['id', 'name', 'type']
-        },
-        {
-          model: User,
-          as: 'notificationRecipients',
-          attributes: ['id', 'name', 'email', 'role']
-        }
-      ]
+      include: getBaseInclude()
     });
 
     res.json({ 

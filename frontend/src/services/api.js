@@ -88,7 +88,14 @@ export const getEntrepreneurs = () => apiCall('get', '/users/entrepreneurs');
 export const createEntrepreneur = (entrepreneurData) => apiCall('post', '/users/entrepreneurs', entrepreneurData);
 
 // Fault Management
-export const getAllFaults = (filters = {}) => apiCall('get', '/faults', { params: filters });
+export const getAllFaults = (filters = {}) => {
+  const params = { ...filters };
+  // Convert arrays to comma-separated strings
+  if (params.sites && Array.isArray(params.sites)) {
+    params.sites = params.sites.join(',');
+  }
+  return apiCall('get', '/faults', { params });
+};
 export const updateFault = (faultId, faultData) => apiCall('put', `/faults/${faultId}`, faultData);
 export const getFaultsBySite = (siteId) => apiCall('get', `/faults/site/${siteId}`);
 export const createFault = (faultData) => apiCall('post', '/faults', faultData);

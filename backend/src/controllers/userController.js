@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { validationResult } = require('express-validator');
-const { User, Site, Organization } = require('../models');
+const { User, Site, Organization, Fault, Inspection, Notification, SiteNotificationRecipients, sequelize } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { getActiveSecrets } = require('../utils/secretManager');
@@ -156,6 +156,9 @@ exports.getCurrentUser = async (req, res, next) => {
 exports.getAllUsers = async (req, res, next) => {
   try {
     const users = await User.findAll({
+      where: {
+        deletedAt: null // Explicitly exclude soft-deleted users
+      },
       attributes: { exclude: ['password'] },
       include: [
         {
@@ -180,7 +183,10 @@ exports.getAllUsers = async (req, res, next) => {
 exports.getEntrepreneurs = async (req, res, next) => {
   try {
     const users = await User.findAll({
-      where: { role: ROLES.entrepreneur },
+      where: { 
+        role: ROLES.entrepreneur,
+        deletedAt: null // Explicitly exclude soft-deleted users
+      },
       attributes: ['id', 'name', 'email'],
       include: [
         {
@@ -205,7 +211,10 @@ exports.getEntrepreneurs = async (req, res, next) => {
 exports.getSecurityOfficers = async (req, res, next) => {
   try {
     const users = await User.findAll({
-      where: { role: 'security_officer' },
+      where: { 
+        role: 'security_officer',
+        deletedAt: null // Explicitly exclude soft-deleted users
+      },
       attributes: ['id', 'name']
     });
     res.json(users);
@@ -217,7 +226,10 @@ exports.getSecurityOfficers = async (req, res, next) => {
 
 exports.getMaintenanceStaff = async (req, res, next) => {
   try {
-    const whereClause = { role: 'maintenance' };
+    const whereClause = { 
+      role: 'maintenance',
+      deletedAt: null // Explicitly exclude soft-deleted users
+    };
     
     // For integrator/maintenance users, only show users from their organization
     if ((req.user.role === 'integrator' || req.user.role === 'maintenance' || req.user.role === 'entrepreneur') 
@@ -242,7 +254,10 @@ exports.getMaintenanceStaff = async (req, res, next) => {
 
 exports.getIntegrators = async (req, res, next) => {
   try {
-    const whereClause = { role: 'integrator' };
+    const whereClause = { 
+      role: 'integrator',
+      deletedAt: null 
+    };
     
     // For integrator/maintenance users, only show users from their organization
     if ((req.user.role === 'integrator' || req.user.role === 'maintenance' || req.user.role === 'entrepreneur') 
@@ -306,7 +321,7 @@ exports.updateUserDetails = async (req, res, next) => {
     await user.update({
       name: name || user.name,
       email: email || user.email,
-      organizationId: organizationId || user.organizationId,
+      organizationId: organizationId === null ? null : (organizationId || user.organizationId),
       role: role || user.role,
       permissions
     });
@@ -340,16 +355,78 @@ exports.updateUserDetails = async (req, res, next) => {
 };
 
 exports.deleteUser = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
       return next(new AppError('משתמש לא נמצא', 404, 'USER_NOT_FOUND'));
     }
 
-    await user.destroy();
-    logger.info(`User deleted: ${user.email}`);
+    // Clear user references in Sites
+    await Site.update(
+      {
+        entrepreneurId: null,
+        controlCenterUserId: null
+      },
+      {
+        where: {
+          [Op.or]: [
+            { entrepreneurId: user.id },
+            { controlCenterUserId: user.id }
+          ]
+        },
+        transaction
+      }
+    );
+
+    // Clear user references in Faults
+    await Fault.update(
+      {
+        maintenanceUserId: null,
+        integratorUserId: null,
+        controlCenterUserId: null
+      },
+      {
+        where: {
+          [Op.or]: [
+            { maintenanceUserId: user.id },
+            { integratorUserId: user.id },
+            { controlCenterUserId: user.id }
+          ]
+        },
+        transaction
+      }
+    );
+
+    // Clear user references in Inspections
+    await Inspection.update(
+      { userId: null },
+      {
+        where: { userId: user.id },
+        transaction
+      }
+    );
+
+    // Delete user's notifications
+    await Notification.destroy({
+      where: { userId: user.id },
+      transaction
+    });
+
+    // Remove user from site notification recipients
+    await SiteNotificationRecipients.destroy({
+      where: { userId: user.id },
+      transaction
+    });
+
+    // Soft delete the user
+    await user.destroy({ transaction });
+
+    await transaction.commit();
+    logger.info(`User deleted and all references cleared: ${user.email}`);
     res.json({ message: 'משתמש נמחק בהצלחה' });
   } catch (error) {
+    await transaction.rollback();
     logger.error('Error deleting user:', error);
     next(new AppError('שגיאה במחיקת המשתמש', 500, 'USER_DELETE_ERROR'));
   }
@@ -566,7 +643,10 @@ exports.getUsersByRole = async (req, res, next) => {
     }
 
     const users = await User.findAll({
-      where: { role },
+      where: { 
+        role,
+        deletedAt: null // Explicitly exclude soft-deleted users
+      },
       attributes: ['id', 'name', 'email'],
       include: [{
         model: Organization,

@@ -130,6 +130,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'Faults',
+    paranoid: false,
     hooks: {
       beforeValidate: async (fault) => {
         // If site is provided, ensure entrepreneurId matches
@@ -182,20 +183,23 @@ module.exports = (sequelize, DataTypes) => {
       as: 'integratorOrganization'
     });
 
-    // User relationships
+    // User relationships with paranoid support
     Fault.belongsTo(models.User, {
       foreignKey: 'maintenanceUserId',
-      as: 'maintenanceUser'
+      as: 'maintenanceUser',
+      constraints: false // Allow faults to keep references to soft-deleted users
     });
 
     Fault.belongsTo(models.User, {
       foreignKey: 'integratorUserId',
-      as: 'integratorUser'
+      as: 'integratorUser',
+      constraints: false // Allow faults to keep references to soft-deleted users
     });
 
     Fault.belongsTo(models.User, {
       foreignKey: 'controlCenterUserId',
-      as: 'controlCenterUser'
+      as: 'controlCenterUser',
+      constraints: false // Allow faults to keep references to soft-deleted users
     });
   };
 

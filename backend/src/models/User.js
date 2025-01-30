@@ -59,6 +59,24 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+  }, {
+    paranoid: true,
+    defaultScope: {
+      where: {
+        deletedAt: null
+      }
+    },
+    scopes: {
+      // Include deleted users
+      withDeleted: {},
+      // Include organization
+      withOrganization: {
+        include: [{
+          model: sequelize.models.Organization,
+          as: 'organization'
+        }]
+      }
+    }
   });
 
   User.associate = function(models) {

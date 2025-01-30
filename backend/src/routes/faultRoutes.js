@@ -1,5 +1,5 @@
 const express = require('express');
-const { check, query } = require('express-validator');
+const { check } = require('express-validator');
 const faultController = require('../controllers/faultController');
 const auth = require('../middleware/auth');
 const roleAuth = require('../middleware/roleAuth');
@@ -23,24 +23,7 @@ router.get('/recurring', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultControlle
 router.get('/critical', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultController.getCriticalFaults);
 
 // Get all faults with filtering - requires VIEW_FAULTS permission
-router.get('/', [
-  auth,
-  roleAuth(PERMISSIONS.VIEW_FAULTS),
-  query('status').optional().isIn(['פתוח', 'בטיפול', 'סגור']).withMessage('סטטוס לא חוקי'),
-  query('type').optional().isIn(['גדר', 'מצלמות', 'תקשורת', 'אחר']).withMessage('סוג תקלה לא חוקי'),
-  query('startDate').optional().isISO8601().withMessage('תאריך התחלה לא חוקי'),
-  query('endDate').optional().isISO8601().withMessage('תאריך סיום לא חוקי'),
-  query('site').optional().isString().withMessage('מזהה אתר לא חוקי'),
-  query('maintenanceOrg')
-    .optional()
-    .custom(validateOrganizationId)
-    .withMessage('מזהה ארגון אחזקה לא חוקי'),
-  query('integratorOrg')
-    .optional()
-    .custom(validateOrganizationId)
-    .withMessage('מזהה ארגון אינטגרציה לא חוקי'),
-  validate
-], faultController.getAllFaults);
+router.get('/', auth, roleAuth(PERMISSIONS.VIEW_FAULTS), faultController.getAllFaults);
 
 // Create fault - requires NEW_FAULT permission
 router.post('/', [

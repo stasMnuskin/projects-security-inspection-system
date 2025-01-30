@@ -16,7 +16,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
-import logo from '../assets/logo-black.svg';
+import logo from '../assets/logo-black.svg'
 
 const Sidebar = ({ 
   activeSection, 

@@ -67,13 +67,13 @@ const Faults = () => {
   const [filters, setFilters] = useState({
     startDate: initialDateRange.startDate,
     endDate: initialDateRange.endDate,
-    sites: initialFilters.sites || [],
+    sites: initialFilters.sites || null,
     isCritical: initialFilters.isCritical !== undefined ? initialFilters.isCritical : null,
-    maintenance: '',
-    integrator: '',
+    maintenance: initialFilters.maintenance || '',
+    integrator: initialFilters.integrator || '',
     type: initialFilters.type || '',
     description: initialFilters.description || '',
-    status: initialFilters.status || '',
+    status: initialFilters.status || null,
     id: initialFilters.id || null
   });
 
@@ -108,10 +108,17 @@ const Faults = () => {
 
     try {
       setLoading(true);
+      console.log('Fetching faults with filters:', filters);
+
       if (filters.id) {
         const fault = await getFaultById(filters.id);
-        setFaults([fault]);
-        setError(null);
+        if (fault) {
+          setFaults([fault]);
+          setError(null);
+        } else {
+          setFaults([]);
+          setError('לא נמצאה תקלה');
+        }
         return;
       }
 
@@ -123,8 +130,8 @@ const Faults = () => {
       if (filters.endDate) {
         queryParams.endDate = filters.endDate.toISOString();
       }
-      if (filters.sites && filters.sites.length > 0) {
-        queryParams.sites = filters.sites;
+      if (filters.sites !== undefined && filters.sites !== null && filters.sites.length > 0) {
+        queryParams.sites = filters.sites.join(',');
       }
       if (filters.isCritical !== null) {
         queryParams.isCritical = filters.isCritical;
@@ -146,8 +153,14 @@ const Faults = () => {
       }
 
       const data = await getAllFaults(queryParams);
+      console.log('data', data)
+      console.log('queryParams', queryParams)
+      if (data.length === 0) {
+        setError('לא נמצאו תקלות מתאימות לסינון שנבחר');
+      } else {
+        setError(null);
+      }
       setFaults(data);
-      setError(null);
     } catch (error) {
       setError('שגיאה בטעינת נתונים');
       console.error('Error fetching faults:', error);
@@ -167,18 +180,22 @@ const Faults = () => {
     }
   }, [location.pathname, canCreateFault]);
 
+  // Fetch faults when filters change
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchFaults();
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [fetchFaults, filters]);
+  }, [fetchFaults]);
 
   const handleFilterChange = useCallback((field, value) => {
+    console.log('Filter changed:', field, value);
     setFilters(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      // Only clear ID when user changes a filter manually (not during sites auto-init)
+      id: field === 'id' ? value : (field === 'sites' ? prev.id : null)
     }));
   }, []);
 
@@ -337,102 +354,103 @@ const Faults = () => {
     }
   };
 
-const handleDescriptionChange = async (faultId, description) => {
-  if (!canEditDescription) {
-    showNotification('אין לך הרשאה לעדכן הערות', 'error');
-    return;
+  const handleDescriptionChange = async (faultId, description) => {
+    if (!canEditDescription) {
+      showNotification('אין לך הרשאה לעדכן הערות', 'error');
+      return;
+    }
+
+    try {
+      await updateFaultDetails(faultId, { description });
+      handleFaultUpdated({
+        id: faultId,
+        description
+      });
+    } catch (error) {
+      showNotification('שגיאה בעדכון הערות', 'error');
+      console.error('Error updating description:', error);
+    }
+  };
+
+  const handleDeleteFault = async (faultId) => {
+    if (!isAdmin) {
+      showNotification('אין לך הרשאה למחוק תקלה', 'error');
+      return;
+    }
+
+    try {
+      await deleteFault(faultId);
+      setFaults(prevFaults => prevFaults.filter(fault => fault.id !== faultId));
+      showNotification('התקלה נמחקה בהצלחה');
+    } catch (error) {
+      showNotification('שגיאה במחיקת התקלה', 'error');
+      console.error('Error deleting fault:', error);
+    }
+  };
+
+  if (!canViewFaults) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>אין לך הרשאה לצפות בדף זה</Typography>
+      </Box>
+    );
   }
 
-  try {
-    await updateFaultDetails(faultId, { description });
-    handleFaultUpdated({
-      id: faultId,
-      description
-    });
-  } catch (error) {
-    showNotification('שגיאה בעדכון הערות', 'error');
-    console.error('Error updating description:', error);
-  }
-};
-
-const handleDeleteFault = async (faultId) => {
-  if (!isAdmin) {
-    showNotification('אין לך הרשאה למחוק תקלה', 'error');
-    return;
-  }
-
-  try {
-    await deleteFault(faultId);
-    setFaults(prevFaults => prevFaults.filter(fault => fault.id !== faultId));
-    showNotification('התקלה נמחקה בהצלחה');
-  } catch (error) {
-    showNotification('שגיאה במחיקת התקלה', 'error');
-    console.error('Error deleting fault:', error);
-  }
-};
-
-if (!canViewFaults) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <Typography>אין לך הרשאה לצפות בדף זה</Typography>
-    </Box>
-  );
-}
-
-return (
-  <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-    <Sidebar
-      activeSection="faults"
-      userInfo={{ name: user.name }}
-      onNewFault={canCreateFault ? () => setNewFaultDialog(true) : null}
-    />
-
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      <FilterBar 
-        filters={filters} 
-        onFilterChange={handleFilterChange}
-        variant="faults"
-        disableAutoFetch={true}
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar
+        activeSection="faults"
+        userInfo={{ name: user.name }}
+        onNewFault={canCreateFault ? () => setNewFaultDialog(true) : null}
       />
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+      <Box sx={{ flexGrow: 1, p: 3 }}>
+        <FilterBar 
+          filters={filters} 
+          onFilterChange={handleFilterChange}
+          variant="faults"
+          userRole={user.role}
+          disableAutoFetch={false}
+        />
 
-      <Box position="relative">
-        {loading && (
-          <Box
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            bgcolor="rgba(0, 0, 0, 0.3)"
-            zIndex={1}
-          >
-            <CircularProgress sx={{ color: colors.primary.orange }} />
-          </Box>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
         )}
 
-        <Box sx={{ mt: 3 }}>
-<FaultList 
-  faults={faults}
-  onSiteClick={handleSiteClick}
-  onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
-  onMaintenanceOrgChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
-  onIntegratorOrgChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
-  onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
-  onDescriptionChange={canEditDescription ? handleDescriptionChange : null}
-  onDeleteFault={isAdmin ? handleDeleteFault : null}
-  maintenanceOrgs={maintenanceOrgs}
-  integratorOrgs={integratorOrgs}
-/>
-</Box>
+        <Box position="relative">
+          {loading && (
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bgcolor="rgba(0, 0, 0, 0.3)"
+              zIndex={1}
+            >
+              <CircularProgress sx={{ color: colors.primary.orange }} />
+            </Box>
+          )}
+
+          <Box sx={{ mt: 3 }}>
+            <FaultList 
+              faults={faults}
+              onSiteClick={handleSiteClick}
+              onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
+              onMaintenanceOrgChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
+              onIntegratorOrgChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
+              onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
+              onDescriptionChange={canEditDescription ? handleDescriptionChange : null}
+              onDeleteFault={isAdmin ? handleDeleteFault : null}
+              maintenanceOrgs={maintenanceOrgs}
+              integratorOrgs={integratorOrgs}
+            />
+          </Box>
         </Box>
 
         <Dialog

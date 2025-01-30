@@ -65,8 +65,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
         getOrganizations('integrator'),
         getOrganizations('maintenance')
       ]);
-      setIntegratorOrgs(integratorOrganizations);
-      setMaintenanceOrgs(maintenanceOrganizations);
+      // Filter out organizations without active users
+      setIntegratorOrgs(integratorOrganizations.filter(org => org.activeUsersCount > 0));
+      setMaintenanceOrgs(maintenanceOrganizations.filter(org => org.activeUsersCount > 0));
     } catch (error) {
       console.error('Error fetching organizations:', error);
     }

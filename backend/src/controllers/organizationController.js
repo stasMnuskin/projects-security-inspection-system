@@ -2,6 +2,7 @@ const { Organization, User, Site, sequelize } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
+const { ROLES } = require('../constants/roles');
 
 exports.createOrganization = async (req, res, next) => {
   try {
@@ -12,13 +13,19 @@ exports.createOrganization = async (req, res, next) => {
 
     const { name, type } = req.body;
 
-    // Validate organization type
-    if (!['integrator', 'maintenance', 'general'].includes(type)) {
+    // Validate organization type - must be one of the roles except admin
+    const validTypes = Object.values(ROLES).filter(role => role !== 'admin');
+    if (!validTypes.includes(type)) {
       return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
     }
 
-    // Check if organization already exists
-    const existingOrg = await Organization.findOne({ where: { name } });
+    // Check if organization already exists with same name and type
+    const existingOrg = await Organization.findOne({
+      where: {
+        name,
+        type
+      }
+    });
     if (existingOrg) {
       return next(new AppError('ארגון קיים במערכת', 400, 'ORGANIZATION_EXISTS'));
     }
@@ -47,19 +54,27 @@ exports.getOrganizations = async (req, res, next) => {
 
     // Filter by type if provided
     if (type) {
-      if (!['integrator', 'maintenance', 'general'].includes(type)) {
+      const validTypes = Object.values(ROLES).filter(role => role !== 'admin');
+      if (!validTypes.includes(type)) {
         return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
       }
       where.type = type;
     }
-
     const organizations = await Organization.findAll({
       where,
-      include: [{
-        model: User,
-        as: 'employees',
-        attributes: ['id', 'name', 'email', 'role']
-      }]
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM "Users" AS "activeUsers"
+              WHERE "activeUsers"."organizationId" = "Organization"."id"
+              AND "activeUsers"."deletedAt" IS NULL
+            )`),
+            'activeUsersCount'
+          ]
+        ]
+      }
     });
 
     res.json(organizations);
@@ -76,8 +91,9 @@ exports.getOrganizationsBySites = async (req, res, next) => {
 
     logger.info(`Getting organizations for type: ${type} and sites: ${siteIds}`);
 
-    // Validate organization type - only for service organizations
-    if (!['integrator', 'maintenance'].includes(type)) {
+    // Validate organization type
+    const validTypes = Object.values(ROLES).filter(role => role !== 'admin');
+    if (!validTypes.includes(type)) {
       return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
     }
 
@@ -86,51 +102,24 @@ exports.getOrganizationsBySites = async (req, res, next) => {
       return next(new AppError('נדרשים מזהי אתרים', 400, 'SITE_IDS_REQUIRED'));
     }
 
-    // Parse siteIds from comma-separated string
     const siteIdsArray = siteIds.split(',').map(id => parseInt(id, 10));
 
-    // First, check if we have any organization-site relationships
-    const orgSitesQuery = `
-      SELECT DISTINCT "organizationId"
-      FROM "OrganizationSites"
-      WHERE "siteId" IN (${siteIdsArray.join(',')})
-    `;
-
-    const [orgSites] = await sequelize.query(orgSitesQuery);
-    logger.info(`Found organization-site relationships:`, orgSites);
-
-    if (orgSites.length === 0) {
-      logger.info('No organization-site relationships found');
-      return res.json([]);
-    }
-
-    // Get organizations that service these sites
-    const organizations = await Organization.findAll({
-      attributes: ['id', 'name', 'type'],
+    // Use scope to get organizations with active users of specific type
+    const organizations = await Organization.scope('withActiveUsersOfType', type).findAll({
       where: {
         type,
-        id: {
-          [Op.in]: orgSites.map(org => org.organizationId)
-        }
+        '$servicedSites.id$': { [Op.in]: siteIdsArray }
       },
-      raw: true
+      include: [{
+        model: Site,
+        as: 'servicedSites',
+        attributes: [],
+        through: { attributes: [] }
+      }],
+      attributes: ['id', 'name', 'type']
     });
 
     logger.info(`Found organizations:`, organizations);
-
-    // Double check the relationships
-    const verificationQuery = `
-      SELECT o.id, o.name, o.type, array_agg(os."siteId") as site_ids
-      FROM "Organizations" o
-      JOIN "OrganizationSites" os ON o.id = os."organizationId"
-      WHERE o.type = '${type}'
-      AND os."siteId" IN (${siteIdsArray.join(',')})
-      GROUP BY o.id, o.name, o.type
-    `;
-
-    const [verification] = await sequelize.query(verificationQuery);
-    logger.info(`Verification query results:`, verification);
-
     res.json(organizations);
   } catch (error) {
     logger.error('Error fetching organizations by sites:', error);
@@ -142,16 +131,11 @@ exports.getOrganization = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const organization = await Organization.findByPk(id, {
-      include: [{
-        model: User,
-        as: 'employees',
-        attributes: ['id', 'name', 'email', 'role']
-      }]
-    });
+    // Use scope to get organization with active users
+    const organization = await Organization.scope('withActiveUsers').findByPk(id);
 
     if (!organization) {
-      return next(new AppError('ארגון לא נמצא', 404, 'ORGANIZATION_NOT_FOUND'));
+      return next(new AppError('ארגון לא נמצא או אין לו משתמשים פעילים', 404, 'ORGANIZATION_NOT_FOUND'));
     }
 
     res.json(organization);
@@ -176,11 +160,12 @@ exports.updateOrganization = async (req, res, next) => {
       return next(new AppError('ארגון לא נמצא', 404, 'ORGANIZATION_NOT_FOUND'));
     }
 
-    // Check if new name already exists (excluding current organization)
+    // Check if new name already exists with same type (excluding current organization)
     if (name) {
       const existingOrg = await Organization.findOne({
         where: {
           name,
+          type: type || organization.type,
           id: { [Op.ne]: id }
         }
       });
@@ -190,8 +175,11 @@ exports.updateOrganization = async (req, res, next) => {
     }
 
     // Validate type if provided
-    if (type && !['integrator', 'maintenance', 'general'].includes(type)) {
-      return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
+    if (type) {
+      const validTypes = Object.values(ROLES).filter(role => role !== 'admin');
+      if (!validTypes.includes(type)) {
+        return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
+      }
     }
 
     // Update organization
@@ -222,10 +210,15 @@ exports.deleteOrganization = async (req, res, next) => {
       return next(new AppError('ארגון לא נמצא', 404, 'ORGANIZATION_NOT_FOUND'));
     }
 
-    // Check if organization has employees
-    const employeeCount = await User.count({ where: { organizationId: id } });
+    // Check if organization has active employees
+    const employeeCount = await User.count({ 
+      where: { 
+        organizationId: id,
+        deletedAt: null
+      } 
+    });
     if (employeeCount > 0) {
-      return next(new AppError('לא ניתן למחוק ארגון שיש לו עובדים', 400, 'ORGANIZATION_HAS_EMPLOYEES'));
+      return next(new AppError('לא ניתן למחוק ארגון שיש לו עובדים פעילים', 400, 'ORGANIZATION_HAS_EMPLOYEES'));
     }
 
     // Delete organization

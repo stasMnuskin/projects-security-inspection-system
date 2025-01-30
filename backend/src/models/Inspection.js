@@ -12,7 +12,8 @@ module.exports = (sequelize, DataTypes) => {
       });
       Inspection.belongsTo(models.User, {
         foreignKey: 'userId',
-        as: 'inspector'
+        as: 'inspector',
+        constraints: false // Allow inspections to keep references to soft-deleted users
       });
     }
 
@@ -135,7 +136,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     userId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Users',
         key: 'id'

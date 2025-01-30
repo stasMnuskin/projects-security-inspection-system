@@ -1,7 +1,6 @@
 const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
-const { Op } = require('sequelize');
 const { PERMISSIONS } = require('../constants/roles');
 
 // Get fault types from the model's ENUM definition
@@ -47,7 +46,7 @@ exports.getOpenFaults = async (req, res, next) => {
     const faults = await db.Fault.findAll({
       where: {
         status: 'פתוח',
-        siteId: { [Op.in]: siteIds }
+        siteId: { [db.Sequelize.Op.in]: siteIds }
       },
       include: [{
         model: db.Site,
@@ -61,8 +60,7 @@ exports.getOpenFaults = async (req, res, next) => {
       id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name,
-        serviceOrganizations: fault.site.serviceOrganizations
+        name: fault.site.name
       },
       type: fault.type,
       description: fault.description,
@@ -86,16 +84,16 @@ exports.getRecurringFaults = async (req, res, next) => {
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     const recurringFaults = await db.Fault.findAll({
       where: {
-        siteId: { [Op.in]: siteIds },
-        reportedTime: { [Op.gte]: oneMonthAgo },
-        status: { [Op.in]: ['פתוח', 'סגור', 'בטיפול'] }
+        siteId: { [db.Sequelize.Op.in]: siteIds },
+        reportedTime: { [db.Sequelize.Op.gte]: oneMonthAgo },
+        status: { [db.Sequelize.Op.in]: ['פתוח', 'סגור', 'בטיפול'] }
       },
-  attributes: [
-    'type',
-    'description',
-    [db.sequelize.fn('COUNT', db.sequelize.col('siteId')), 'count']
-  ],
-  group: ['type', 'description', 'siteId'],
+      attributes: [
+        'type',
+        'description',
+        [db.sequelize.fn('COUNT', db.sequelize.col('siteId')), 'count']
+      ],
+      group: ['type', 'description', 'siteId'],
       having: db.sequelize.where(db.sequelize.fn('COUNT', db.sequelize.col('id')), '>', 1),
       order: [[db.sequelize.fn('COUNT', db.sequelize.col('id')), 'DESC']]
     });
@@ -123,7 +121,7 @@ exports.getCriticalFaults = async (req, res, next) => {
       where: {
         isCritical: true,
         status: 'פתוח',
-        siteId: { [Op.in]: siteIds }
+        siteId: { [db.Sequelize.Op.in]: siteIds }
       },
       include: [{
         model: db.Site,
@@ -137,8 +135,7 @@ exports.getCriticalFaults = async (req, res, next) => {
       id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name,
-        serviceOrganizations: fault.site.serviceOrganizations
+        name: fault.site.name
       },
       type: fault.type,
       description: fault.description,
@@ -156,33 +153,40 @@ exports.getCriticalFaults = async (req, res, next) => {
 exports.getAllFaults = async (req, res, next) => {
   try {
     const { role, id: userId, organizationId } = req.user;
-    const { startDate, endDate, sites, isCritical, maintenanceOrg, integratorOrg, type, description, status, faultType } = req.query;
+    const { id, startDate, endDate, sites, isCritical, maintenanceOrg, integratorOrg, type, description, status } = req.query;
 
+    logger.info('getAllFaults called with params:', {
+      role,
+      userId,
+      organizationId,
+      query: req.query
+    });
+
+    // Build base where clause
     let whereClause = {};
 
-    if (startDate && endDate) {
-      whereClause.reportedTime = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
-      };
-    } else if (startDate) {
-      whereClause.reportedTime = {
-        [Op.gte]: new Date(startDate)
-      };
-    } else if (endDate) {
-      whereClause.reportedTime = {
-        [Op.lte]: new Date(endDate)
-      };
+    // Handle date range
+    if (startDate || endDate) {
+      whereClause.reportedTime = {};
+      if (startDate) {
+        whereClause.reportedTime[db.Sequelize.Op.gte] = new Date(startDate);
+      }
+      if (endDate) {
+        whereClause.reportedTime[db.Sequelize.Op.lte] = new Date(endDate);
+      }
     }
 
+    // Handle criticality
     if (isCritical !== undefined) {
       whereClause.isCritical = isCritical === 'true';
     }
 
+    // Handle status
     if (status) {
       whereClause.status = status;
     }
 
-    // טיפול בפילטרים type ו-description
+    // Handle type and description
     if (type === 'אחר' && description) {
       whereClause.type = 'אחר';
       whereClause.description = description;
@@ -190,59 +194,95 @@ exports.getAllFaults = async (req, res, next) => {
       whereClause.type = type;
     }
 
-    let siteWhere = {};
-    if (role === 'entrepreneur') {
-      siteWhere.entrepreneurId = userId;
+    // Handle organization filters
+    if (maintenanceOrg) {
+      whereClause.maintenanceOrganizationId = maintenanceOrg;
     }
+    if (integratorOrg) {
+      whereClause.integratorOrganizationId = integratorOrg;
+    }
+
+    // Get sites based on user role
+    const userSites = await getSitesByUserRole(req.user);
+    const allowedSiteIds = userSites.map(site => site.id);
     
+    // Handle site filters
+    let finalSiteIds;
     if (sites) {
-      const siteIds = Array.isArray(sites) ? sites : [sites];
-      siteWhere.id = { [Op.in]: siteIds };
+      const requestedSiteIds = sites.split(',').map(id => parseInt(id, 10));
+      finalSiteIds = requestedSiteIds.filter(id => allowedSiteIds.includes(id));
+    } else {
+      finalSiteIds = allowedSiteIds;
+    }
+
+    // Add site filter to where clause
+    whereClause.siteId = {
+      [db.Sequelize.Op.in]: finalSiteIds
+    };
+
+    // Add organization-specific access
+    if (role === 'integrator') {
+      whereClause.integratorOrganizationId = organizationId;
+    } else if (role === 'maintenance') {
+      whereClause.maintenanceOrganizationId = organizationId;
     }
 
     const includes = [
       {
         model: db.Site,
         as: 'site',
-        where: siteWhere,
-        attributes: ['id', 'name'],
-        include: [
-          {
-            model: db.Organization,
-            as: 'serviceOrganizations',
-            attributes: ['id', 'name', 'type'],
-            ...(maintenanceOrg || integratorOrg ? {
-              where: {
-                [Op.or]: [
-                  maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
-                  integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
-                ].filter(Boolean)
-              }
-            } : {})
-          }
-        ]
+        attributes: ['id', 'name']
+      },
+      {
+        model: db.Organization,
+        as: 'maintenanceOrganization',
+        attributes: ['id', 'name', 'type']
+      },
+      {
+        model: db.Organization,
+        as: 'integratorOrganization',
+        attributes: ['id', 'name', 'type']
       }
     ];
 
-    if (role === 'integrator' || role === 'maintenance') {
-      includes[0].include[0].where = {
-        id: organizationId,
-        type: role === 'integrator' ? 'integrator' : 'maintenance'
-      };
-    }
+    logger.info('Final query:', {
+      whereClause,
+      includes,
+      order: [['reportedTime', 'DESC']]
+    });
 
-    const faults = await db.Fault.findAll({
+    const query = {
       where: whereClause,
       include: includes,
       order: [['reportedTime', 'DESC']]
+    };
+
+    const faults = await db.Fault.findAll(query);
+
+    logger.info('Query result:', {
+      faultsCount: faults.length,
+      firstFault: faults[0] ? {
+        id: faults[0].id,
+        site: faults[0].site?.id,
+        type: faults[0].type
+      } : null
     });
 
     const formattedFaults = faults.map(fault => ({
       id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name,
-        serviceOrganizations: fault.site.serviceOrganizations
+        name: fault.site.name
+      },
+      maintenanceOrganization: {
+        id: fault.maintenanceOrganization?.id,
+        name: fault.maintenanceOrganization?.name,
+        type: fault.maintenanceOrganization?.type
+      },
+      integratorOrganization: {
+        id: fault.integratorOrganization?.id,
+        name: fault.integratorOrganization?.name,
+        type: fault.integratorOrganization?.type
       },
       type: fault.type,
       description: fault.description,
@@ -310,34 +350,17 @@ exports.createFault = async (req, res, next) => {
         {
           model: db.Site,
           as: 'site',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.Organization,
-            as: 'serviceOrganizations',
-            attributes: ['id', 'name', 'type']
-          }]
+          attributes: ['id', 'name']
         },
         {
           model: db.Organization,
           as: 'maintenanceOrganization',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'maintenance' }
-          }]
+          attributes: ['id', 'name']
         },
         {
           model: db.Organization,
           as: 'integratorOrganization',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'integrator' }
-          }]
+          attributes: ['id', 'name']
         }
       ]
     });
@@ -346,24 +369,15 @@ exports.createFault = async (req, res, next) => {
       id: createdFault.id,
       site: {
         id: createdFault.site.id,
-        name: createdFault.site.name,
-        serviceOrganizations: createdFault.site.serviceOrganizations
+        name: createdFault.site.name
       },
       maintenanceOrganization: {
         id: createdFault.maintenanceOrganization?.id,
-        name: createdFault.maintenanceOrganization?.name,
-        users: createdFault.maintenanceOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: createdFault.maintenanceOrganization?.name
       },
       integratorOrganization: {
         id: createdFault.integratorOrganization?.id,
-        name: createdFault.integratorOrganization?.name,
-        users: createdFault.integratorOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: createdFault.integratorOrganization?.name
       },
       type: createdFault.type,
       description: createdFault.description,
@@ -398,23 +412,11 @@ exports.updateFaultStatus = async (req, res, next) => {
         },
         {
           model: db.Organization,
-          as: 'maintenanceOrganization',
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'maintenance' }
-          }]
+          as: 'maintenanceOrganization'
         },
         {
           model: db.Organization,
-          as: 'integratorOrganization',
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'integrator' }
-          }]
+          as: 'integratorOrganization'
         }
       ]
     });
@@ -423,7 +425,6 @@ exports.updateFaultStatus = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
-    
     if (!req.user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS)) {
       return next(new AppError('אין לך הרשאה לעדכן סטטוס תקלה', 403));
     }
@@ -457,24 +458,15 @@ exports.updateFaultStatus = async (req, res, next) => {
       id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name,
-        serviceOrganizations: fault.site.serviceOrganizations
+        name: fault.site.name
       },
       maintenanceOrganization: {
         id: fault.maintenanceOrganization?.id,
-        name: fault.maintenanceOrganization?.name,
-        users: fault.maintenanceOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: fault.maintenanceOrganization?.name
       },
       integratorOrganization: {
         id: fault.integratorOrganization?.id,
-        name: fault.integratorOrganization?.name,
-        users: fault.integratorOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: fault.integratorOrganization?.name
       },
       type: fault.type,
       description: fault.description,
@@ -507,23 +499,11 @@ exports.updateFaultDetails = async (req, res, next) => {
         },
         {
           model: db.Organization,
-          as: 'maintenanceOrganization',
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'maintenance' }
-          }]
+          as: 'maintenanceOrganization'
         },
         {
           model: db.Organization,
-          as: 'integratorOrganization',
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'integrator' }
-          }]
+          as: 'integratorOrganization'
         }
       ]
     });
@@ -584,34 +564,17 @@ exports.updateFaultDetails = async (req, res, next) => {
         {
           model: db.Site,
           as: 'site',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.Organization,
-            as: 'serviceOrganizations',
-            attributes: ['id', 'name', 'type']
-          }]
+          attributes: ['id', 'name']
         },
         {
           model: db.Organization,
           as: 'maintenanceOrganization',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'maintenance' }
-          }]
+          attributes: ['id', 'name']
         },
         {
           model: db.Organization,
           as: 'integratorOrganization',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'integrator' }
-          }]
+          attributes: ['id', 'name']
         }
       ]
     });
@@ -620,24 +583,15 @@ exports.updateFaultDetails = async (req, res, next) => {
       id: updatedFault.id,
       site: {
         id: updatedFault.site.id,
-        name: updatedFault.site.name,
-        serviceOrganizations: updatedFault.site.serviceOrganizations
+        name: updatedFault.site.name
       },
       maintenanceOrganization: {
         id: updatedFault.maintenanceOrganization?.id,
-        name: updatedFault.maintenanceOrganization?.name,
-        users: updatedFault.maintenanceOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: updatedFault.maintenanceOrganization?.name
       },
       integratorOrganization: {
         id: updatedFault.integratorOrganization?.id,
-        name: updatedFault.integratorOrganization?.name,
-        users: updatedFault.integratorOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: updatedFault.integratorOrganization?.name
       },
       type: updatedFault.type,
       description: updatedFault.description,
@@ -688,34 +642,17 @@ exports.getFaultById = async (req, res, next) => {
         {
           model: db.Site,
           as: 'site',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.Organization,
-            as: 'serviceOrganizations',
-            attributes: ['id', 'name', 'type']
-          }]
+          attributes: ['id', 'name']
         },
         {
           model: db.Organization,
           as: 'maintenanceOrganization',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'maintenance' }
-          }]
+          attributes: ['id', 'name']
         },
         {
           model: db.Organization,
           as: 'integratorOrganization',
-          attributes: ['id', 'name'],
-          include: [{
-            model: db.User,
-            as: 'employees',
-            attributes: ['id', 'name'],
-            where: { role: 'integrator' }
-          }]
+          attributes: ['id', 'name']
         }
       ]
     });
@@ -728,24 +665,15 @@ exports.getFaultById = async (req, res, next) => {
       id: fault.id,
       site: {
         id: fault.site.id,
-        name: fault.site.name,
-        serviceOrganizations: fault.site.serviceOrganizations
+        name: fault.site.name
       },
       maintenanceOrganization: {
         id: fault.maintenanceOrganization?.id,
-        name: fault.maintenanceOrganization?.name,
-        users: fault.maintenanceOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: fault.maintenanceOrganization?.name
       },
       integratorOrganization: {
         id: fault.integratorOrganization?.id,
-        name: fault.integratorOrganization?.name,
-        users: fault.integratorOrganization?.employees?.map(user => ({
-          id: user.id,
-          name: user.name
-        })) || []
+        name: fault.integratorOrganization?.name
       },
       type: fault.type,
       description: fault.description,
@@ -763,3 +691,5 @@ exports.getFaultById = async (req, res, next) => {
     next(new AppError('שגיאה בשליפת תקלה', 500));
   }
 };
+
+module.exports = exports;

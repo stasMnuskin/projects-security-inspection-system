@@ -28,7 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import { getUsers, updateUser, getOrganizations, createOrganization, deleteUser } from '../services/api';
 import { colors } from '../styles/colors';
 import { formStyles } from '../styles/components';
-import { ROLE_OPTIONS } from '../constants/roles';
+import { ROLE_OPTIONS, ROLES } from '../constants/roles';
 
 function Users() {
   const { user } = useAuth();
@@ -40,11 +40,7 @@ function Users() {
   const [loading, setLoading] = useState(false);
   const [editedUser, setEditedUser] = useState(null);
   const [errors, setErrors] = useState({});
-  const [organizations, setOrganizations] = useState({
-    maintenance: [],
-    integrator: [],
-    general: []
-  });
+  const [organizations, setOrganizations] = useState({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
 
@@ -76,10 +72,10 @@ function Users() {
   useEffect(() => {
     if (user.role === 'admin') {
       fetchUsers();
-      // Fetch organizations of all types
-      fetchOrganizations('maintenance');
-      fetchOrganizations('integrator');
-      fetchOrganizations('general');
+      // Fetch organizations for all roles except admin
+      Object.values(ROLES)
+        .filter(role => role !== 'admin')
+        .forEach(role => fetchOrganizations(role));
     }
   }, [fetchUsers, fetchOrganizations, user.role]);
 
@@ -135,7 +131,7 @@ function Users() {
     if (!editedUser.role) {
       newErrors.role = 'תפקיד נדרש';
     }
-    if (['maintenance', 'integrator'].includes(editedUser.role) && !editedUser.organization) {
+    if (editedUser.role && editedUser.role !== 'admin' && !editedUser.organization) {
       newErrors.organization = 'ארגון נדרש';
     }
 
@@ -165,28 +161,17 @@ function Users() {
     }
   };
 
-  const findExistingOrganization = (name) => {
-    // Check in all organization types
-    for (const type of ['maintenance', 'integrator', 'general']) {
-      const existing = organizations[type]?.find(
-        org => org.name.toLowerCase() === name.toLowerCase()
-      );
-      if (existing) {
-        return existing;
-      }
-    }
-    return null;
+  const findExistingOrganization = (name, role) => {
+    if (!role || role === 'admin') return null;
+    
+    return organizations[role]?.find(
+      org => org.name.toLowerCase() === name.toLowerCase()
+    );
   };
 
-  const getOrganizationOptions = useCallback(() => {
-    // Get all unique organization names across all types
-    const allOrgs = new Set();
-    ['maintenance', 'integrator', 'general'].forEach(type => {
-      organizations[type]?.forEach(org => {
-        allOrgs.add(org.name);
-      });
-    });
-    return Array.from(allOrgs);
+  const getOrganizationOptions = useCallback((role) => {
+    if (!role || role === 'admin') return [];
+    return organizations[role]?.map(org => org.name) || [];
   }, [organizations]);
 
   const handleSave = async () => {
@@ -197,62 +182,48 @@ function Users() {
     try {
       setLoading(true);
 
-      // Handle organization for all roles
-      let organizationId = editedUser.organizationId;
-      let organizationName = editedUser.organization;
+      // Handle organization for all roles except admin
+      let organizationId = null;
+      let organizationName = null;
       
-      if (organizationName) {
-        // Check if organization already exists (case-insensitive)
-        const existingOrg = findExistingOrganization(organizationName);
+      if (editedUser.role && editedUser.role !== 'admin' && editedUser.organization) {
+        // Check if organization exists for this role
+        const existingOrg = findExistingOrganization(editedUser.organization, editedUser.role);
         
         if (existingOrg) {
-          // Use existing organization
           organizationId = existingOrg.id;
           organizationName = existingOrg.name;
         } else {
-          // Create new organization with appropriate type
-          const orgType = ['maintenance', 'integrator'].includes(editedUser.role) 
-            ? editedUser.role 
-            : 'general';
-          
+          // Create new organization with role-specific type
           const newOrg = await createOrganization({
-            name: organizationName,
-            type: orgType
+            name: editedUser.organization,
+            type: editedUser.role
           });
           organizationId = newOrg.id;
+          organizationName = newOrg.name;
           
           // Refresh organizations list
-          await fetchOrganizations(orgType);
+          await fetchOrganizations(editedUser.role);
         }
-      } else {
-        organizationId = null;
-        organizationName = null;
       }
 
-      // Update user with organizationId
-      const updatedUser = {
-        ...editedUser,
-        organizationId,
-        organization: organizationName ? { name: organizationName } : null
-      };
-      delete updatedUser.organizationName;
+    // Update user
+    const updatedUser = {
+      ...editedUser,
+      organizationId,
+      organization: organizationName ? { name: organizationName } : null
+    };
+    delete updatedUser.organizationName;
 
-      await updateUser(updatedUser);
-      
-      // Update the user in the list
-      const updatedUsers = users.map(u => {
-        if (u.id === updatedUser.id) {
-          return {
-            ...u,
-            ...updatedUser,
-            organization: organizationName ? { name: organizationName } : null
-          };
-        }
-        return u;
-      });
-      
-      setUsers(updatedUsers);
-      setFilteredUsers(updatedUsers);
+    await updateUser(updatedUser);
+    
+    // Refresh both users and organizations
+    await Promise.all([
+      fetchUsers(),
+      ...Object.values(ROLES)
+        .filter(role => role !== 'admin')
+        .map(role => fetchOrganizations(role))
+    ]);
       showNotification('המשתמש נשמר בהצלחה');
       setSelectedUser(null);
       setEditedUser(null);
@@ -424,8 +395,9 @@ function Users() {
                           setEditedUser(prev => ({
                             ...prev,
                             role: newRole,
-                            organization: prev.organization,
-                            organizationId: prev.organizationId
+                            // Clear organization when switching roles
+                            organization: '',
+                            organizationId: null
                           }));
                         }}
                         sx={{
@@ -455,8 +427,8 @@ function Users() {
                     </FormControl>
                   </Grid>
 
-                  {/* Organization field - show for all roles */}
-                  {editedUser.role && (
+                  {/* Organization field - show for all roles except admin */}
+                  {editedUser.role && editedUser.role !== 'admin' && (
                     <Grid item xs={12}>
                       <Autocomplete
                         freeSolo
@@ -471,19 +443,14 @@ function Users() {
                           organization: newValue,
                           organizationId: null 
                         }))}
-                        options={getOrganizationOptions()}
+                        options={getOrganizationOptions(editedUser.role)}
                         renderInput={(params) => (
                           <TextField
                             {...params}
                             label="ארגון"
                             error={!!errors.organization}
-                            helperText={
-                              errors.organization || 
-                              (['maintenance', 'integrator'].includes(editedUser.role)
-                                ? 'שדה חובה - ניתן לבחור ארגון קיים או להזין שם חדש'
-                                : 'ניתן לבחור ארגון קיים או להזין שם חדש')
-                            }
-                            required={['maintenance', 'integrator'].includes(editedUser.role)}
+                            helperText={errors.organization || 'ניתן לבחור ארגון קיים או להזין שם חדש'}
+                            required={true}
                             sx={formStyles.textField}
                           />
                         )}

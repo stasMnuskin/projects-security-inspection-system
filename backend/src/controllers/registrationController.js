@@ -6,6 +6,7 @@ const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { getActiveSecrets } = require('../utils/secretManager');
 const { sendRegistrationLink, sendRegistrationComplete } = require('../utils/emailService');
+const { ROLES } = require('../constants/roles');
 
 const activeSecrets = getActiveSecrets();
 
@@ -30,61 +31,38 @@ exports.generateRegistrationLink = async (req, res, next) => {
     }
 
     // Validate role
-    const validRoles = ['admin', 'security_officer', 'entrepreneur', 'integrator', 'maintenance', 'control_center'];
+    const validRoles = Object.values(ROLES);
     if (!validRoles.includes(role)) {
       return next(new AppError('תפקיד לא תקין', 400, 'INVALID_ROLE'));
     }
 
-    // Organization is now required for entrepreneurs, integrators, and maintenance roles
-    if ((role === 'entrepreneur' || role === 'integrator' || role === 'maintenance') && !organizationName) {
-      return next(new AppError('נדרש שם ארגון למשתמש מסוג יזם, אינטגרטור או אחזקה', 400, 'ORGANIZATION_REQUIRED'));
+    // Organization is required for all roles
+    if (!organizationName) {
+      return next(new AppError('נדרש שם ארגון', 400, 'ORGANIZATION_REQUIRED'));
     }
 
     let organizationId = null;
 
-    if (organizationName) {
-      // For integrator and maintenance roles, handle organization with type validation
-      if (role === 'integrator' || role === 'maintenance') {
-        let organization = await Organization.findOne({
-          where: { name: organizationName }
-        });
+    // Handle organization creation/validation
+    let organization = await Organization.findOne({
+      where: { name: organizationName }
+    });
 
-        if (!organization) {
-          // Create new organization with type based on user role
-          organization = await Organization.create({
-            name: organizationName,
-            type: role === 'integrator' ? 'integrator' : 'maintenance'
-          });
-          logger.info(`Created new organization: ${organizationName}, Type: ${organization.type}`);
-        } else {
-          // Validate organization type matches user role
-          if ((role === 'integrator' && organization.type !== 'integrator') ||
-              (role === 'maintenance' && organization.type !== 'maintenance')) {
-            return next(new AppError('סוג הארגון אינו תואם לתפקיד המשתמש', 400, 'ORGANIZATION_TYPE_MISMATCH'));
-          }
-        }
-
-        organizationId = organization.id;
-      } else {
-        // For entrepreneurs and other roles, handle general type organizations
-        let organization = await Organization.findOne({
-          where: { name: organizationName }
-        });
-
-        if (!organization) {
-          // Create new organization with general type
-          organization = await Organization.create({
-            name: organizationName,
-            type: 'general'
-          });
-          logger.info(`Created new general organization: ${organizationName}`);
-        } else if (organization.type !== 'general') {
-          return next(new AppError('לא ניתן להשתמש בארגון מסוג אחזקה או אינטגרטור', 400, 'ORGANIZATION_TYPE_MISMATCH'));
-        }
-
-        organizationId = organization.id;
+    if (!organization) {
+      // Create new organization with type based on user role
+      organization = await Organization.create({
+        name: organizationName,
+        type: role
+      });
+      logger.info(`Created new organization: ${organizationName}, Type: ${role}`);
+    } else {
+      // Validate organization type matches user role
+      if (organization.type !== role) {
+        return next(new AppError('סוג הארגון אינו תואם לתפקיד המשתמש', 400, 'ORGANIZATION_TYPE_MISMATCH'));
       }
     }
+
+    organizationId = organization.id;
 
     // Get default permissions for role
     const defaultPermissions = await User.getDefaultPermissions(role);
@@ -191,8 +169,6 @@ exports.registerUser = async (req, res, next) => {
       return next(new AppError('שגיאת אימות', 400, 'VALIDATION_ERROR', true, errors.array()));
     }
 
-    console.log('Registration request body:', req.body); 
-
     const { email, password, token } = req.body;
 
     // Verify token and get stored data
@@ -262,22 +238,34 @@ exports.registerUser = async (req, res, next) => {
 exports.getOrganizations = async (req, res, next) => {
   try {
     const { type } = req.query;
-    const where = {};
 
-    // Filter by type if provided
-    if (type) {
-      if (!['integrator', 'maintenance', 'general'].includes(type)) {
-        return next(new AppError('סוג ארגון לא תקין', 400, 'INVALID_ORGANIZATION_TYPE'));
-      }
-      where.type = type;
+    // If no type specified or invalid type, return empty array
+    if (!type || !Object.values(ROLES).includes(type)) {
+      return res.json([]);
     }
 
-    const organizations = await Organization.findAll({
-      where,
-      attributes: ['id', 'name', 'type']
+    // Use appropriate scope based on type
+    const organizations = await Organization.scope(type).findAll({
+      where: { type },
+      attributes: ['id', 'name', 'type'],
+      include: [{
+        model: User,
+        as: 'employees',
+        attributes: ['id', 'name', 'email'],
+        where: { deletedAt: null, role: type }
+      }]
     });
 
-    res.json(organizations);
+    // Format response to include active users count
+    const formattedOrganizations = organizations.map(org => ({
+      id: org.id,
+      name: org.name,
+      type: org.type,
+      activeUsers: org.employees.length,
+      employees: org.employees
+    }));
+
+    res.json(formattedOrganizations);
   } catch (error) {
     logger.error('Error fetching organizations:', error);
     next(new AppError('שגיאה בשליפת ארגונים', 500));

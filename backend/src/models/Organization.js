@@ -1,3 +1,5 @@
+const { ROLES } = require('../constants/roles');
+
 module.exports = (sequelize, DataTypes) => {
   const Organization = sequelize.define('Organization', {
     name: {
@@ -9,9 +11,9 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        isIn: [['integrator', 'maintenance', 'general']]
+        isIn: [Object.values(ROLES)]
       },
-      comment: 'Type of service the organization provides. "general" is used for organizations that are not service providers.'
+      comment: 'Type of service/role the organization provides'
     }
   });
 
@@ -19,14 +21,43 @@ module.exports = (sequelize, DataTypes) => {
     // Organization has many users
     Organization.hasMany(models.User, {
       foreignKey: 'organizationId',
-      as: 'employees'
+      as: 'employees',
+      onDelete: 'SET NULL'
     });
 
     // Organization can service many sites
     Organization.belongsToMany(models.Site, {
       through: 'OrganizationSites',
       foreignKey: 'organizationId',
-      as: 'servicedSites'
+      as: 'servicedSites',
+      onDelete: 'CASCADE'
+    });
+
+    // Add scope to only include organizations with active users
+    Organization.addScope('withActiveUsers', {
+      include: [{
+        model: models.User,
+        as: 'employees',
+        where: {
+          deletedAt: null
+        },
+        required: true
+      }]
+    });
+
+    // Add scopes for each role type
+    Object.values(ROLES).forEach(role => {
+      Organization.addScope(role, {
+        include: [{
+          model: models.User,
+          as: 'employees',
+          where: {
+            deletedAt: null,
+            role: role
+          },
+          required: true
+        }]
+      });
     });
   };
 

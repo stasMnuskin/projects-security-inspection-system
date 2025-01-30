@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     entrepreneurId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Users',
         key: 'id'
@@ -48,15 +48,17 @@ module.exports = (sequelize, DataTypes) => {
 
   Site.associate = function(models) {
     // Site belongs to an entrepreneur
-    Site.belongsTo(models.User, {
+    Site.belongsTo(models.User.scope('defaultScope'), {
       foreignKey: 'entrepreneurId',
-      as: 'entrepreneur'
+      as: 'entrepreneur',
+      onDelete: 'SET NULL'
     });
 
     // Site belongs to a control center user
-    Site.belongsTo(models.User, {
+    Site.belongsTo(models.User.scope('defaultScope'), {
       foreignKey: 'controlCenterUserId',
-      as: 'controlCenter'
+      as: 'controlCenter',
+      onDelete: 'SET NULL'
     });
     
     // Site has many inspections
@@ -65,25 +67,28 @@ module.exports = (sequelize, DataTypes) => {
       as: 'inspections'
     });
 
-    // Site has many faults
+    // Site has many faults with paranoid support
     Site.hasMany(models.Fault, {
       foreignKey: 'siteId',
-      as: 'faults'
+      as: 'faults',
+      constraints: false // Allow sites to keep references to soft-deleted faults
     });
 
     // Site can be serviced by many organizations (integrator/maintenance companies)
     Site.belongsToMany(models.Organization, {
       through: 'OrganizationSites',
       foreignKey: 'siteId',
-      as: 'serviceOrganizations'
+      as: 'serviceOrganizations',
+      onDelete: 'CASCADE'
     });
 
-    // Site has many notification recipients (users who receive fault notifications)
-    Site.belongsToMany(models.User, {
+    // Site has many notification recipients
+    Site.belongsToMany(models.User.scope('defaultScope'), {
       through: models.SiteNotificationRecipients,
       foreignKey: 'siteId',
       otherKey: 'userId',
-      as: 'notificationRecipients'
+      as: 'notificationRecipients',
+      onDelete: 'CASCADE'
     });
   };
 
