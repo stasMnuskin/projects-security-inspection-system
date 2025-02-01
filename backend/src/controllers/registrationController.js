@@ -1,7 +1,7 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { User, Organization } = require('../models');
+const { User, Organization, sequelize } = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { getActiveSecrets } = require('../utils/secretManager');
@@ -24,10 +24,30 @@ exports.generateRegistrationLink = async (req, res, next) => {
 
     const { email, name, organizationName, role } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return next(new AppError('משתמש קיים במערכת', 400, 'USER_ALREADY_EXISTS'));
+    const transaction = await sequelize.transaction();
+    
+    try {
+      // Check if user exists (including soft-deleted users)
+      const existingUser = await User.scope('withDeleted').findOne({ 
+        where: { email },
+        transaction
+      });
+      
+      if (existingUser) {
+        if (existingUser.deletedAt) {
+          // If user was soft-deleted, perform hard delete
+          await existingUser.destroy({ force: true, transaction });
+          logger.info(`Hard deleted previously soft-deleted user: ${email}`);
+        } else {
+          await transaction.rollback();
+          return next(new AppError('משתמש קיים במערכת', 400, 'USER_ALREADY_EXISTS'));
+        }
+      }
+      
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
 
     // Validate role
@@ -244,19 +264,10 @@ exports.getOrganizations = async (req, res, next) => {
       return res.json([]);
     }
 
-    // Use appropriate scope based on type
-    const organizations = await Organization.scope(type).findAll({
-      where: { type },
-      attributes: ['id', 'name', 'type'],
-      include: [{
-        model: User,
-        as: 'employees',
-        attributes: ['id', 'name', 'email'],
-        where: { deletedAt: null, role: type }
-      }]
-    });
+    // Use scope to get organizations with active users of the specified role
+    const organizations = await Organization.scope(type).findAll();
 
-    // Format response to include active users count
+    // Format response
     const formattedOrganizations = organizations.map(org => ({
       id: org.id,
       name: org.name,

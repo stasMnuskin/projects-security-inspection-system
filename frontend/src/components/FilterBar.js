@@ -10,8 +10,7 @@ import {
   getSecurityOfficers, 
   getOrganizations, 
   getInspectionTypes,
-  getSitesByEntrepreneur,
-  getOrganizationsBySites
+  // getSitesByEntrepreneur
 } from '../services/api';
 
 const FAULT_CRITICALITY = [
@@ -50,57 +49,54 @@ const FilterBar = ({
       try {
         let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
         
-        if (user.role === 'entrepreneur') {
-          try {
-            const entrepreneurSites = await getSitesByEntrepreneur(user.id);
-            if (Array.isArray(entrepreneurSites)) {
-              sitesData = entrepreneurSites;
-              
-              const siteIds = entrepreneurSites.map(site => site.id);
-              if (siteIds.length > 0) {
-                try {
-                  [maintenanceOrgs, integratorOrgs] = await Promise.all([
-                    getOrganizationsBySites(siteIds, 'maintenance'),
-                    getOrganizationsBySites(siteIds, 'integrator')
-                  ]);
-                } catch (error) {
-                  console.error('Error loading organizations:', error);
-                  maintenanceOrgs = [];
-                  integratorOrgs = [];
-                }
-              }
-            } else {
-              console.error('Invalid response from getSitesByEntrepreneur');
-              sitesData = [];
-            }
-          } catch (error) {
-            console.error('Error loading entrepreneur sites:', error);
-            sitesData = [];
-          }
-        } else {
-          try {
-            const [sites, maintenance, integrators] = await Promise.all([
-              getSites(),
-              getOrganizations('maintenance'),
-              getOrganizations('integrator')
-            ]);
-            sitesData = sites;
-            // Filter out organizations without active users
-            maintenanceOrgs = maintenance.filter(org => org.activeUsersCount > 0);
-            integratorOrgs = integrators.filter(org => org.activeUsersCount > 0);
-          } catch (error) {
-            console.error('Error loading sites and organizations:', error);
-            sitesData = [];
-            maintenanceOrgs = [];
-            integratorOrgs = [];
-          }
+        try {
+          sitesData = await getSites();
+        } catch (error) {
+          console.error('Error loading sites:', error);
+          sitesData = [];
         }
 
         try {
-          securityOfficersData = await getSecurityOfficers();
+          if (['entrepreneur', 'security_officer', 'admin'].includes(user.role)) {
+            securityOfficersData = await getSecurityOfficers();
+          }
         } catch (error) {
           console.error('Error loading security officers:', error);
           securityOfficersData = [];
+        }
+
+        try {
+          if (user.role === 'entrepreneur') {
+            const organizations = sitesData.reduce((orgs, site) => {
+              if (site.serviceOrganizations && Array.isArray(site.serviceOrganizations)) {
+                site.serviceOrganizations.forEach(org => {
+                  if (org && org.type === 'maintenance') {
+                    orgs.maintenance.set(org.id, org);
+                  } else if (org && org.type === 'integrator') {
+                    orgs.integrator.set(org.id, org);
+                  }
+                });
+              }
+              return orgs;
+            }, { maintenance: new Map(), integrator: new Map() });
+            
+            maintenanceOrgs = Array.from(organizations.maintenance.values());
+            integratorOrgs = Array.from(organizations.integrator.values());
+          } else if (['control_center', 'maintenance', 'integrator'].includes(user.role)) {
+            maintenanceOrgs = [];
+            integratorOrgs = [];
+          } else if (user.role === 'security_officer' || user.role === 'admin') {
+            const [maintenance, integrators] = await Promise.all([
+              getOrganizations('maintenance'),
+              getOrganizations('integrator')
+            ]);
+            maintenanceOrgs = maintenance;
+            integratorOrgs = integrators;
+          }
+        } catch (error) {
+          console.error('Error loading organizations:', error);
+          maintenanceOrgs = [];
+          integratorOrgs = [];
         }
 
         console.log('Sites loaded:', {

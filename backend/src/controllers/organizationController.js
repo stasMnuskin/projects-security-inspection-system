@@ -62,19 +62,16 @@ exports.getOrganizations = async (req, res, next) => {
     }
     const organizations = await Organization.findAll({
       where,
-      attributes: {
-        include: [
-          [
-            sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM "Users" AS "activeUsers"
-              WHERE "activeUsers"."organizationId" = "Organization"."id"
-              AND "activeUsers"."deletedAt" IS NULL
-            )`),
-            'activeUsersCount'
-          ]
-        ]
-      }
+      include: [{
+        model: User,
+        as: 'employees',
+        where: {
+          deletedAt: null,
+          role: where.type
+        },
+        required: true,
+        attributes: [] 
+      }]
     });
 
     res.json(organizations);

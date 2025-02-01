@@ -23,7 +23,7 @@ const validateUser = async (userId, role, errorPrefix) => {
 const validateOrganizations = async (organizationIds, type, errorPrefix) => {
   if (!organizationIds || organizationIds.length === 0) return [];
 
-  // First find organizations by ID and type
+  // Find organizations by ID and type, with active users
   const organizations = await Organization.findAll({
     where: { 
       id: organizationIds,
@@ -36,11 +36,11 @@ const validateOrganizations = async (organizationIds, type, errorPrefix) => {
         deletedAt: null,
         role: type
       },
-      required: true
+      required: true,
+      attributes: []
     }]
   });
 
-  // Check if all organizations were found with active users
   if (organizations.length !== organizationIds.length) {
     throw new AppError(`חלק מה${errorPrefix} לא נמצאו או אין להם משתמשים פעילים`, 404, 'ORGANIZATION_NOT_FOUND');
   }
@@ -73,12 +73,6 @@ const getBaseInclude = () => [
     required: false
   },
   {
-    model: User,
-    as: 'controlCenter',
-    attributes: ['id', 'name'],
-    required: false
-  },
-  {
     model: Organization.scope('withActiveUsers'),
     as: 'serviceOrganizations',
     attributes: ['id', 'name', 'type'],
@@ -105,7 +99,7 @@ exports.createSite = async (req, res, next) => {
       entrepreneurId,
       integratorOrganizationIds,
       maintenanceOrganizationIds,
-      controlCenterUserId,
+      controlCenterOrganizationIds,
       customFields,
       notificationRecipientIds
     } = req.body;
@@ -121,11 +115,7 @@ exports.createSite = async (req, res, next) => {
     // Validate organizations
     const integratorOrgs = await validateOrganizations(integratorOrganizationIds, 'integrator', 'ארגוני אינטגרציה');
     const maintenanceOrgs = await validateOrganizations(maintenanceOrganizationIds, 'maintenance', 'ארגוני אחזקה');
-
-    // Validate control center user if provided
-    if (controlCenterUserId) {
-      await validateUser(controlCenterUserId, 'control_center', 'איש מוקד');
-    }
+    const controlCenterOrgs = await validateOrganizations(controlCenterOrganizationIds, 'control_center', 'ארגוני מוקד');
 
     // Validate notification recipients if provided
     const notificationRecipients = await validateNotificationRecipients(notificationRecipientIds);
@@ -146,14 +136,14 @@ exports.createSite = async (req, res, next) => {
       name,
       type,
       entrepreneurId,
-      controlCenterUserId,
       customFields: customFields || []
     });
 
     // Set up organization relationships
     const organizationIds = [
       ...(integratorOrgs.map(org => org.id) || []),
-      ...(maintenanceOrgs.map(org => org.id) || [])
+      ...(maintenanceOrgs.map(org => org.id) || []),
+      ...(controlCenterOrgs.map(org => org.id) || [])
     ];
     
     if (organizationIds.length > 0) {
@@ -185,20 +175,28 @@ exports.createSite = async (req, res, next) => {
 exports.getAllSites = async (req, res, next) => {
   try {
     let where = {};
+    let include = getBaseInclude();
     
-    // Only entrepreneurs are restricted to their own sites
     if (req.user.role === 'entrepreneur') {
       where.entrepreneurId = req.user.id;
     }
+    else if (['control_center', 'maintenance', 'integrator'].includes(req.user.role)) {
+      include.push({
+        model: Organization.scope('withActiveUsers'),
+        as: 'serviceOrganizations',
+        where: { id: req.user.organizationId },
+        required: true
+      });
+    }
+    else if (req.user.role === 'security_officer' || req.user.role === 'admin') {
+    }
 
-    // Include entrepreneur data for all sites
     const sites = await Site.findAll({
       where,
-      include: getBaseInclude(),
+      include,
       order: [['name', 'ASC']]
     });
 
-    // Return sites with entrepreneur data
     res.json(sites);
   } catch (error) {
     logger.error('Error getting all sites:', error);
@@ -274,7 +272,7 @@ exports.updateSite = async (req, res, next) => {
       entrepreneurId,
       integratorOrganizationIds,
       maintenanceOrganizationIds,
-      controlCenterUserId,
+      controlCenterOrganizationIds,
       customFields,
       notificationRecipientIds
     } = req.body;
@@ -297,25 +295,20 @@ exports.updateSite = async (req, res, next) => {
     }
 
     // Update organizations
-    if (integratorOrganizationIds !== undefined || maintenanceOrganizationIds !== undefined) {
+    if (integratorOrganizationIds !== undefined || maintenanceOrganizationIds !== undefined || controlCenterOrganizationIds !== undefined) {
       const integratorOrgs = await validateOrganizations(integratorOrganizationIds, 'integrator', 'ארגוני אינטגרציה');
       const maintenanceOrgs = await validateOrganizations(maintenanceOrganizationIds, 'maintenance', 'ארגוני אחזקה');
+      const controlCenterOrgs = await validateOrganizations(controlCenterOrganizationIds, 'control_center', 'ארגוני מוקד');
       
       const organizationIds = [
         ...(integratorOrgs.map(org => org.id) || []),
-        ...(maintenanceOrgs.map(org => org.id) || [])
+        ...(maintenanceOrgs.map(org => org.id) || []),
+        ...(controlCenterOrgs.map(org => org.id) || [])
       ];
 
       await site.setServiceOrganizations(organizationIds);
     }
 
-    // Update control center user if provided
-    if (controlCenterUserId !== undefined) {
-      if (controlCenterUserId) {
-        await validateUser(controlCenterUserId, 'control_center', 'איש מוקד');
-      }
-      site.controlCenterUserId = controlCenterUserId;
-    }
 
     // Update notification recipients if provided
     if (notificationRecipientIds !== undefined) {

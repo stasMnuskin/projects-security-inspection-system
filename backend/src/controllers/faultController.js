@@ -21,7 +21,7 @@ const getSitesByUserRole = async (user) => {
     return await db.Site.findAll({ attributes: ['id'] });
   }
   
-  if (role === 'integrator' || role === 'maintenance') {
+  if (role === 'integrator' || role === 'maintenance' || role === 'control_center') {
     return await db.Site.findAll({
       attributes: ['id'],
       include: [{
@@ -219,13 +219,6 @@ exports.getAllFaults = async (req, res, next) => {
     whereClause.siteId = {
       [db.Sequelize.Op.in]: finalSiteIds
     };
-
-    // Add organization-specific access
-    if (role === 'integrator') {
-      whereClause.integratorOrganizationId = organizationId;
-    } else if (role === 'maintenance') {
-      whereClause.maintenanceOrganizationId = organizationId;
-    }
 
     const includes = [
       {

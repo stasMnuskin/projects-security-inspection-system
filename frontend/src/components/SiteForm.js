@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import { getEntrepreneurs, getUsers, getOrganizations } from '../services/api';
+import { getEntrepreneurs, getOrganizations } from '../services/api';
 import { colors } from '../styles/colors';
 import { dialogStyles, notificationRecipientsStyles } from '../styles/components';
 import NotificationRecipientsDialog from './NotificationRecipientsDialog';
@@ -33,7 +33,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
   const [entrepreneurs, setEntrepreneurs] = useState([]);
   const [integratorOrgs, setIntegratorOrgs] = useState([]);
   const [maintenanceOrgs, setMaintenanceOrgs] = useState([]);
-  const [controlCenterStaff, setControlCenterStaff] = useState([]);
+  const [controlCenterOrgs, setControlCenterOrgs] = useState([]);
 
   const [siteDetails, setSiteDetails] = useState({
     name: '',
@@ -41,7 +41,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     entrepreneurId: '',
     integratorOrganizationIds: [],
     maintenanceOrganizationIds: [],
-    controlCenterUserId: null,
+    controlCenterOrganizationIds: [],
     notificationRecipientIds: []
   });
 
@@ -51,9 +51,6 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     try {
       const entrepreneursData = await getEntrepreneurs();
       setEntrepreneurs(entrepreneursData);
-
-      const users = await getUsers();
-      setControlCenterStaff(users.filter(user => user.role === 'control_center'));
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -61,13 +58,14 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
 
   const fetchOrganizations = useCallback(async () => {
     try {
-      const [integratorOrganizations, maintenanceOrganizations] = await Promise.all([
+      const [integratorOrganizations, maintenanceOrganizations, controlCenterOrganizations] = await Promise.all([
         getOrganizations('integrator'),
-        getOrganizations('maintenance')
+        getOrganizations('maintenance'),
+        getOrganizations('control_center')
       ]);
-      // Filter out organizations without active users
-      setIntegratorOrgs(integratorOrganizations.filter(org => org.activeUsersCount > 0));
-      setMaintenanceOrgs(maintenanceOrganizations.filter(org => org.activeUsersCount > 0));
+      setIntegratorOrgs(integratorOrganizations);
+      setMaintenanceOrgs(maintenanceOrganizations);
+      setControlCenterOrgs(controlCenterOrganizations);
     } catch (error) {
       console.error('Error fetching organizations:', error);
     }
@@ -84,12 +82,14 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
         name: initialData.name || '',
         type: initialData.type || 'inductive_fence',
         entrepreneurId: initialData.entrepreneurId || '',
-        controlCenterUserId: initialData.controlCenterUserId || null,
         integratorOrganizationIds: initialData.serviceOrganizations
           ?.filter(org => org.type === 'integrator')
           .map(org => org.id) || [],
         maintenanceOrganizationIds: initialData.serviceOrganizations
           ?.filter(org => org.type === 'maintenance')
+          .map(org => org.id) || [],
+        controlCenterOrganizationIds: initialData.serviceOrganizations
+          ?.filter(org => org.type === 'control_center')
           .map(org => org.id) || [],
         notificationRecipientIds: initialData.notificationRecipients?.map(user => user.id) || []
       });
@@ -296,15 +296,35 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
         <Grid item xs={12}>
           <FormControl fullWidth>
             <Autocomplete
-              value={controlCenterStaff.find(c => c.id === siteDetails.controlCenterUserId) || null}
-              options={controlCenterStaff}
+              multiple
+              options={controlCenterOrgs}
               getOptionLabel={(option) => option.name}
+              value={siteDetails.controlCenterOrganizationIds.length > 0 
+                ? controlCenterOrgs.filter(org => siteDetails.controlCenterOrganizationIds.includes(org.id))
+                : []}
               onChange={(event, newValue) => {
                 setSiteDetails(prev => ({
                   ...prev,
-                  controlCenterUserId: newValue?.id || null
+                  controlCenterOrganizationIds: newValue.map(v => v.id)
                 }));
               }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...chipProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      label={option.name}
+                      {...chipProps}
+                      sx={{
+                        backgroundColor: colors.background.darkGrey,
+                        color: colors.text.white,
+                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                      }}
+                    />
+                  );
+                })
+              }
               renderInput={(params) => (
                 <TextField 
                   {...params} 
@@ -433,7 +453,6 @@ SiteForm.propTypes = {
       name: PropTypes.string,
       type: PropTypes.string
     })),
-    controlCenterUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     notificationRecipients: PropTypes.arrayOf(PropTypes.shape({
       id: PropTypes.number,
       name: PropTypes.string,

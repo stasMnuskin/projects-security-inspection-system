@@ -228,7 +228,7 @@ function Sites({ mode = 'list', onModeChange }) {
                   {formatOrganizationsList(site.serviceOrganizations?.filter(org => org.type === 'maintenance'))}
                 </TableCell>
                 <TableCell sx={{ color: colors.text.white }}>
-                  {site.controlCenter?.name || '-'}
+                  {formatOrganizationsList(site.serviceOrganizations?.filter(org => org.type === 'control_center'))}
                 </TableCell>
                 {user.hasPermission(PERMISSIONS.ADMIN) && (
                   <TableCell>

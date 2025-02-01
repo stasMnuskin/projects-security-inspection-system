@@ -17,14 +17,6 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    controlCenterUserId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
-    },
     customFields: {
       type: DataTypes.JSON,
       allowNull: true,
@@ -54,13 +46,6 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'SET NULL'
     });
 
-    // Site belongs to a control center user
-    Site.belongsTo(models.User.scope('defaultScope'), {
-      foreignKey: 'controlCenterUserId',
-      as: 'controlCenter',
-      onDelete: 'SET NULL'
-    });
-    
     // Site has many inspections
     Site.hasMany(models.Inspection, {
       foreignKey: 'siteId',

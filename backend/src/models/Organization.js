@@ -48,6 +48,7 @@ module.exports = (sequelize, DataTypes) => {
     // Add scopes for each role type
     Object.values(ROLES).forEach(role => {
       Organization.addScope(role, {
+        where: { type: role },
         include: [{
           model: models.User,
           as: 'employees',
@@ -55,7 +56,8 @@ module.exports = (sequelize, DataTypes) => {
             deletedAt: null,
             role: role
           },
-          required: true
+          required: true,
+          attributes: ['id', 'name', 'email']
         }]
       });
     });

@@ -75,6 +75,9 @@ export const getOrganizationById = (orgId) => apiCall('get', `/organizations/${o
 export const getOrganizationsBySites = (siteIds, type) => 
   apiCall('get', `/organizations/${type}/sites`, { params: { siteIds: siteIds.join(',') } });
 
+export const getSitesByOrganization = (organizationId) =>
+  apiCall('get', `/sites/organization/${organizationId}`);
+
 // Site Management
 export const getSites = () => apiCall('get', '/sites');
 export const getSiteById = (siteId) => apiCall('get', `/sites/${siteId}`);
