@@ -333,7 +333,7 @@ const Inspections = () => {
           onFilterChange={handleFilterChange}
           variant="inspections"
           userRole={user.role}
-          disableAutoFetch={true}
+          disableAutoFetch={false}
         />
 
         {error ? (

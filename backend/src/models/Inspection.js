@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       Inspection.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'inspector',
-        constraints: false // Allow inspections to keep references to soft-deleted users
+        constraints: false 
       });
     }
 
@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
 
     // method to get inspector name
     getInspectorName() {
-      return this.formData?.securityOfficer;  // Always use securityOfficer
+      return this.formData?.securityOfficer;  
     }
 
     // method to check if this is a drill

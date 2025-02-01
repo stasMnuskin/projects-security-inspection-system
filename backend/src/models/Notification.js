@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
   Notification.associate = function(models) {
     Notification.belongsTo(models.User, { 
       foreignKey: 'userId',
-      constraints: false // Allow notifications to keep references to soft-deleted users
+      constraints: false 
     });
   };
 
