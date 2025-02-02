@@ -65,7 +65,10 @@ exports.generateRegistrationLink = async (req, res, next) => {
 
     // Handle organization creation/validation
     let organization = await Organization.findOne({
-      where: { name: organizationName }
+      where: { 
+        name: organizationName,
+        type: role
+      }
     });
 
     if (!organization) {
@@ -219,6 +222,23 @@ exports.registerUser = async (req, res, next) => {
     // Check if registration is already completed
     if (user.password) {
       return next(new AppError('ההרשמה כבר הושלמה', 400, 'REGISTRATION_COMPLETED'));
+    }
+
+    // Check if this will be the last user in the organization
+    const userCount = await User.count({
+      where: { 
+        organizationId: user.organizationId,
+        deletedAt: null,
+        id: { [sequelize.Op.ne]: user.id }
+      }
+    });
+
+    // If this is the last user, delete the organization
+    if (userCount === 0) {
+      await Organization.destroy({
+        where: { id: user.organizationId }
+      });
+      logger.info(`Deleted organization ${user.organizationId} as it has no more active users`);
     }
 
     // Hash the password before saving

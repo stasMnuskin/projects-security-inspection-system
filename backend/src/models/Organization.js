@@ -4,8 +4,7 @@ module.exports = (sequelize, DataTypes) => {
   const Organization = sequelize.define('Organization', {
     name: {
       type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
+      allowNull: false
     },
     type: {
       type: DataTypes.STRING,
@@ -22,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
     Organization.hasMany(models.User, {
       foreignKey: 'organizationId',
       as: 'employees',
-      onDelete: 'SET NULL'
+      onDelete: 'CASCADE'
     });
 
     // Organization can service many sites

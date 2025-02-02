@@ -1,3 +1,5 @@
+const { Op } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     name: {
@@ -193,6 +195,28 @@ module.exports = (sequelize, DataTypes) => {
       throw error;
     }
   };
+
+  // Add hooks for organization cleanup
+  User.addHook('afterDestroy', async (user, options) => {
+    if (!user.organizationId) return;
+
+    // Check if this was the last user in the organization
+    const userCount = await User.count({
+      where: { 
+        organizationId: user.organizationId,
+        deletedAt: null,
+        id: { [Op.ne]: user.id }
+      }
+    });
+
+    // If this was the last user, delete the organization
+    if (userCount === 0) {
+      await sequelize.models.Organization.destroy({
+        where: { id: user.organizationId },
+        ...options
+      });
+    }
+  });
 
   return User;
 };

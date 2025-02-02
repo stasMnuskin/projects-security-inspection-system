@@ -365,15 +365,11 @@ exports.deleteUser = async (req, res, next) => {
     // Clear user references in Sites
     await Site.update(
       {
-        entrepreneurId: null,
-        controlCenterUserId: null
+        entrepreneurId: null
       },
       {
         where: {
-          [Op.or]: [
-            { entrepreneurId: user.id },
-            { controlCenterUserId: user.id }
-          ]
+          entrepreneurId: user.id
         },
         transaction
       }
@@ -383,15 +379,13 @@ exports.deleteUser = async (req, res, next) => {
     await Fault.update(
       {
         maintenanceUserId: null,
-        integratorUserId: null,
-        controlCenterUserId: null
+        integratorUserId: null
       },
       {
         where: {
           [Op.or]: [
             { maintenanceUserId: user.id },
-            { integratorUserId: user.id },
-            { controlCenterUserId: user.id }
+            { integratorUserId: user.id }
           ]
         },
         transaction
