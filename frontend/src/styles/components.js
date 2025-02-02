@@ -519,11 +519,11 @@ export const layoutStyles = {
     backgroundColor: colors.background.black,
   },
   logo: {
-    height: '40px',
+    height: '120px',
     '@media (min-width:600px)': {
-      height: '50px',
+      height: '140px',
     },
-    margin: '1rem'
+    margin: '0.5rem'
   },
   pageContainer: {
     display: 'flex',
@@ -543,18 +543,18 @@ export const pageStyles = {
     alignItems: 'center',
     minHeight: '100vh',
     backgroundColor: colors.background.black,
-    padding: '1rem',
+    padding: '0.5rem',
     '@media (min-width:600px)': {
-      padding: '2rem',
+      padding: '1rem',
     },
   },
   logo: {
-    height: '50px',
+    height: '120px',
     '@media (min-width:600px)': {
-      height: '60px',
+      height: '140px',
     },
-    marginBottom: '2rem',
-    filter: 'brightness(0) invert(1)'
+    marginBottom: '1rem',
+    filter: 'invert(1)'
   }
 };
 
@@ -575,7 +575,7 @@ export const sidebarStyles = {
     height: 'fit-content'
   },
   headerContainer: {
-    padding: '1rem',
+    padding: '0.5rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

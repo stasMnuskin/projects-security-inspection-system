@@ -17,7 +17,7 @@ import { login as apiLogin } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
 import { pageStyles, formStyles } from '../styles/components';
-import logo from '../assets/logo-black.svg';
+import logo from '../assets/logo.svg';
 import { colors } from '../styles/colors';
 
 const TextField = styled(MuiTextField)(({ theme }) => ({
@@ -119,7 +119,10 @@ function Login() {
         component="img" 
         src={logo}
         alt="Logo"
-        sx={pageStyles.logo}
+        sx={{
+          ...pageStyles.logo,
+          filter: 'none'
+        }}
       />
       <Box sx={formStyles.container}>
         <Paper elevation={3} sx={formStyles.paper}>

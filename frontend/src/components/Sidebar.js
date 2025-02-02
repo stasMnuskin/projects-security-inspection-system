@@ -16,7 +16,10 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
-import logo from '../assets/logo-black.svg'
+// import logo from '../assets/logo-black.svg'
+import logo from '../assets/logo.svg'
+
+
 
 const Sidebar = ({ 
   activeSection, 
@@ -284,15 +287,15 @@ const Sidebar = ({
         ...sidebarStyles.headerContainer,
         display: 'flex',
         justifyContent: 'flex-start',
-        padding: '1rem'
+        padding: '0.5rem'
       }}>
         <Box 
           component="img" 
           src={logo} 
           alt="Logo"
           sx={{ 
-            height: '40px',
-            filter: 'brightness(0) invert(1)'
+            height: '140px',
+            filter: 'invert(1)'
           }} 
         />
       </Box>

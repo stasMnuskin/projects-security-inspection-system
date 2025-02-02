@@ -14,7 +14,7 @@ import {
 import { resetPassword } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { pageStyles, formStyles } from '../styles/components';
-import logo from '../assets/logo-black.svg';
+import logo from '../assets/logo.svg';
 import { colors } from '../styles/colors';
 
 function ResetPassword() {

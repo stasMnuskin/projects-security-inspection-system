@@ -19,7 +19,7 @@ import { generateRegistrationLink, getRegistrationOrganizations } from '../servi
 import { colors } from '../styles/colors';
 import { formStyles, pageStyles } from '../styles/components';
 import { ROLE_OPTIONS } from '../constants/roles';
-import logo from '../assets/logo-black.svg';
+import logo from '../assets/logo.svg';
 
 const TextField = styled(MuiTextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
