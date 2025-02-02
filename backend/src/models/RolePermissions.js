@@ -92,21 +92,45 @@ module.exports = (sequelize, DataTypes) => {
       return Object.values(PERMISSIONS);
     }
 
-    // Default permissions for other roles
     const defaultPermissions = {
       'security_officer': [
         PERMISSIONS.VIEW_INSPECTIONS,
         PERMISSIONS.NEW_INSPECTION,
-        PERMISSIONS.VIEW_FAULTS,
-        PERMISSIONS.NEW_FAULT,
         PERMISSIONS.VIEW_DRILLS,
         PERMISSIONS.NEW_DRILL
       ],
       'entrepreneur': [
         PERMISSIONS.VIEW_INSPECTIONS,
-        PERMISSIONS.VIEW_FAULTS,
         PERMISSIONS.VIEW_DRILLS,
         PERMISSIONS.DASHBOARD
+      ],
+      'integrator': [],
+      'maintenance': [],
+      'control_center': [
+        PERMISSIONS.VIEW_INSPECTIONS
+      ]
+    };
+
+    return defaultPermissions[role] || [];
+  };
+
+  RolePermissions.getInitialFaultPermissions = function(role) {
+    if (role === 'admin') {
+      return [
+        PERMISSIONS.NEW_FAULT,
+        PERMISSIONS.VIEW_FAULTS,
+        PERMISSIONS.UPDATE_FAULT_STATUS,
+        PERMISSIONS.UPDATE_FAULT_DETAILS
+      ];
+    }
+
+    const initialFaultPermissions = {
+      'security_officer': [
+        PERMISSIONS.VIEW_FAULTS,
+        PERMISSIONS.NEW_FAULT
+      ],
+      'entrepreneur': [
+        PERMISSIONS.VIEW_FAULTS
       ],
       'integrator': [
         PERMISSIONS.VIEW_FAULTS,
@@ -119,14 +143,31 @@ module.exports = (sequelize, DataTypes) => {
         PERMISSIONS.UPDATE_FAULT_DETAILS
       ],
       'control_center': [
-        PERMISSIONS.VIEW_INSPECTIONS,
         PERMISSIONS.VIEW_FAULTS,
         PERMISSIONS.NEW_FAULT,
         PERMISSIONS.UPDATE_FAULT_STATUS
       ]
     };
 
-    return defaultPermissions[role] || [];
+    return initialFaultPermissions[role] || [];
+  };
+
+  // Initialize role permissions if they don't exist
+  RolePermissions.initializeRole = async function(role) {
+    try {
+      const existingPerms = await this.findByPk(role);
+      if (!existingPerms) {
+        const defaultPerms = this.getDefaultPermissions(role);
+        const faultPerms = this.getInitialFaultPermissions(role);
+        await this.create({
+          role,
+          permissions: [...defaultPerms, ...faultPerms]
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing role permissions:', error);
+      throw error;
+    }
   };
 
   return RolePermissions;

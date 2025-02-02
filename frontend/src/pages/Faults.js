@@ -108,7 +108,6 @@ const Faults = () => {
 
     try {
       setLoading(true);
-      console.log('Fetching faults with filters:', filters);
 
       if (filters.id) {
         const fault = await getFaultById(filters.id);
@@ -153,8 +152,6 @@ const Faults = () => {
       }
 
       const data = await getAllFaults(queryParams);
-      console.log('data', data)
-      console.log('queryParams', queryParams)
       if (data.length === 0) {
         setError('לא נמצאו תקלות מתאימות לסינון שנבחר');
       } else {
@@ -190,7 +187,6 @@ const Faults = () => {
   }, [fetchFaults]);
 
   const handleFilterChange = useCallback((field, value) => {
-    console.log('Filter changed:', field, value);
     setFilters(prev => ({
       ...prev,
       [field]: value,

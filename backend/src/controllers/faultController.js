@@ -41,6 +41,10 @@ const getSitesByUserRole = async (user) => {
 
 exports.getOpenFaults = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.VIEW_FAULTS)) {
+      return next(new AppError('אין לך הרשאה לצפות בתקלות', 403));
+    }
+
     const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
 
     const faults = await db.Fault.findAll({
@@ -78,6 +82,10 @@ exports.getOpenFaults = async (req, res, next) => {
 
 exports.getRecurringFaults = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.VIEW_FAULTS)) {
+      return next(new AppError('אין לך הרשאה לצפות בתקלות', 403));
+    }
+
     const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
 
     const oneMonthAgo = new Date();
@@ -115,6 +123,10 @@ exports.getRecurringFaults = async (req, res, next) => {
 
 exports.getCriticalFaults = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.VIEW_FAULTS)) {
+      return next(new AppError('אין לך הרשאה לצפות בתקלות', 403));
+    }
+
     const siteIds = (await getSitesByUserRole(req.user)).map(site => site.id);
 
     const faults = await db.Fault.findAll({
@@ -152,6 +164,10 @@ exports.getCriticalFaults = async (req, res, next) => {
 
 exports.getAllFaults = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.VIEW_FAULTS)) {
+      return next(new AppError('אין לך הרשאה לצפות בתקלות', 403));
+    }
+
     const { role, id: userId, organizationId } = req.user;
     const { id, startDate, endDate, sites, isCritical, maintenanceOrg, integratorOrg, type, description, status } = req.query;
 
@@ -298,8 +314,14 @@ exports.createFault = async (req, res, next) => {
   try {
     const { siteId, type, description, isCritical } = req.body;
 
-    if (!req.user.hasPermission('new_fault')) {
+    if (!req.user.hasPermission(PERMISSIONS.NEW_FAULT)) {
       return next(new AppError('אין הרשאה ליצירת תקלה', 403));
+    }
+
+    const userSites = await getSitesByUserRole(req.user);
+    const userSiteIds = userSites.map(site => site.id);
+    if (!userSiteIds.includes(siteId)) {
+      return next(new AppError('אין לך הרשאה ליצור תקלה באתר זה', 403));
     }
 
     const site = await db.Site.findByPk(siteId, {
@@ -418,19 +440,15 @@ exports.updateFaultStatus = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
+    // Check if user has permission to update fault status
     if (!req.user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS)) {
       return next(new AppError('אין לך הרשאה לעדכן סטטוס תקלה', 403));
     }
 
-    // If user is from an organization, verify they belong to the fault's organizations
-    if (req.user.organizationId) {
-      const userOrgId = req.user.organizationId;
-      const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
-                       fault.integratorOrganizationId === userOrgId;
-      
-      if (!isAllowed) {
-        return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
-      }
+    const userSites = await getSitesByUserRole(req.user);
+    const userSiteIds = userSites.map(site => site.id);
+    if (!userSiteIds.includes(fault.siteId)) {
+      return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
     }
 
     fault.status = status;
@@ -505,14 +523,15 @@ exports.updateFaultDetails = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
-    if (req.user.role === 'integrator' || req.user.role === 'maintenance') {
-      const userOrgId = req.user.organizationId;
-      const isAllowed = fault.maintenanceOrganizationId === userOrgId || 
-                       fault.integratorOrganizationId === userOrgId;
-      
-      if (!isAllowed) {
-        return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
-      }
+    // Check if user has permission to update fault details
+    if (!req.user.hasPermission(PERMISSIONS.UPDATE_FAULT_DETAILS)) {
+      return next(new AppError('אין לך הרשאה לעדכן פרטי תקלה', 403));
+    }
+
+    const userSites = await getSitesByUserRole(req.user);
+    const userSiteIds = userSites.map(site => site.id);
+    if (!userSiteIds.includes(fault.siteId)) {
+      return next(new AppError('אין לך הרשאה לעדכן תקלה זו', 403));
     }
 
     if (technician !== undefined) {
@@ -617,6 +636,16 @@ exports.deleteFault = async (req, res, next) => {
       return next(new AppError('תקלה לא נמצאה', 404));
     }
 
+    const userSites = await getSitesByUserRole(req.user);
+    const userSiteIds = userSites.map(site => site.id);
+    if (!userSiteIds.includes(fault.siteId)) {
+      return next(new AppError('אין לך הרשאה למחוק תקלה זו', 403));
+    }
+
+    if (!fault) {
+      return next(new AppError('תקלה לא נמצאה', 404));
+    }
+
     await fault.destroy();
 
     logger.info(`Fault ${id} deleted by admin`);
@@ -652,6 +681,12 @@ exports.getFaultById = async (req, res, next) => {
 
     if (!fault) {
       return next(new AppError('תקלה לא נמצאה', 404));
+    }
+
+    const userSites = await getSitesByUserRole(req.user);
+    const userSiteIds = userSites.map(site => site.id);
+    if (!userSiteIds.includes(fault.siteId)) {
+      return next(new AppError('אין לך הרשאה לצפות בתקלה זו', 403));
     }
 
     const formattedFault = {

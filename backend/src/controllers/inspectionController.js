@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
+const { PERMISSIONS } = require('../constants/roles');
 
 exports.getAllInspections = async (req, res, next) => {
   try {
@@ -25,7 +26,15 @@ exports.getAllInspections = async (req, res, next) => {
       };
     }
 
-    // Handle inspection type filter
+    // Check permissions based on type
+    if (type === 'drill') {
+      if (!req.user.hasPermission(PERMISSIONS.VIEW_DRILLS)) {
+        return next(new AppError('אין לך הרשאה לצפות בתרגילים', 403));
+      }
+    } else if (!req.user.hasPermission(PERMISSIONS.VIEW_INSPECTIONS)) {
+      return next(new AppError('אין לך הרשאה לצפות בביקורות', 403));
+    }
+
     if (type) {
       whereClause.type = type;
     }
@@ -107,6 +116,17 @@ exports.createInspection = async (req, res, next) => {
 
   try {
     const { siteId, inspectionTypeId, formData, type } = req.body;
+
+    // Check permissions based on type
+    if (type === 'drill') {
+      if (!req.user.hasPermission(PERMISSIONS.NEW_DRILL)) {
+        await transaction.rollback();
+        return next(new AppError('אין לך הרשאה ליצור תרגיל', 403));
+      }
+    } else if (!req.user.hasPermission(PERMISSIONS.NEW_INSPECTION)) {
+      await transaction.rollback();
+      return next(new AppError('אין לך הרשאה ליצור ביקורת', 403));
+    }
 
     if (!siteId || !inspectionTypeId || !formData) {
       await transaction.rollback();
@@ -193,6 +213,15 @@ exports.getInspection = async (req, res, next) => {
     });
     if (!inspection) {
       throw new AppError('Inspection not found', 404, 'INSPECTION_NOT_FOUND');
+    }
+
+    // Check permissions based on type
+    if (inspection.type === 'drill') {
+      if (!req.user.hasPermission(PERMISSIONS.VIEW_DRILLS)) {
+        return next(new AppError('אין לך הרשאה לצפות בתרגילים', 403));
+      }
+    } else if (!req.user.hasPermission(PERMISSIONS.VIEW_INSPECTIONS)) {
+      return next(new AppError('אין לך הרשאה לצפות בביקורות', 403));
     }
     res.json(inspection);
     logger.info(`getInspection function called with id: ${req.params.id}`);
@@ -408,6 +437,15 @@ exports.getLatestInspection = async (req, res, next) => {
       return next(new AppError('No inspections found', 404, 'NO_INSPECTIONS'));
     }
 
+    // Check permissions based on type
+    if (inspection.type === 'drill') {
+      if (!req.user.hasPermission(PERMISSIONS.VIEW_DRILLS)) {
+        return next(new AppError('אין לך הרשאה לצפות בתרגילים', 403));
+      }
+    } else if (!req.user.hasPermission(PERMISSIONS.VIEW_INSPECTIONS)) {
+      return next(new AppError('אין לך הרשאה לצפות בביקורות', 403));
+    }
+
     res.json(inspection);
     logger.info(`getLatestInspection function called with param: ${req.params.id}`);
   } catch (error) {
@@ -442,6 +480,10 @@ exports.getSitesByEntrepreneur = async (req, res, next) => {
 
 exports.getLatestRoutineInspection = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.VIEW_INSPECTIONS)) {
+      return next(new AppError('אין לך הרשאה לצפות בביקורות', 403));
+    }
+
     const latestRoutineInspection = await db.Inspection.findOne({
       where: {
         siteId: req.params.siteId,
@@ -469,6 +511,10 @@ exports.getLatestRoutineInspection = async (req, res, next) => {
 
 exports.getDrillSuccessRate = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.VIEW_DRILLS)) {
+      return next(new AppError('אין לך הרשאה לצפות בתרגילים', 403));
+    }
+
     const drills = await db.Inspection.findAll({
       where: {
         siteId: req.params.siteId,
@@ -507,7 +553,23 @@ exports.getDrillSuccessRate = async (req, res, next) => {
 
 exports.getLatestInspections = async (req, res, next) => {
   try {
+    // Build where clause based on permissions
+    const whereClause = [];
+    if (req.user.hasPermission(PERMISSIONS.VIEW_DRILLS)) {
+      whereClause.push({ type: 'drill' });
+    }
+    if (req.user.hasPermission(PERMISSIONS.VIEW_INSPECTIONS)) {
+      whereClause.push({ type: 'inspection' });
+    }
+
+    if (whereClause.length === 0) {
+      return next(new AppError('אין לך הרשאה לצפות בביקורות או בתרגילים', 403));
+    }
+
     const latestInspections = await db.Inspection.findAll({
+      where: {
+        [db.Sequelize.Op.or]: whereClause
+      },
       limit: 10,
       order: [['createdAt', 'DESC']],
       include: [
@@ -531,6 +593,15 @@ exports.getInspectionsBySite = async (req, res, next) => {
 
     if (!siteId) {
       return next(new AppError('Site ID is required', 400));
+    }
+
+    // Check permissions based on type
+    if (type === 'drill') {
+      if (!req.user.hasPermission(PERMISSIONS.VIEW_DRILLS)) {
+        return next(new AppError('אין לך הרשאה לצפות בתרגילים', 403));
+      }
+    } else if (!req.user.hasPermission(PERMISSIONS.VIEW_INSPECTIONS)) {
+      return next(new AppError('אין לך הרשאה לצפות בביקורות', 403));
     }
 
     const whereClause = { siteId };

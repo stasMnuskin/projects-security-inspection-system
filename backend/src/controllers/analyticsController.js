@@ -3,8 +3,14 @@ const db = require('../models');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 
+const { PERMISSIONS } = require('../constants/roles');
+
 exports.getDashboardOverview = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.DASHBOARD)) {
+      return next(new AppError('אין לך הרשאה לצפות בדשבורד', 403));
+    }
+
     const { role, id: userId } = req.user;
     const { startDate, endDate, sites: selectedSites, maintenance, securityOfficer, integrator } = req.query;
 
@@ -213,6 +219,10 @@ exports.getDashboardOverview = async (req, res, next) => {
 
 exports.getFilterOptions = async (req, res, next) => {
   try {
+    if (!req.user.hasPermission(PERMISSIONS.DASHBOARD)) {
+      return next(new AppError('אין לך הרשאה לצפות בדשבורד', 403));
+    }
+
     const { id: userId, role } = req.user;
 
     let sites;
