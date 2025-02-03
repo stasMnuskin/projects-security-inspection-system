@@ -10,7 +10,7 @@ import {
   getSecurityOfficers, 
   getOrganizations, 
   getInspectionTypes,
-  // getSitesByEntrepreneur
+  getSitesByEntrepreneur
 } from '../services/api';
 
 const FAULT_CRITICALITY = [
@@ -31,6 +31,7 @@ const FilterBar = ({
     securityOfficers: [],
     maintenance: [],
     integrators: [],
+    entrepreneurs: [],
     drillTypes: []
   });
 
@@ -60,6 +61,14 @@ const FilterBar = ({
         }
 
         try {
+          if (user.role === 'admin') {
+            const entrepreneurs = await getOrganizations('entrepreneur');
+            setOptions(prev => ({
+              ...prev,
+              entrepreneurs: entrepreneurs || []
+            }));
+          }
+
           if (user.role === 'entrepreneur') {
             const organizations = sitesData.reduce((orgs, site) => {
               if (site.serviceOrganizations && Array.isArray(site.serviceOrganizations)) {
@@ -132,17 +141,35 @@ const FilterBar = ({
   }, [user, variant, authLoading]);
 
   useEffect(() => {
+    const updateSites = async () => {
+      try {
+        if (user?.role === 'admin' && filters.entrepreneur) {
+          const entrepreneurSites = await getSitesByEntrepreneur(filters.entrepreneur);
+          setOptions(prev => ({
+            ...prev,
+            sites: entrepreneurSites || []
+          }));
+          if (!filters.id && !disableAutoFetch) {
+            onFilterChange('sites', entrepreneurSites.map(site => site.id));
+          }
+        } else {
+          if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
+            onFilterChange('maintenance', user.organizationId);
+          } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
+            onFilterChange('integrator', user.organizationId);
+          }
 
-    if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
-      onFilterChange('maintenance', user.organizationId);
-    } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
-      onFilterChange('integrator', user.organizationId);
-    }
+          if (!filters.id && filters.sites === null && options.sites.length > 0 && !disableAutoFetch) {
+            onFilterChange('sites', options.sites.map(site => site.id));
+          }
+        }
+      } catch (error) {
+        console.error('Error updating sites:', error);
+      }
+    };
 
-    if (!filters.id && filters.sites === null && options.sites.length > 0 && !disableAutoFetch) {
-      onFilterChange('sites', options.sites.map(site => site.id));
-    }
-  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, filters.sites, filters.id, options.sites, onFilterChange, disableAutoFetch, filters]);
+    updateSites();
+  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, filters.sites, filters.id, options.sites, onFilterChange, disableAutoFetch, filters.entrepreneur]);
 
   const formatOrganizationName = (org) => org ? org.name : '';
 
@@ -195,6 +222,21 @@ const FilterBar = ({
       <Box>
         <FilterListIcon sx={filterStyles.filterIcon} />
       </Box>
+
+      {user?.role === 'admin' && (
+        <Box>
+          <Autocomplete
+            {...commonAutocompleteProps}
+            options={options.entrepreneurs}
+            getOptionLabel={formatOrganizationName}
+            value={options.entrepreneurs.find(org => org.id === filters.entrepreneur) || null}
+            onChange={(_, newValue) => onFilterChange('entrepreneur', newValue?.id || '')}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => renderTextField(params, "יזם")}
+            sx={filterStyles.entrepreneurFilter}
+          />
+        </Box>
+      )}
 
       {variant !== 'drills' && (
         <>
@@ -320,6 +362,7 @@ FilterBar.propTypes = {
     securityOfficer: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     maintenance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     integrator: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    entrepreneur: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     drillType: PropTypes.string
   }).isRequired,
   onFilterChange: PropTypes.func.isRequired,

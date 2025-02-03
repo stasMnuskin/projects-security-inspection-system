@@ -868,6 +868,64 @@ export const filterStyles = {
     width: '100%',
     height: '100%'
   },
+  entrepreneurFilter: {
+    backgroundColor: colors.background.darkGrey,
+    width: '100%',
+    '& .MuiAutocomplete-root': {
+      width: '100%'
+    },
+    '& .MuiAutocomplete-inputRoot': {
+      color: colors.text.white,
+      backgroundColor: colors.background.darkGrey,
+      height: '36px',
+      display: 'flex',
+      alignItems: 'center',
+      '& fieldset': {
+        borderColor: colors.border.grey,
+        borderRadius: '4px'
+      },
+      '&:hover fieldset': {
+        borderColor: colors.border.orange
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: colors.primary.orange
+      }
+    },
+    '& .MuiAutocomplete-input': {
+      color: `${colors.text.white} !important`,
+      textAlign: 'center !important',
+      padding: '6px 8px !important',
+      height: '24px !important',
+      lineHeight: '24px !important',
+      fontSize: '0.875rem !important',
+      verticalAlign: 'middle !important'
+    },
+    '& .MuiAutocomplete-endAdornment': {
+      '& .MuiSvgIcon-root': {
+        color: colors.text.grey,
+        fontSize: '14px'
+      }
+    },
+    '& .MuiAutocomplete-popper': {
+      backgroundColor: colors.background.darkGrey,
+      '& .MuiPaper-root': {
+        backgroundColor: colors.background.darkGrey,
+        color: colors.text.white,
+        border: `1px solid ${colors.border.grey}`,
+        '& .MuiAutocomplete-option': {
+          '&[aria-selected="true"]': {
+            backgroundColor: colors.background.active
+          },
+          '&.Mui-focused': {
+            backgroundColor: colors.background.hover
+          },
+          '&:hover': {
+            backgroundColor: colors.background.hover
+          }
+        }
+      }
+    }
+  },
   filterSelect: {
     backgroundColor: colors.background.darkGrey,
     width: '100%',
