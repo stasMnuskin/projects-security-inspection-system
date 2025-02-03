@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
@@ -206,15 +207,17 @@ module.exports = (sequelize, DataTypes) => {
         organizationId: user.organizationId,
         deletedAt: null,
         id: { [Op.ne]: user.id }
-      }
+      },
+      transaction: options.transaction 
     });
 
     // If this was the last user, delete the organization
     if (userCount === 0) {
       await sequelize.models.Organization.destroy({
         where: { id: user.organizationId },
-        ...options
+        transaction: options.transaction 
       });
+      logger.info(`Deleted organization ${user.organizationId} as it has no more active users`);
     }
   });
 
