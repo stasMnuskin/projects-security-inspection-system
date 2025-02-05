@@ -7,7 +7,7 @@ const { PERMISSIONS } = require('../constants/roles');
 exports.getAllInspections = async (req, res, next) => {
   try {
     const { role, id: userId, organizationId } = req.user;
-    const { startDate, endDate, sites, type, maintenanceOrg, integratorOrg, securityOfficer } = req.query;
+    const { startDate, endDate, sites, type, maintenanceOrg, integratorOrg, securityOfficer, entrepreneur } = req.query;
 
     let whereClause = {};
 
@@ -39,18 +39,25 @@ exports.getAllInspections = async (req, res, next) => {
       whereClause.type = type;
     }
 
-    // Handle site access based on user role
+    // Handle site access based on user role and filters
     let siteWhere = {};
+    
+    // For entrepreneur users, always filter by their sites
     if (role === 'entrepreneur') {
       siteWhere.entrepreneurId = userId;
     }
-    
-    if (sites) {
+    // For admin users or other roles with entrepreneur filter
+    else if (entrepreneur) {
+      siteWhere.entrepreneurId = entrepreneur;
+    }
+    // If specific sites are requested
+    else if (sites) {
       const siteIds = Array.isArray(sites) ? sites : [sites];
       siteWhere.id = {
         [db.Sequelize.Op.in]: siteIds
       };
     }
+    // For admin users without filters, don't add any site restrictions
 
     const siteInclude = {
       model: db.Site,
@@ -589,7 +596,7 @@ exports.getLatestInspections = async (req, res, next) => {
 exports.getInspectionsBySite = async (req, res, next) => {
   try {
     const { siteId } = req.params;
-    const { type, startDate, endDate, drillType, maintenanceOrg, integratorOrg } = req.query;
+    const { type, startDate, endDate, drillType, maintenanceOrg, integratorOrg, entrepreneur } = req.query;
 
     if (!siteId) {
       return next(new AppError('Site ID is required', 400));
@@ -627,6 +634,7 @@ exports.getInspectionsBySite = async (req, res, next) => {
     const siteInclude = {
       model: db.Site,
       attributes: ['id', 'name', 'entrepreneurId'],
+      where: entrepreneur ? { entrepreneurId: entrepreneur } : {},
       include: [{
         model: db.User,
         as: 'entrepreneur',

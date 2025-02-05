@@ -50,7 +50,8 @@ const Drills = () => {
       return date;
     })(),
     drillType: '',
-    securityOfficer: ''
+    securityOfficer: '',
+    entrepreneur: ''
   });
 
   const columns = [
@@ -148,7 +149,7 @@ const getValue = (drill, column) => {
 const fetchDrills = useCallback(async () => {
   try {
     setLoading(true);
-    const queryParams = {
+  const queryParams = {
       type: 'drill'
     };
     
@@ -163,6 +164,9 @@ const fetchDrills = useCallback(async () => {
     }
     if (filters.drillType) {
       queryParams.drillType = filters.drillType;
+    }
+    if (filters.entrepreneur) {
+      queryParams.entrepreneur = filters.entrepreneur;
     }
 
     let response;

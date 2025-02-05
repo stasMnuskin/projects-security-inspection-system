@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../context/AuthContext';
-import { getUsers, updateUser, getOrganizations, createOrganization, deleteUser } from '../services/api';
+import { getUsers, updateUser, getOrganizations, deleteUser } from '../services/api';
 import { colors } from '../styles/colors';
 import { formStyles } from '../styles/components';
 import { ROLE_OPTIONS, ROLES } from '../constants/roles';
@@ -103,7 +103,7 @@ function Users() {
       ...selectedUser,
       name: selectedUser.name || '',
       email: selectedUser.email || '',
-      organization: selectedUser.organization?.name || '',
+      organization: selectedUser.organization || null,  // שומרים את כל אובייקט הארגון
       organizationId: selectedUser.organizationId,
       role: selectedUser.role || ''
     });
@@ -131,7 +131,7 @@ function Users() {
     if (!editedUser.role) {
       newErrors.role = 'תפקיד נדרש';
     }
-    if (editedUser.role && editedUser.role !== 'admin' && !editedUser.organization) {
+    if (editedUser.role && editedUser.role !== 'admin' && !editedUser.organization?.name) {
       newErrors.organization = 'ארגון נדרש';
     }
 
@@ -161,14 +161,6 @@ function Users() {
     }
   };
 
-  const findExistingOrganization = (name, role) => {
-    if (!role || role === 'admin') return null;
-    
-    return organizations[role]?.find(
-      org => org.name.toLowerCase() === name.toLowerCase()
-    );
-  };
-
   const getOrganizationOptions = useCallback((role) => {
     if (!role || role === 'admin') return [];
     return organizations[role]?.map(org => org.name) || [];
@@ -182,48 +174,41 @@ function Users() {
     try {
       setLoading(true);
 
-      // Handle organization for all roles except admin
-      let organizationId = null;
-      let organizationName = null;
+      const updatedUser = {
+        id: editedUser.id,
+        name: editedUser.name,
+        email: editedUser.email,
+        role: editedUser.role,
+        organization: editedUser.organization?.name ? {
+          name: editedUser.organization.name
+        } : undefined
+      };
+
+      // Log the update data for debugging
+      console.log('Updating user with data:', updatedUser);
       
-      if (editedUser.role && editedUser.role !== 'admin' && editedUser.organization) {
-        // Check if organization exists for this role
-        const existingOrg = findExistingOrganization(editedUser.organization, editedUser.role);
-        
-        if (existingOrg) {
-          organizationId = existingOrg.id;
-          organizationName = existingOrg.name;
-        } else {
-          // Create new organization with role-specific type
-          const newOrg = await createOrganization({
-            name: editedUser.organization,
-            type: editedUser.role
-          });
-          organizationId = newOrg.id;
-          organizationName = newOrg.name;
-          
-          // Refresh organizations list
-          await fetchOrganizations(editedUser.role);
-        }
-      }
+      const result = await updateUser(updatedUser);
+      console.log('Update result:', result);
 
-    // Update user
-    const updatedUser = {
-      ...editedUser,
-      organizationId,
-      organization: organizationName ? { name: organizationName } : null
-    };
-    delete updatedUser.organizationName;
+      const updatedUserData = result.user;
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === updatedUserData.id ? updatedUserData : user
+        )
+      );
+      setFilteredUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === updatedUserData.id ? updatedUserData : user
+        )
+      );
+      setSelectedUser(updatedUserData);
 
-    await updateUser(updatedUser);
-    
-    // Refresh both users and organizations
-    await Promise.all([
-      fetchUsers(),
-      ...Object.values(ROLES)
-        .filter(role => role !== 'admin')
-        .map(role => fetchOrganizations(role))
-    ]);
+      await Promise.all(
+        Object.values(ROLES)
+          .filter(role => role !== 'admin')
+          .map(role => fetchOrganizations(role))
+      );
+
       showNotification('המשתמש נשמר בהצלחה');
       setSelectedUser(null);
       setEditedUser(null);
@@ -395,8 +380,8 @@ function Users() {
                           setEditedUser(prev => ({
                             ...prev,
                             role: newRole,
-                            // Clear organization when switching roles
-                            organization: '',
+                            // Clear organization when switching roles to let the server create a new one
+                            organization: null,
                             organizationId: null
                           }));
                         }}
@@ -432,17 +417,31 @@ function Users() {
                     <Grid item xs={12}>
                       <Autocomplete
                         freeSolo
-                        value={editedUser.organization || ''}
-                        onChange={(_, newValue) => setEditedUser(prev => ({ 
-                          ...prev, 
-                          organization: newValue,
-                          organizationId: null 
-                        }))}
-                        onInputChange={(_, newValue) => setEditedUser(prev => ({ 
-                          ...prev, 
-                          organization: newValue,
-                          organizationId: null 
-                        }))}
+                        value={editedUser.organization?.name || ''}
+                        onChange={(_, newValue) => {
+                          setEditedUser(prev => ({ 
+                            ...prev, 
+                            organization: prev.organization ? {
+                              ...prev.organization,
+                              name: newValue
+                            } : {
+                              name: newValue,
+                              type: prev.role
+                            }
+                          }));
+                        }}
+                        onInputChange={(_, newValue) => {
+                          setEditedUser(prev => ({ 
+                            ...prev, 
+                            organization: prev.organization ? {
+                              ...prev.organization,
+                              name: newValue
+                            } : {
+                              name: newValue,
+                              type: prev.role
+                            }
+                          }));
+                        }}
                         options={getOrganizationOptions(editedUser.role)}
                         renderInput={(params) => (
                           <TextField

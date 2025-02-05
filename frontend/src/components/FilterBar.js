@@ -8,7 +8,8 @@ import DateRangeSelector from './DateRangeSelector';
 import { 
   getSites, 
   getSecurityOfficers, 
-  getOrganizations, 
+  getOrganizations,
+  getEntrepreneurs,
   getInspectionTypes,
   getSitesByEntrepreneur
 } from '../services/api';
@@ -46,6 +47,14 @@ const FilterBar = ({
         
         try {
           sitesData = await getSites();
+          setOptions(prev => ({
+            ...prev,
+            sites: sitesData || []
+          }));
+          // Trigger "All Sites" behavior right after loading sites
+          if (variant === 'inspections') {
+            onFilterChange('sites', sitesData.map(site => site.id));
+          }
         } catch (error) {
           console.error('Error loading sites:', error);
           sitesData = [];
@@ -62,7 +71,7 @@ const FilterBar = ({
 
         try {
           if (user.role === 'admin') {
-            const entrepreneurs = await getOrganizations('entrepreneur');
+            const entrepreneurs = await getEntrepreneurs();
             setOptions(prev => ({
               ...prev,
               entrepreneurs: entrepreneurs || []
@@ -102,16 +111,12 @@ const FilterBar = ({
           integratorOrgs = [];
         }
 
-        setOptions(prev => {
-          const newOptions = {
-            ...prev,
-            sites: sitesData || [],
-            securityOfficers: securityOfficersData || [],
-            maintenance: maintenanceOrgs || [],
-            integrators: integratorOrgs || []
-          };
-          return newOptions;
-        });
+        setOptions(prev => ({
+          ...prev,
+          securityOfficers: securityOfficersData || [],
+          maintenance: maintenanceOrgs || [],
+          integrators: integratorOrgs || []
+        }));
 
         if (variant === 'drills') {
           try {
@@ -138,38 +143,23 @@ const FilterBar = ({
     };
 
     loadOptions();
-  }, [user, variant, authLoading]);
+  }, [user, variant, authLoading, onFilterChange]);
 
   useEffect(() => {
-    const updateSites = async () => {
+    const updateOrganizationFilters = async () => {
       try {
-        if (user?.role === 'admin' && filters.entrepreneur) {
-          const entrepreneurSites = await getSitesByEntrepreneur(filters.entrepreneur);
-          setOptions(prev => ({
-            ...prev,
-            sites: entrepreneurSites || []
-          }));
-          if (!filters.id && !disableAutoFetch) {
-            onFilterChange('sites', entrepreneurSites.map(site => site.id));
-          }
-        } else {
-          if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
-            onFilterChange('maintenance', user.organizationId);
-          } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
-            onFilterChange('integrator', user.organizationId);
-          }
-
-          if (!filters.id && filters.sites === null && options.sites.length > 0 && !disableAutoFetch) {
-            onFilterChange('sites', options.sites.map(site => site.id));
-          }
+        if (user?.role === 'maintenance' && user?.organizationId && !filters.maintenance) {
+          onFilterChange('maintenance', user.organizationId);
+        } else if (user?.role === 'integrator' && user?.organizationId && !filters.integrator) {
+          onFilterChange('integrator', user.organizationId);
         }
       } catch (error) {
-        console.error('Error updating sites:', error);
+        console.error('Error updating organization filters:', error);
       }
     };
 
-    updateSites();
-  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, filters.sites, filters.id, options.sites, onFilterChange, disableAutoFetch, filters.entrepreneur]);
+    updateOrganizationFilters();
+  }, [user?.role, user?.organizationId, filters.maintenance, filters.integrator, onFilterChange]);
 
   const formatOrganizationName = (org) => org ? org.name : '';
 
@@ -228,9 +218,18 @@ const FilterBar = ({
           <Autocomplete
             {...commonAutocompleteProps}
             options={options.entrepreneurs}
-            getOptionLabel={formatOrganizationName}
-            value={options.entrepreneurs.find(org => org.id === filters.entrepreneur) || null}
-            onChange={(_, newValue) => onFilterChange('entrepreneur', newValue?.id || '')}
+            getOptionLabel={(user) => user?.organization?.name || ''}
+            value={options.entrepreneurs.find(user => user.id === filters.entrepreneur) || null}
+            onChange={async (_, newValue) => {
+              const sites = newValue?.id 
+                ? await getSitesByEntrepreneur(newValue.id)
+                : await getSites();
+              
+              setOptions(prev => ({ ...prev, sites: sites || [] }));
+              
+              onFilterChange('entrepreneur', newValue?.id || '');
+              onFilterChange('sites', sites.map(site => site.id));
+            }}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             renderInput={(params) => renderTextField(params, "יזם")}
             sx={filterStyles.entrepreneurFilter}
@@ -360,9 +359,6 @@ FilterBar.propTypes = {
     sites: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
     isCritical: PropTypes.bool,
     securityOfficer: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    maintenance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    integrator: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    entrepreneur: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     drillType: PropTypes.string
   }).isRequired,
   onFilterChange: PropTypes.func.isRequired,

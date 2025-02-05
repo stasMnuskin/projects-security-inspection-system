@@ -281,6 +281,8 @@ exports.getIntegrators = async (req, res, next) => {
 };
 
 exports.updateUserDetails = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -290,23 +292,47 @@ exports.updateUserDetails = async (req, res, next) => {
     const { name, email, organizationId, role } = req.body;
     const userId = req.params.id;
 
+    // Log initial request
+    logger.info(`Starting user update for ID ${userId}:`, {
+      requestData: {
+        name,
+        email,
+        organizationId,
+        role
+      }
+    });
+
     // Find the user with organization
     const user = await User.findByPk(userId, {
       include: [{
         model: Organization,
         as: 'organization',
         attributes: ['id', 'name', 'type']
-      }]
+      }],
+      transaction
     });
     
     if (!user) {
+      await transaction.rollback();
       return next(new AppError('משתמש לא נמצא', 404, 'USER_NOT_FOUND'));
     }
 
+    // Log current user state
+    logger.info(`Current user state:`, {
+      userId,
+      currentRole: user.role,
+      currentOrganizationId: user.organizationId,
+      currentOrganizationName: user.organization?.name
+    });
+
     // Check if email is being changed and if it's already in use
     if (email && email !== user.email) {
-      const existingUser = await User.findOne({ where: { email } });
+      const existingUser = await User.findOne({ 
+        where: { email },
+        transaction
+      });
       if (existingUser) {
+        await transaction.rollback();
         return next(new AppError('כתובת האימייל כבר קיימת במערכת', 400, 'EMAIL_EXISTS'));
       }
     }
@@ -317,25 +343,92 @@ exports.updateUserDetails = async (req, res, next) => {
       permissions = await User.getDefaultPermissions(role);
     }
 
-    // Update user
-    await user.update({
+    const updateData = {
       name: name || user.name,
       email: email || user.email,
-      organizationId: organizationId === null ? null : (organizationId || user.organizationId),
+      organizationId: organizationId !== undefined ? organizationId : user.organizationId,
       role: role || user.role,
       permissions
-    });
+    };
+
+    // Log update attempt
+    logger.info(`Attempting to update user with data:`, updateData);
+
+    // Handle organization update
+    if (req.body.organization?.name && user.role !== 'admin') {
+      // Check if organization exists with same name and type
+      const existingOrg = await Organization.findOne({
+        where: { 
+          name: req.body.organization.name,
+          type: user.role
+        },
+        transaction
+      });
+
+      if (existingOrg) {
+        await transaction.rollback();
+        return next(new AppError('ארגון קיים במערכת', 400, 'ORGANIZATION_EXISTS'));
+      }
+
+      // Create new organization
+      const newOrg = await Organization.create({
+        name: req.body.organization.name,
+        type: user.role
+      }, { transaction });
+      
+      updateData.organizationId = newOrg.id;
+      logger.info(`Created new organization:`, {
+        id: newOrg.id,
+        name: newOrg.name,
+        type: newOrg.type
+      });
+    }
+
+    // Update user within transaction
+    await user.update(updateData, { transaction });
+
+    // Force reload within transaction to ensure we have latest data
+    await user.reload({ transaction });
 
     // Fetch updated user with organization
     const updatedUser = await User.findByPk(userId, {
       include: [{
         model: Organization,
         as: 'organization',
-        attributes: ['id', 'name', 'type']
-      }]
+        attributes: ['id', 'name', 'type'],
+        required: false
+      }],
+      transaction
     });
 
-    logger.info(`User updated successfully: ${user.email}`);
+    if (!updatedUser) {
+      await transaction.rollback();
+      throw new Error('Failed to fetch updated user data');
+    }
+
+    // Verify organization update if needed
+    if (req.body.organization?.name && 
+        (!updatedUser.organization || updatedUser.organization.name !== req.body.organization.name)) {
+      await transaction.rollback();
+      logger.error('Organization name update verification failed', {
+        expected: req.body.organization.name,
+        actual: updatedUser.organization?.name
+      });
+      throw new Error('Failed to update organization name');
+    }
+
+    // Log final state before commit
+    logger.info(`Final user state before commit:`, {
+      userId: updatedUser.id,
+      role: updatedUser.role,
+      organizationId: updatedUser.organizationId,
+      organizationName: updatedUser.organization?.name
+    });
+
+    await transaction.commit();
+
+    // Log successful update
+    logger.info(`User update completed successfully for ID ${userId}`);
     res.json({ 
       message: 'המשתמש עודכן בהצלחה',
       user: {
@@ -349,7 +442,19 @@ exports.updateUserDetails = async (req, res, next) => {
       }
     });
   } catch (error) {
-    logger.error('Error updating user:', error);
+    await transaction.rollback();
+    logger.error('Error updating user:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.params.id,
+      requestData: req.body
+    });
+    
+    // Check for specific validation errors
+    if (error.name === 'SequelizeValidationError') {
+      return next(new AppError(error.message, 400, 'VALIDATION_ERROR'));
+    }
+    
     next(new AppError('שגיאה בעדכון המשתמש', 500, 'USER_UPDATE_ERROR'));
   }
 };

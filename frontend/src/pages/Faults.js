@@ -71,6 +71,7 @@ const Faults = () => {
     isCritical: initialFilters.isCritical !== undefined ? initialFilters.isCritical : null,
     maintenance: initialFilters.maintenance || '',
     integrator: initialFilters.integrator || '',
+    entrepreneur: initialFilters.entrepreneur || '',
     type: initialFilters.type || '',
     description: initialFilters.description || '',
     status: initialFilters.status || null,
@@ -140,6 +141,9 @@ const Faults = () => {
       }
       if (filters.integrator) {
         queryParams.integratorOrg = filters.integrator;
+      }
+      if (filters.entrepreneur) {
+        queryParams.entrepreneur = filters.entrepreneur;
       }
       if (filters.type === 'אחר' && filters.description) {
         queryParams.type = 'אחר';

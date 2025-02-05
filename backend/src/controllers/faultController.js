@@ -169,7 +169,7 @@ exports.getAllFaults = async (req, res, next) => {
     }
 
     const { role, id: userId, organizationId } = req.user;
-    const { id, startDate, endDate, sites, isCritical, maintenanceOrg, integratorOrg, type, description, status } = req.query;
+    const { id, startDate, endDate, sites, isCritical, maintenanceOrg, integratorOrg, entrepreneur, type, description, status } = req.query;
 
     logger.info('getAllFaults called with params:', {
       role,
@@ -218,8 +218,16 @@ exports.getAllFaults = async (req, res, next) => {
       whereClause.integratorOrganizationId = integratorOrg;
     }
 
-    // Get sites based on user role
-    const userSites = await getSitesByUserRole(req.user);
+    // Get sites based on user role and entrepreneur filter
+    let userSites;
+    if (role === 'admin' && entrepreneur) {
+      userSites = await db.Site.findAll({
+        where: { entrepreneurId: entrepreneur },
+        attributes: ['id']
+      });
+    } else {
+      userSites = await getSitesByUserRole(req.user);
+    }
     const allowedSiteIds = userSites.map(site => site.id);
     
     // Handle site filters

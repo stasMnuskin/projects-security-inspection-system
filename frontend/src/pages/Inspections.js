@@ -22,7 +22,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
-import { getInspectionsBySite, getInspections, getEnabledFields, deleteInspection } from '../services/api';
+import { getInspections, getEnabledFields, deleteInspection } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { subMonths } from 'date-fns';
 import { colors } from '../styles/colors';
@@ -168,36 +168,16 @@ const Inspections = () => {
     try {
       setLoading(true);
       const queryParams = {
-        type: 'inspection'
+        type: 'inspection',
+        sites: filters.sites || [],  
+        ...(filters.startDate && { startDate: filters.startDate.toISOString() }),
+        ...(filters.endDate && { endDate: filters.endDate.toISOString() }),
+        ...(filters.maintenance && { maintenanceOrg: filters.maintenance }),
+        ...(filters.integrator && { integratorOrg: filters.integrator })
       };
-      
-      if (filters.startDate) {
-        queryParams.startDate = filters.startDate.toISOString();
-      }
-      if (filters.endDate) {
-        queryParams.endDate = filters.endDate.toISOString();
-      }
-      if (filters.maintenance) {
-        queryParams.maintenanceOrg = filters.maintenance;
-      }
-      if (filters.integrator) {
-        queryParams.integratorOrg = filters.integrator;
-      }
 
-      let response;
-      if (filters.sites && filters.sites.length > 0) {
-        // Fetch inspections for all selected sites
-        const inspectionPromises = filters.sites.map(siteId => 
-          getInspectionsBySite(siteId, queryParams)
-        );
-        const responses = await Promise.all(inspectionPromises);
-        // Combine and deduplicate inspections from all sites
-        response = Array.from(new Set(responses.flat()));
-      } else {
-        response = await getInspections(queryParams);
-      }
-
-      const filteredInspections = (response || []).filter(item => item.type === 'inspection');
+      const response = await getInspections(queryParams);
+      const filteredInspections = response || [];
       setInspections(filteredInspections);
       setError(null);
     } catch (error) {
@@ -216,7 +196,7 @@ const Inspections = () => {
     }));
   }, []);
 
-  // Fetch data when filters change
+  // Load data on mount and when filters change
   useEffect(() => {
     fetchInspections();
   }, [filters, fetchInspections]);
