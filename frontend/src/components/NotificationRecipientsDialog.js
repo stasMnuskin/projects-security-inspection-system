@@ -179,7 +179,7 @@ function NotificationRecipientsDialog({ open, onClose, selectedRecipients, onCha
         <DialogActions sx={styles.dialogActions}>
           <Button
             variant="contained"
-            onClick={onClose}
+            onClick={() => setSelectedRole(null)}
             sx={styles.saveButton}
           >
             שמירה
