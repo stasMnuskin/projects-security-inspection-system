@@ -8,15 +8,14 @@ import {
   Link,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  TextField
 } from '@mui/material';
-import Select from 'react-select';
 import { login as apiLogin } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
-import { pageStyles, formStyles, selectStyles } from '../styles/components';
+import { pageStyles, formStyles } from '../styles/components';
 import FormField from '../components/common/FormField';
-import { colors } from '../styles/colors';
 import logo from '../assets/logo.svg';
 
 function Login() {
@@ -90,57 +89,27 @@ function Login() {
             </Typography>
 
             <FormField label="אימייל" required>
-              <Select
-                inputValue={formData.email}
-                value={formData.email ? { value: formData.email, label: formData.email } : null}
-                onInputChange={(inputValue, { action }) => {
-                  if (action === 'input-change') {
-                    setFormData(prev => ({ ...prev, email: inputValue }));
-                  }
-                }}
-                onChange={(newValue) => setFormData(prev => ({ ...prev, email: newValue?.value || '' }))}
-                options={[]}
-                styles={selectStyles}
-                placeholder=""
-                isClearable
-                components={{
-                  DropdownIndicator: () => null,
-                  IndicatorSeparator: () => null,
-                  Menu: () => null
+              <TextField
+                fullWidth
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                sx={formStyles.textField}
+                inputProps={{
+                  dir: "ltr"
                 }}
               />
             </FormField>
 
             <FormField label="סיסמה" required>
-              <Select
-                inputValue={formData.password}
-                value={formData.password ? { value: formData.password, label: formData.password } : null}
-                onInputChange={(inputValue, { action }) => {
-                  if (action === 'input-change') {
-                    setFormData(prev => ({ ...prev, password: inputValue }));
-                  }
-                }}
-                onChange={(newValue) => setFormData(prev => ({ ...prev, password: newValue?.value || '' }))}
-                options={[]}
-                styles={{
-                  ...selectStyles,
-                  input: (base) => ({
-                    ...base,
-                    WebkitTextSecurity: 'disc',
-                    color: colors.text.white
-                  }),
-                  singleValue: (base) => ({
-                    ...base,
-                    WebkitTextSecurity: 'disc',
-                    color: colors.text.white
-                  })
-                }}
-                placeholder=""
-                isClearable
-                components={{
-                  DropdownIndicator: () => null,
-                  IndicatorSeparator: () => null,
-                  Menu: () => null
+              <TextField
+                fullWidth
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                sx={formStyles.textField}
+                inputProps={{
+                  dir: "ltr"
                 }}
               />
             </FormField>

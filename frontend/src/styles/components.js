@@ -712,14 +712,14 @@ export const formStyles = {
         borderColor: colors.primary.orange
       },
       '& input': {
-        backgroundColor: `${colors.background.darkGrey} !important`,
+        backgroundColor: `${colors.background.darkGreyOpaque} !important`,
         color: `${colors.text.white} !important`
       },
       '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
-        WebkitBoxShadow: `0 0 0 1000px ${colors.background.darkGrey} inset !important`,
+        WebkitBoxShadow: `0 0 0 1000px ${colors.background.darkGreyOpaque} inset !important`,
         WebkitTextFillColor: `${colors.text.white} !important`,
         caretColor: `${colors.text.white} !important`,
-        backgroundColor: `${colors.background.darkGrey} !important`
+        backgroundColor: `${colors.background.darkGreyOpaque} !important`
       }
     },
     '& .MuiInputLabel-root': {
@@ -969,7 +969,17 @@ export const datePickerStyles = {
         height: '48px',
         '& input': {
           height: '36px',
-          padding: '6px 8px'
+          padding: '6px 8px',
+          fontSize: '0.75rem'
+        }
+      },
+      '@media (min-width:600px) and (max-width:960px)': {
+        minHeight: '40px !important',
+        height: '40px',
+        '& input': {
+          height: '24px',
+          padding: '6px 8px',
+          fontSize: '0.8rem'
         }
       },
       '@media (min-width:960px)': {
@@ -977,11 +987,15 @@ export const datePickerStyles = {
         height: '40px',
         '& input': {
           height: '24px',
-          padding: '6px 8px'
+          padding: '6px 8px',
+          fontSize: '0.875rem'
         }
       },
       '& input': {
         color: colors.text.white
+      },
+      '& .MuiInputAdornment-root': {
+        marginLeft: '4px'
       }
     }
   }
@@ -1062,9 +1076,40 @@ export const filterStyles = {
     '& .MuiOutlinedInput-root': {
       ...selectStyles.control,
       padding: '2px 8px',
+      '@media (max-width:600px)': {
+        minHeight: '48px !important',
+        height: '48px',
+        '& input': {
+          height: '36px',
+          padding: '6px 8px',
+          fontSize: '0.75rem'
+        }
+      },
+      '@media (min-width:600px) and (max-width:960px)': {
+        minHeight: '40px !important',
+        height: '40px',
+        '& input': {
+          height: '24px',
+          padding: '6px 8px',
+          fontSize: '0.8rem'
+        }
+      },
+      '@media (min-width:960px)': {
+        minHeight: '40px !important',
+        height: '40px',
+        '& input': {
+          height: '24px',
+          padding: '6px 8px',
+          fontSize: '0.875rem'
+        }
+      },
       '& input': {
         color: colors.text.white,
         textAlign: 'center'
+      },
+      '& .MuiInputAdornment-root': {
+        marginLeft: '4px',
+        marginRight: '4px'
       }
     },
     '& .MuiButtonBase-root': {
@@ -1072,7 +1117,7 @@ export const filterStyles = {
       marginRight: 0,
       '& .MuiSvgIcon-root': {
         color: colors.text.grey,
-        fontSize: '16px',
+        fontSize: '14px',
         cursor: 'pointer',
         '&:hover': {
           color: colors.text.white
@@ -1090,5 +1135,3 @@ export const filterStyles = {
     }
   }
 };
-
-// Rest of the file remains the same...

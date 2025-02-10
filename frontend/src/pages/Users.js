@@ -171,11 +171,14 @@ function Users() {
         id: editedUser.id,
         name: editedUser.name,
         email: editedUser.email,
-        role: editedUser.role,
-        organization: editedUser.organization?.name ? {
-          name: editedUser.organization.name
-        } : undefined
+        role: editedUser.role
       };
+
+      if (editedUser.organization?.name !== selectedUser.organization?.name) {
+        updatedUser.organization = {
+          name: editedUser.organization.name
+        };
+      }
 
       // Log the update data for debugging
       console.log('Updating user with data:', updatedUser);
