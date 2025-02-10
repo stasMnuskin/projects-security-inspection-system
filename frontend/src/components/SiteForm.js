@@ -1,23 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import {
-  Box,
-  TextField,
-  FormControl,
-  Button,
-  Grid,
-  Autocomplete,
-  IconButton,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  Chip
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, Button, Grid, Typography, useTheme, useMediaQuery } from '@mui/material';
+// import AddIcon from '@mui/icons-material/Add';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import Select from 'react-select';
 import { getEntrepreneurs, getOrganizations } from '../services/api';
 import { colors } from '../styles/colors';
-import { dialogStyles, notificationRecipientsStyles } from '../styles/components';
+import { dialogStyles, notificationRecipientsStyles, selectStyles } from '../styles/components';
+import FormField from './common/FormField';
 import NotificationRecipientsDialog from './NotificationRecipientsDialog';
 
 const SITE_TYPES = [
@@ -97,9 +87,9 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
     }
   }, [initialData]);
 
-  const handleAddField = () => {
-    setCustomFields([...customFields, { name: '', value: '' }]);
-  };
+  // const handleAddField = () => {
+  //   setCustomFields([...customFields, { name: '', value: '' }]);
+  // };
 
   const handleFieldChange = (index, field, value) => {
     const newFields = [...customFields];
@@ -115,22 +105,20 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
   };
 
   const handleSubmit = () => {
+    const errors = {};
+    if (!siteDetails.name) errors.name = 'שדה שם האתר לא יכול להיות ריק';
+    if (!siteDetails.entrepreneurId) errors.entrepreneurId = 'שדה יזם לא יכול להיות ריק';
+    if (!siteDetails.type) errors.type = 'שדה סוג האתר לא יכול להיות ריק';
+
+    if (Object.keys(errors).length > 0) {
+      onSubmit({ hasErrors: true, errors });
+      return;
+    }
+
     onSubmit({
       ...siteDetails,
       customFields
     });
-  };
-
-  const commonTextFieldStyles = {
-    ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-    '& .MuiOutlinedInput-root': {
-      ...dialogStyles.dialogContent['& .MuiInputBase-root'],
-      fontSize: { xs: '0.9rem', sm: '1rem' }
-    },
-    '& .MuiInputLabel-root': {
-      ...dialogStyles.dialogContent['& .MuiInputLabel-root'],
-      fontSize: { xs: '0.9rem', sm: '1rem' }
-    }
   };
 
   return (
@@ -149,191 +137,120 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
       
       <Grid container spacing={{ xs: 1.5, sm: 2 }}>
         <Grid item xs={12}>
-          <FormControl fullWidth>
-            <TextField
-              required
-              label="שם האתר"
-              value={siteDetails.name}
-              onChange={(e) => setSiteDetails(prev => ({ ...prev, name: e.target.value }))}
-              sx={commonTextFieldStyles}
-            />
-          </FormControl>
-        </Grid>
-
-        <Grid item xs={12}>
-          <FormControl fullWidth>
-            <Autocomplete
-              value={entrepreneurs.find(e => e.id === siteDetails.entrepreneurId) || null}
-              options={entrepreneurs}
-              getOptionLabel={(option) => option.organization?.name || option.name || ''}
-              onChange={(event, newValue) => {
-                setSiteDetails(prev => ({
-                  ...prev,
-                  entrepreneurId: newValue?.id || ''
-                }));
+          <FormField label="שם האתר" required>
+            <Select
+              inputValue={siteDetails.name}
+              value={siteDetails.name ? { value: siteDetails.name, label: siteDetails.name } : null}
+              onInputChange={(inputValue, { action }) => {
+                if (action === 'input-change') {
+                  setSiteDetails(prev => ({ ...prev, name: inputValue }));
+                }
               }}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="יזם"
-                  required
-                  sx={commonTextFieldStyles}
-                />
-              )}
+              onChange={(newValue) => setSiteDetails(prev => ({ ...prev, name: newValue?.value || '' }))}
+              options={[]}
+              styles={selectStyles}
+              placeholder=""
+              isClearable
+              components={{
+                DropdownIndicator: () => null,
+                IndicatorSeparator: () => null,
+                Menu: () => null
+              }}
             />
-          </FormControl>
+          </FormField>
         </Grid>
 
         <Grid item xs={12}>
-          <FormControl fullWidth>
-            <Autocomplete
+          <FormField label="יזם" required>
+            <Select
+              value={entrepreneurs.find(e => e.id === siteDetails.entrepreneurId) ? {
+                value: siteDetails.entrepreneurId,
+                label: entrepreneurs.find(e => e.id === siteDetails.entrepreneurId)?.organization?.name || 
+                       entrepreneurs.find(e => e.id === siteDetails.entrepreneurId)?.name || ''
+              } : null}
+              onChange={(newValue) => setSiteDetails(prev => ({
+                ...prev,
+                entrepreneurId: newValue?.value || ''
+              }))}
+              options={entrepreneurs.map(e => ({
+                value: e.id,
+                label: e.organization?.name || e.name || ''
+              }))}
+              styles={selectStyles}
+              placeholder=""
+              isClearable
+            />
+          </FormField>
+        </Grid>
+
+        <Grid item xs={12}>
+          <FormField label="סוג האתר" required>
+            <Select
               value={SITE_TYPES.find(type => type.value === siteDetails.type)}
+              onChange={(newValue) => setSiteDetails(prev => ({
+                ...prev,
+                type: newValue?.value || 'inductive_fence'
+              }))}
               options={SITE_TYPES}
-              getOptionLabel={(option) => option.label}
-              onChange={(event, newValue) => {
-                setSiteDetails(prev => ({
-                  ...prev,
-                  type: newValue?.value || 'inductive_fence'
-                }));
-              }}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="סוג האתר"
-                  required
-                  sx={commonTextFieldStyles}
-                />
-              )}
+              styles={selectStyles}
+              placeholder=""
+              isClearable={false}
             />
-          </FormControl>
+          </FormField>
         </Grid>
 
         <Grid item xs={12}>
-          <FormControl fullWidth>
-            <Autocomplete
-              multiple
-              options={integratorOrgs}
-              getOptionLabel={(option) => option.name}
-              value={integratorOrgs.filter(org => siteDetails.integratorOrganizationIds.includes(org.id))}
-              disableCloseOnSelect
-              onChange={(event, newValue) => {
-                setSiteDetails(prev => ({
-                  ...prev,
-                  integratorOrganizationIds: newValue.map(v => v.id)
-                }));
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...chipProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      label={option.name}
-                      {...chipProps}
-                      sx={{
-                        backgroundColor: colors.background.darkGrey,
-                        color: colors.text.white,
-                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
-                      }}
-                    />
-                  );
-                })
-              }
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="חברות אינטגרציה"
-                  sx={commonTextFieldStyles}
-                />
-              )}
+          <FormField label="חברות אינטגרציה">
+            <Select
+              isMulti
+              value={integratorOrgs
+                .filter(org => siteDetails.integratorOrganizationIds.includes(org.id))
+                .map(org => ({ value: org.id, label: org.name }))}
+              onChange={(newValue) => setSiteDetails(prev => ({
+                ...prev,
+                integratorOrganizationIds: newValue.map(v => v.value)
+              }))}
+              options={integratorOrgs.map(org => ({ value: org.id, label: org.name }))}
+              styles={selectStyles}
+              placeholder=""
             />
-          </FormControl>
+          </FormField>
         </Grid>
 
         <Grid item xs={12}>
-          <FormControl fullWidth>
-            <Autocomplete
-              multiple
-              options={maintenanceOrgs}
-              getOptionLabel={(option) => option.name}
-              value={siteDetails.maintenanceOrganizationIds.length > 0 
-                ? maintenanceOrgs.filter(org => siteDetails.maintenanceOrganizationIds.includes(org.id))
-                : []}
-              onChange={(event, newValue) => {
-                setSiteDetails(prev => ({
-                  ...prev,
-                  maintenanceOrganizationIds: newValue.map(v => v.id)
-                }));
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...chipProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      label={option.name}
-                      {...chipProps}
-                      sx={{
-                        backgroundColor: colors.background.darkGrey,
-                        color: colors.text.white,
-                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
-                      }}
-                    />
-                  );
-                })
-              }
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="חברות אחזקה"
-                  sx={commonTextFieldStyles}
-                />
-              )}
+          <FormField label="חברות אחזקה">
+            <Select
+              isMulti
+              value={maintenanceOrgs
+                .filter(org => siteDetails.maintenanceOrganizationIds.includes(org.id))
+                .map(org => ({ value: org.id, label: org.name }))}
+              onChange={(newValue) => setSiteDetails(prev => ({
+                ...prev,
+                maintenanceOrganizationIds: newValue.map(v => v.value)
+              }))}
+              options={maintenanceOrgs.map(org => ({ value: org.id, label: org.name }))}
+              styles={selectStyles}
+              placeholder=""
             />
-          </FormControl>
+          </FormField>
         </Grid>
 
         <Grid item xs={12}>
-          <FormControl fullWidth>
-            <Autocomplete
-              multiple
-              options={controlCenterOrgs}
-              getOptionLabel={(option) => option.name}
-              value={siteDetails.controlCenterOrganizationIds.length > 0 
-                ? controlCenterOrgs.filter(org => siteDetails.controlCenterOrganizationIds.includes(org.id))
-                : []}
-              onChange={(event, newValue) => {
-                setSiteDetails(prev => ({
-                  ...prev,
-                  controlCenterOrganizationIds: newValue.map(v => v.id)
-                }));
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...chipProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      label={option.name}
-                      {...chipProps}
-                      sx={{
-                        backgroundColor: colors.background.darkGrey,
-                        color: colors.text.white,
-                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
-                      }}
-                    />
-                  );
-                })
-              }
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="מוקד"
-                  sx={commonTextFieldStyles}
-                />
-              )}
+          <FormField label="מוקד">
+            <Select
+              isMulti
+              value={controlCenterOrgs
+                .filter(org => siteDetails.controlCenterOrganizationIds.includes(org.id))
+                .map(org => ({ value: org.id, label: org.name }))}
+              onChange={(newValue) => setSiteDetails(prev => ({
+                ...prev,
+                controlCenterOrganizationIds: newValue.map(v => v.value)
+              }))}
+              options={controlCenterOrgs.map(org => ({ value: org.id, label: org.name }))}
+              styles={selectStyles}
+              placeholder=""
             />
-          </FormControl>
+          </FormField>
         </Grid>
 
         <Grid item xs={12}>
@@ -370,28 +287,34 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           <Grid item xs={12} key={index}>
             <Grid container spacing={{ xs: 1, sm: 2 }}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="שדה"
-                  value={field.name}
-                  onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
-                  sx={commonTextFieldStyles}
-                />
+                <FormField label="שדה">
+                  <Select
+                    value={field.name ? { value: field.name, label: field.name } : null}
+                    onChange={(newValue) => handleFieldChange(index, 'name', newValue?.value || '')}
+                    options={[]}
+                    styles={selectStyles}
+                    placeholder=""
+                    isClearable
+                  />
+                </FormField>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="ערך"
-                  value={field.value}
-                  onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
-                  sx={commonTextFieldStyles}
-                />
+                <FormField label="ערך">
+                  <Select
+                    value={field.value ? { value: field.value, label: field.value } : null}
+                    onChange={(newValue) => handleFieldChange(index, 'value', newValue?.value || '')}
+                    options={[]}
+                    styles={selectStyles}
+                    placeholder=""
+                    isClearable
+                  />
+                </FormField>
               </Grid>
             </Grid>
           </Grid>
         ))}
 
-        <Grid item xs={12}>
+        {/* <Grid item xs={12}>
           <IconButton 
             onClick={handleAddField} 
             sx={{ 
@@ -403,7 +326,7 @@ function SiteForm({ initialData, onSubmit, onCancel, submitLabel }) {
           >
             <AddIcon />
           </IconButton>
-        </Grid>
+        </Grid> */}
 
         <Grid item xs={12}>
           <Box sx={{ 

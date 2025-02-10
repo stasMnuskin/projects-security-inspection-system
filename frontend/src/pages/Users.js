@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
-  TextField,
   Typography,
   Container,
-  FormControl,
   Button,
   Grid,
   List,
@@ -13,21 +11,19 @@ import {
   ListItemText,
   Snackbar,
   Alert,
-  Autocomplete,
-  Select,
-  MenuItem,
-  InputLabel,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions
 } from '@mui/material';
+import Select from 'react-select';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, updateUser, getOrganizations, deleteUser } from '../services/api';
 import { colors } from '../styles/colors';
-import { formStyles } from '../styles/components';
+import { formStyles, selectStyles, dialogStyles } from '../styles/components';
+import FormField from '../components/common/FormField';
 import { ROLE_OPTIONS, ROLES } from '../constants/roles';
 
 function Users() {
@@ -39,7 +35,6 @@ function Users() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
   const [editedUser, setEditedUser] = useState(null);
-  const [errors, setErrors] = useState({});
   const [organizations, setOrganizations] = useState({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
@@ -93,8 +88,8 @@ function Users() {
     }
   }, [searchTerm, users]);
 
-  const handleSearch = (event, value) => {
-    setSearchTerm(value || '');
+  const handleSearch = (newValue) => {
+    setSearchTerm(newValue?.value || '');
   };
 
   const handleUserSelect = (selectedUser) => {
@@ -103,11 +98,10 @@ function Users() {
       ...selectedUser,
       name: selectedUser.name || '',
       email: selectedUser.email || '',
-      organization: selectedUser.organization || null,  // שומרים את כל אובייקט הארגון
+      organization: selectedUser.organization || null, 
       organizationId: selectedUser.organizationId,
       role: selectedUser.role || ''
     });
-    setErrors({});
   };
 
   const showNotification = (message, severity = 'success') => {
@@ -119,24 +113,23 @@ function Users() {
   };
 
   const validateForm = () => {
-    const newErrors = {};
-    if (!editedUser.name?.trim()) {
-      newErrors.name = 'שם נדרש';
+    const errors = {};
+    if (!editedUser.name) errors.name = 'שדה שם לא יכול להיות ריק';
+    if (!editedUser.email) errors.email = 'שדה אימייל לא יכול להיות ריק';
+    else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(editedUser.email)) {
+      errors.email = 'כתובת אימייל לא תקינה';
     }
-    if (!editedUser.email?.trim()) {
-      newErrors.email = 'אימייל נדרש';
-    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(editedUser.email)) {
-      newErrors.email = 'כתובת אימייל לא תקינה';
-    }
-    if (!editedUser.role) {
-      newErrors.role = 'תפקיד נדרש';
-    }
+    if (!editedUser.role) errors.role = 'שדה תפקיד לא יכול להיות ריק';
     if (editedUser.role && editedUser.role !== 'admin' && !editedUser.organization?.name) {
-      newErrors.organization = 'ארגון נדרש';
+      errors.organization = 'שדה ארגון לא יכול להיות ריק';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (Object.keys(errors).length > 0) {
+      const errorMessages = Object.values(errors).join('\n');
+      showNotification(errorMessages, 'error');
+      return false;
+    }
+    return true;
   };
 
   const handleDeleteClick = (userItem, event) => {
@@ -248,26 +241,19 @@ function Users() {
         <Grid item xs={12} md={4}>
           <Paper elevation={3} sx={formStyles.paper}>
             <Box sx={formStyles.formBox}>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <Autocomplete
-                  freeSolo
-                  options={getSearchSuggestions()}
-                  onInputChange={handleSearch}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      variant="outlined"
-                      placeholder="חיפוש לפי שם, אימייל, ארגון או תפקיד"
-                      sx={{
-                        backgroundColor: colors.background.darkGrey,
-                        '& .MuiOutlinedInput-root': {
-                          color: colors.text.white
-                        }
-                      }}
-                    />
-                  )}
+              <FormField label="חיפוש">
+                <Select
+                  value={searchTerm ? { value: searchTerm, label: searchTerm } : null}
+                  onChange={handleSearch}
+                  options={getSearchSuggestions().map(suggestion => ({
+                    value: suggestion,
+                    label: suggestion
+                  }))}
+                  styles={selectStyles}
+                  placeholder="חיפוש לפי שם, אימייל, ארגון או תפקיד"
+                  isClearable
                 />
-              </FormControl>
+              </FormField>
 
               <List sx={{ 
                 bgcolor: colors.background.darkGrey, 
@@ -347,113 +333,107 @@ function Users() {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="שם"
-                      value={editedUser.name}
-                      onChange={(e) => setEditedUser(prev => ({ ...prev, name: e.target.value }))}
-                      error={!!errors.name}
-                      helperText={errors.name}
-                      sx={formStyles.textField}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="אימייל"
-                      value={editedUser.email}
-                      onChange={(e) => setEditedUser(prev => ({ ...prev, email: e.target.value }))}
-                      error={!!errors.email}
-                      helperText={errors.email}
-                      sx={formStyles.textField}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth error={!!errors.role} sx={formStyles.textField}>
-                      <InputLabel id="role-select-label" sx={{ color: colors.text.white }}>תפקיד</InputLabel>
+                    <FormField label="שם" required>
                       <Select
-                        labelId="role-select-label"
-                        value={editedUser.role || ''}
-                        label="תפקיד"
-                        onChange={(e) => {
-                          const newRole = e.target.value;
+                        inputValue={editedUser.name}
+                        value={editedUser.name ? { value: editedUser.name, label: editedUser.name } : null}
+                        onInputChange={(inputValue, { action }) => {
+                          if (action === 'input-change') {
+                            setEditedUser(prev => ({ ...prev, name: inputValue }));
+                          }
+                        }}
+                        onChange={(newValue) => setEditedUser(prev => ({ ...prev, name: newValue?.value || '' }))}
+                        options={[]}
+                        styles={selectStyles}
+                        placeholder=""
+                        isClearable
+                        components={{
+                          DropdownIndicator: () => null,
+                          IndicatorSeparator: () => null,
+                          Menu: () => null
+                        }}
+                      />
+                    </FormField>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormField label="אימייל" required>
+                      <Select
+                        inputValue={editedUser.email}
+                        value={editedUser.email ? { value: editedUser.email, label: editedUser.email } : null}
+                        onInputChange={(inputValue, { action }) => {
+                          if (action === 'input-change') {
+                            setEditedUser(prev => ({ ...prev, email: inputValue }));
+                          }
+                        }}
+                        onChange={(newValue) => setEditedUser(prev => ({ ...prev, email: newValue?.value || '' }))}
+                        options={[]}
+                        styles={selectStyles}
+                        placeholder=""
+                        isClearable
+                        components={{
+                          DropdownIndicator: () => null,
+                          IndicatorSeparator: () => null,
+                          Menu: () => null
+                        }}
+                      />
+                    </FormField>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormField label="תפקיד" required>
+                      <Select
+                        value={editedUser.role ? ROLE_OPTIONS.find(role => role.value === editedUser.role) : null}
+                        onChange={(newValue) => {
                           setEditedUser(prev => ({
                             ...prev,
-                            role: newRole,
-                            // Clear organization when switching roles to let the server create a new one
+                            role: newValue?.value || '',
                             organization: null,
                             organizationId: null
                           }));
                         }}
-                        sx={{
-                          color: colors.text.white,
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.border.grey
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.border.grey
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.border.grey
-                          }
-                        }}
-                      >
-                        {ROLE_OPTIONS.map((role) => (
-                          <MenuItem key={role.value} value={role.value}>
-                            {role.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errors.role && (
-                        <Typography variant="caption" color="error">
-                          {errors.role}
-                        </Typography>
-                      )}
-                    </FormControl>
+                        options={ROLE_OPTIONS}
+                        styles={selectStyles}
+                        placeholder=""
+                        isClearable
+                      />
+                    </FormField>
                   </Grid>
 
                   {/* Organization field - show for all roles except admin */}
                   {editedUser.role && editedUser.role !== 'admin' && (
                     <Grid item xs={12}>
-                      <Autocomplete
-                        freeSolo
-                        value={editedUser.organization?.name || ''}
-                        onChange={(_, newValue) => {
-                          setEditedUser(prev => ({ 
-                            ...prev, 
-                            organization: prev.organization ? {
-                              ...prev.organization,
-                              name: newValue
-                            } : {
-                              name: newValue,
-                              type: prev.role
+                      <FormField label="ארגון" required>
+                        <Select
+                          inputValue={editedUser.organization?.name || ''}
+                          value={editedUser.organization?.name ? { value: editedUser.organization.name, label: editedUser.organization.name } : null}
+                          onInputChange={(inputValue, { action }) => {
+                            if (action === 'input-change') {
+                              setEditedUser(prev => ({
+                                ...prev,
+                                organization: {
+                                  name: inputValue,
+                                  type: prev.role
+                                }
+                              }));
                             }
-                          }));
-                        }}
-                        onInputChange={(_, newValue) => {
-                          setEditedUser(prev => ({ 
-                            ...prev, 
-                            organization: prev.organization ? {
-                              ...prev.organization,
-                              name: newValue
-                            } : {
-                              name: newValue,
-                              type: prev.role
-                            }
-                          }));
-                        }}
-                        options={getOrganizationOptions(editedUser.role)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="ארגון"
-                            error={!!errors.organization}
-                            helperText={errors.organization || 'ניתן לבחור ארגון קיים או להזין שם חדש'}
-                            required={true}
-                            sx={formStyles.textField}
-                          />
-                        )}
-                      />
+                          }}
+                          onChange={(newValue) => {
+                            setEditedUser(prev => ({
+                              ...prev,
+                              organization: newValue ? {
+                                name: newValue.value,
+                                type: prev.role
+                              } : null
+                            }));
+                          }}
+                          options={getOrganizationOptions(editedUser.role).map(name => ({
+                            value: name,
+                            label: name
+                          }))}
+                          styles={selectStyles}
+                          placeholder=""
+                          isClearable
+                        />
+                      </FormField>
                     </Grid>
                   )}
 
@@ -465,14 +445,13 @@ function Users() {
                         disabled={loading}
                         sx={formStyles.submitButton}
                       >
-                        {loading ? 'שומר...' : 'שמור'}
+                        {loading ? 'שומר...' : 'שמירה'}
                       </Button>
                       <Button
                         variant="outlined"
                         onClick={() => {
                           setSelectedUser(null);
                           setEditedUser(null);
-                          setErrors({});
                         }}
                         sx={{
                           color: colors.text.white,
@@ -497,36 +476,29 @@ function Users() {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: colors.background.black,
-            color: colors.text.white
-          }
-        }}
+        sx={dialogStyles.dialog}
       >
-        <DialogTitle>אישור מחיקה</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={dialogStyles.dialogTitle}>
+          אישור מחיקה
+        </DialogTitle>
+        <DialogContent sx={dialogStyles.dialogContent}>
           <Typography>
             האם אתה בטוח שברצונך למחוק את המשתמש {userToDelete?.name}?
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogStyles.dialogActions}>
           <Button 
             onClick={() => setDeleteDialogOpen(false)}
-            sx={{ color: colors.text.white }}
+            sx={dialogStyles.cancelButton}
           >
             ביטול
           </Button>
           <Button 
             onClick={handleDeleteConfirm}
-            sx={{ 
-              color: colors.primary.orange,
-              '&:hover': {
-                color: colors.primary.orangeHover
-              }
-            }}
+            disabled={loading}
+            sx={dialogStyles.submitButton}
           >
-            מחק
+            {loading ? 'מוחק...' : 'מחק'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -536,7 +508,13 @@ function Users() {
         autoHideDuration={6000}
         onClose={() => setNotification({ ...notification, open: false })}
       >
-        <Alert severity={notification.severity} onClose={() => setNotification({ ...notification, open: false })}>
+        <Alert 
+          severity={notification.severity} 
+          onClose={() => setNotification({ ...notification, open: false })}
+          sx={{
+            whiteSpace: 'pre-line'
+          }}
+        >
           {notification.message}
         </Alert>
       </Snackbar>

@@ -2,22 +2,20 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TextField,
   FormControlLabel,
   Switch,
   Autocomplete,
   CircularProgress,
   IconButton,
-  Typography
+  Typography,
+  MenuItem
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { colors } from '../styles/colors';
-import { dialogStyles } from '../styles/components';
+import { selectStyles } from '../styles/components';
 import { getEntrepreneurs, getSites, getFaultTypes } from '../services/api';
+import FormField from './common/FormField';
 
 const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -67,7 +65,6 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
 
   const handleEntrepreneurChange = (_, value) => {
     setSelectedEntrepreneur(value);
-    console.log(value);
     setSelectedSite(null);
     if (value) {
       const entrepreneurSites = allSites.filter(site => site.entrepreneurId === value.id);
@@ -108,6 +105,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
     setFaultData(updatedData);
     onFaultDataChange(updatedData);
   };
+
   return (
     <Box sx={{ display: 'grid', gap: 2, mt: 2, position: 'relative' }}>
       {onClose && (
@@ -132,120 +130,130 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
         פרטי התקלה
       </Typography>
 
-      {/* Entrepreneur Selection - Modified to handle null organization */}
-      <Autocomplete
-        loading={loading}
-        options={entrepreneurs}
-        getOptionLabel={(option) => {
-          if (!option) return 'בחר יזם';
-          return option.organization?.name || option.name;
-        }}
-        value={selectedEntrepreneur}
-        onChange={handleEntrepreneurChange}
-        isOptionEqualToValue={(option, value) => option?.id === value?.id}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="יזם"
-            sx={{
-              ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-              '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-              '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-            }}
-            InputProps={{
-              ...params.InputProps,
-              endAdornment: (
-                <>
-                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                  {params.InputProps.endAdornment}
-                </>
-              ),
-            }}
-          />
-        )}
-      />
+      {/* Entrepreneur Selection */}
+      <FormField label="יזם">
+        <Autocomplete
+          loading={loading}
+          options={entrepreneurs}
+          getOptionLabel={(option) => {
+            if (!option) return '';
+            return option.organization?.name || option.name;
+          }}
+          value={selectedEntrepreneur}
+          onChange={handleEntrepreneurChange}
+          isOptionEqualToValue={(option, value) => option?.id === value?.id}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              error={false}
+              sx={{
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  ...selectStyles.control,
+                  padding: '2px 8px',
+                  '& input': {
+                    color: colors.text.white
+                  }
+                }
+              }}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+      </FormField>
 
       {/* Site Selection */}
-      <Autocomplete
-        loading={loading}
-        options={filteredSites}
-        getOptionLabel={(option) => option?.name || 'בחר אתר'}
-        value={selectedSite}
-        onChange={handleSiteChange}
-        isOptionEqualToValue={(option, value) => option?.id === value?.id}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="אתר"
-            sx={{
-              ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-              '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-              '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-            }}
-            InputProps={{
-              ...params.InputProps,
-              endAdornment: (
-                <>
-                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                  {params.InputProps.endAdornment}
-                </>
-              ),
-            }}
-          />
-        )}
-      />
+      <FormField label="אתר">
+        <Autocomplete
+          loading={loading}
+          options={filteredSites}
+          getOptionLabel={(option) => option?.name || ''}
+          value={selectedSite}
+          onChange={handleSiteChange}
+          isOptionEqualToValue={(option, value) => option?.id === value?.id}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              error={false}
+              sx={{
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  ...selectStyles.control,
+                  padding: '2px 8px',
+                  '& input': {
+                    color: colors.text.white
+                  }
+                }
+              }}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+      </FormField>
 
       {/* Fault Type */}
-      <FormControl fullWidth>
-        <InputLabel 
-          id="fault-type-label"
-          sx={{
-            color: colors.text.grey,
-            '&.Mui-focused': {
-              color: colors.primary.orange,
-            },
-            '&.MuiFormLabel-filled': {
-              transform: 'translate(14px, -9px) scale(0.75)',
-            },
-            backgroundColor: colors.background.darkGreyOpaque,
-            padding: '0 5px',
-          }}
-        >
-          סוג תקלה
-        </InputLabel>
-        <Select
-          labelId="fault-type-label"
+      <FormField label="סוג תקלה">
+        <TextField
+          select
+          fullWidth
           value={faultData.type}
           onChange={(e) => updateFaultData({ type: e.target.value })}
-          label="סוג תקלה"
           sx={{
-            ...dialogStyles.dialogContent['& .MuiInputBase-root'],
-            '& .MuiSelect-icon': {
-              color: colors.text.grey
+            width: '100%',
+            '& .MuiOutlinedInput-root': {
+              ...selectStyles.control,
+              padding: '2px 8px',
+              '& .MuiSelect-select': {
+                color: colors.text.white
+              }
             }
           }}
         >
           {faultTypes.map(type => (
             <MenuItem key={type} value={type}>{type}</MenuItem>
           ))}
-        </Select>
-      </FormControl>
+        </TextField>
+      </FormField>
 
       {/* Description field - appears after selecting type */}
       {faultData.type && (
-        <TextField
-          label={faultData.type === 'אחר' ? 'הערות (חובה)' : 'הערות (אופציונלי)'}
-          multiline
-          rows={4}
-          value={faultData.description}
-          onChange={(e) => updateFaultData({ description: e.target.value })}
+        <FormField 
+          label={faultData.type === 'אחר' ? 'הערות' : 'הערות'} 
           required={faultData.type === 'אחר'}
-          sx={{
-            ...dialogStyles.dialogContent['& .MuiFormControl-root'],
-            '& .MuiOutlinedInput-root': dialogStyles.dialogContent['& .MuiInputBase-root'],
-            '& .MuiInputLabel-root': dialogStyles.dialogContent['& .MuiInputLabel-root']
-          }}
-        />
+        >
+          <TextField
+            multiline
+            rows={4}
+            value={faultData.description}
+            onChange={(e) => updateFaultData({ description: e.target.value })}
+            sx={{
+              width: '100%',
+              '& .MuiOutlinedInput-root': {
+                ...selectStyles.control,
+                padding: '2px 8px',
+                '& textarea': {
+                  color: colors.text.white
+                }
+              }
+            }}
+          />
+        </FormField>
       )}
 
       {/* Critical Fault Switch */}
@@ -275,8 +283,10 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
     </Box>
   );
 };
+
 NewFaultForm.propTypes = {
   onFaultDataChange: PropTypes.func.isRequired,
   onClose: PropTypes.func
 };
+
 export default NewFaultForm;

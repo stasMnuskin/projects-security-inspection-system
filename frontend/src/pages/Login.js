@@ -1,62 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { 
-  TextField as MuiTextField, 
   Button, 
   Typography, 
   Box, 
   Paper, 
   Link,
-  FormControl,
   Snackbar,
   Alert,
-  CircularProgress,
-  styled
+  CircularProgress
 } from '@mui/material';
+import Select from 'react-select';
 import { login as apiLogin } from '../services/api';
 import { AppError } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
-import { pageStyles, formStyles } from '../styles/components';
-import logo from '../assets/logo.svg';
+import { pageStyles, formStyles, selectStyles } from '../styles/components';
+import FormField from '../components/common/FormField';
 import { colors } from '../styles/colors';
-
-const TextField = styled(MuiTextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    color: colors.text.white,
-    '& fieldset': {
-      borderColor: colors.border.grey
-    },
-    '&:hover fieldset': {
-      borderColor: colors.border.orange
-    },
-    '&.Mui-focused fieldset': {
-      borderColor: colors.primary.orange
-    },
-    '& input': {
-      backgroundColor: `${colors.background.darkGrey} !important`,
-      color: `${colors.text.white} !important`,
-      WebkitTextFillColor: `${colors.text.white} !important`,
-      '&:-webkit-autofill': {
-        WebkitBoxShadow: `0 0 0 1000px ${colors.background.darkGrey} inset !important`,
-        transition: 'background-color 5000s ease-in-out 0s'
-      }
-    }
-  },
-  '& .MuiInputLabel-root': {
-    color: colors.text.grey,
-    backgroundColor: colors.background.darkGrey,
-    padding: '0 8px',
-    marginLeft: '-4px',
-    marginRight: '-4px',
-    transform: 'translate(14px, 16px) scale(1)',
-    '&.Mui-focused, &.MuiFormLabel-filled': {
-      transform: 'translate(14px, -9px) scale(0.75)'
-    },
-    '&.Mui-focused': {
-      color: colors.primary.orange
-    }
-  }
-}));
+import logo from '../assets/logo.svg';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -119,10 +80,7 @@ function Login() {
         component="img" 
         src={logo}
         alt="Logo"
-        sx={{
-          ...pageStyles.logo,
-          filter: 'none'
-        }}
+        sx={pageStyles.logo}
       />
       <Box sx={formStyles.container}>
         <Paper elevation={3} sx={formStyles.paper}>
@@ -131,32 +89,61 @@ function Login() {
               ברוכים הבאים לסול-טן
             </Typography>
 
-            <FormControl fullWidth>
-              <TextField
-                required
-                label="אימייל"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                inputProps={{
-                  dir: "ltr",
-                  autoComplete: "username"
+            <FormField label="אימייל" required>
+              <Select
+                inputValue={formData.email}
+                value={formData.email ? { value: formData.email, label: formData.email } : null}
+                onInputChange={(inputValue, { action }) => {
+                  if (action === 'input-change') {
+                    setFormData(prev => ({ ...prev, email: inputValue }));
+                  }
+                }}
+                onChange={(newValue) => setFormData(prev => ({ ...prev, email: newValue?.value || '' }))}
+                options={[]}
+                styles={selectStyles}
+                placeholder=""
+                isClearable
+                components={{
+                  DropdownIndicator: () => null,
+                  IndicatorSeparator: () => null,
+                  Menu: () => null
                 }}
               />
-            </FormControl>
+            </FormField>
 
-            <FormControl fullWidth>
-              <TextField
-                required
-                type="password"
-                label="סיסמה"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                inputProps={{
-                  dir: "ltr",
-                  autoComplete: "current-password"
+            <FormField label="סיסמה" required>
+              <Select
+                inputValue={formData.password}
+                value={formData.password ? { value: formData.password, label: formData.password } : null}
+                onInputChange={(inputValue, { action }) => {
+                  if (action === 'input-change') {
+                    setFormData(prev => ({ ...prev, password: inputValue }));
+                  }
+                }}
+                onChange={(newValue) => setFormData(prev => ({ ...prev, password: newValue?.value || '' }))}
+                options={[]}
+                styles={{
+                  ...selectStyles,
+                  input: (base) => ({
+                    ...base,
+                    WebkitTextSecurity: 'disc',
+                    color: colors.text.white
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
+                    WebkitTextSecurity: 'disc',
+                    color: colors.text.white
+                  })
+                }}
+                placeholder=""
+                isClearable
+                components={{
+                  DropdownIndicator: () => null,
+                  IndicatorSeparator: () => null,
+                  Menu: () => null
                 }}
               />
-            </FormControl>
+            </FormField>
 
             <Link
               component={RouterLink}
@@ -188,6 +175,9 @@ function Login() {
         <Alert 
           severity={notification.severity}
           onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+          sx={{
+            whiteSpace: 'pre-line'
+          }}
         >
           {notification.message}
         </Alert>

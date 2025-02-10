@@ -493,7 +493,7 @@ const Faults = () => {
               variant="contained"
               sx={dialogStyles.submitButton}
             >
-              צור
+              סיום
             </Button>
           </DialogActions>
         </Dialog>

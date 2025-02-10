@@ -2,9 +2,11 @@ import React, { useEffect, useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Autocomplete, TextField, Chip } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { filterStyles } from '../styles/components';
+import { filterStyles, selectStyles } from '../styles/components';
+import { colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
 import DateRangeSelector from './DateRangeSelector';
+import FormField from './common/FormField';
 import { 
   getSites, 
   getSecurityOfficers, 
@@ -197,8 +199,17 @@ const FilterBar = ({
   const renderTextField = (params, label) => (
     <TextField
       {...params}
-      label={label}
-      sx={filterStyles.filterSelect}
+      error={false}
+      sx={{
+        width: '100%',
+        '& .MuiOutlinedInput-root': {
+          ...selectStyles.control,
+          padding: '2px 8px',
+          '& input': {
+            color: colors.text.white
+          }
+        }
+      }}
       onKeyDown={preventSubmit}
     />
   );
@@ -215,129 +226,143 @@ const FilterBar = ({
 
       {user?.role === 'admin' && (
         <Box>
-          <Autocomplete
-            {...commonAutocompleteProps}
-            options={options.entrepreneurs}
-            getOptionLabel={(user) => user?.organization?.name || ''}
-            value={options.entrepreneurs.find(user => user.id === filters.entrepreneur) || null}
-            onChange={async (_, newValue) => {
-              const sites = newValue?.id 
-                ? await getSitesByEntrepreneur(newValue.id)
-                : await getSites();
-              
-              setOptions(prev => ({ ...prev, sites: sites || [] }));
-              
-              onFilterChange('entrepreneur', newValue?.id || '');
-              onFilterChange('sites', sites.map(site => site.id));
-            }}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => renderTextField(params, "יזם")}
-            sx={filterStyles.entrepreneurFilter}
-          />
+          <FormField label="יזם">
+            <Autocomplete
+              {...commonAutocompleteProps}
+              options={options.entrepreneurs}
+              getOptionLabel={(user) => user?.organization?.name || ''}
+              value={options.entrepreneurs.find(user => user.id === filters.entrepreneur) || null}
+              onChange={async (_, newValue) => {
+                const sites = newValue?.id 
+                  ? await getSitesByEntrepreneur(newValue.id)
+                  : await getSites();
+                
+                setOptions(prev => ({ ...prev, sites: sites || [] }));
+                
+                onFilterChange('entrepreneur', newValue?.id || '');
+                onFilterChange('sites', sites.map(site => site.id));
+              }}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={params => renderTextField(params)}
+              sx={filterStyles.entrepreneurFilter}
+            />
+          </FormField>
         </Box>
       )}
 
       {variant !== 'drills' && (
         <>
           <Box>
-            <Autocomplete
-              {...commonAutocompleteProps}
-              options={options.integrators}
-              getOptionLabel={formatOrganizationName}
-              value={options.integrators.find(org => org.id === (user?.role === 'integrator' ? user?.organizationId : filters.integrator)) || null}
-              onChange={(_, newValue) => onFilterChange('integrator', newValue?.id || '')}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              disabled={user?.role === 'integrator'}
-              renderInput={(params) => renderTextField(params, "אינטגרטור")}
-            />
+            <FormField label="אינטגרטור">
+              <Autocomplete
+                {...commonAutocompleteProps}
+                options={options.integrators}
+                getOptionLabel={formatOrganizationName}
+                value={options.integrators.find(org => org.id === (user?.role === 'integrator' ? user?.organizationId : filters.integrator)) || null}
+                onChange={(_, newValue) => onFilterChange('integrator', newValue?.id || '')}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                disabled={user?.role === 'integrator'}
+                renderInput={params => renderTextField(params)}
+              />
+            </FormField>
           </Box>
 
           <Box>
-            <Autocomplete
-              {...commonAutocompleteProps}
-              options={options.maintenance}
-              getOptionLabel={formatOrganizationName}
-              value={options.maintenance.find(org => org.id === (user?.role === 'maintenance' ? user?.organizationId : filters.maintenance)) || null}
-              onChange={(_, newValue) => onFilterChange('maintenance', newValue?.id || '')}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              disabled={user?.role === 'maintenance'}
-              renderInput={(params) => renderTextField(params, "אחזקה")}
-            />
+            <FormField label="אחזקה">
+              <Autocomplete
+                {...commonAutocompleteProps}
+                options={options.maintenance}
+                getOptionLabel={formatOrganizationName}
+                value={options.maintenance.find(org => org.id === (user?.role === 'maintenance' ? user?.organizationId : filters.maintenance)) || null}
+                onChange={(_, newValue) => onFilterChange('maintenance', newValue?.id || '')}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                disabled={user?.role === 'maintenance'}
+                renderInput={params => renderTextField(params)}
+              />
+            </FormField>
           </Box>
         </>
       )}
 
       {variant === 'faults' && (
         <Box>
-          <Autocomplete
-            {...commonAutocompleteProps}
-            options={FAULT_CRITICALITY}
-            getOptionLabel={(option) => option.label}
-            value={FAULT_CRITICALITY.find(opt => opt.value === filters.isCritical) || null}
-            onChange={(_, newValue) => onFilterChange('isCritical', newValue?.value)}
-            renderInput={(params) => renderTextField(params, "סוג תקלה")}
-          />
+          <FormField label="סוג תקלה">
+            <Autocomplete
+              {...commonAutocompleteProps}
+              options={FAULT_CRITICALITY}
+              getOptionLabel={(option) => option.label}
+              value={FAULT_CRITICALITY.find(opt => opt.value === filters.isCritical) || null}
+              onChange={(_, newValue) => onFilterChange('isCritical', newValue?.value)}
+              renderInput={params => renderTextField(params)}
+            />
+          </FormField>
         </Box>
       )}
 
       {variant === 'drills' && (
         <Box>
-          <Autocomplete
-            {...commonAutocompleteProps}
-            options={options.drillTypes}
-            value={filters.drillType || null}
-            onChange={(_, newValue) => onFilterChange('drillType', newValue)}
-            renderInput={(params) => renderTextField(params, "סוג תרגיל")}
-          />
+          <FormField label="סוג תרגיל">
+            <Autocomplete
+              {...commonAutocompleteProps}
+              options={options.drillTypes}
+              value={filters.drillType || null}
+              onChange={(_, newValue) => onFilterChange('drillType', newValue)}
+              renderInput={params => renderTextField(params)}
+            />
+          </FormField>
         </Box>
       )}
 
       <Box>
-        <Autocomplete
-          {...commonAutocompleteProps}
-          options={options.securityOfficers}
-          getOptionLabel={(user) => user?.name || ''}
-          value={options.securityOfficers.find(user => user.id === filters.securityOfficer) || null}
-          onChange={(_, newValue) => onFilterChange('securityOfficer', newValue?.id || '')}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          renderInput={(params) => renderTextField(params, "קב״ט")}
-        />
+        <FormField label="קב״ט">
+          <Autocomplete
+            {...commonAutocompleteProps}
+            options={options.securityOfficers}
+            getOptionLabel={(user) => user?.name || ''}
+            value={options.securityOfficers.find(user => user.id === filters.securityOfficer) || null}
+            onChange={(_, newValue) => onFilterChange('securityOfficer', newValue?.id || '')}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={params => renderTextField(params)}
+          />
+        </FormField>
       </Box>
 
       <Box>
-        <Autocomplete
-          {...commonAutocompleteProps}
-          multiple
-          options={[{ id: 'all', name: 'כל האתרים' }, ...options.sites]}
-          getOptionLabel={(option) => option.name || ''}
-          value={filters.sites === null 
-            ? []
-            : filters.sites?.length === options.sites.length
+        <FormField label="אתר">
+          <Autocomplete
+            {...commonAutocompleteProps}
+            multiple
+            options={[{ id: 'all', name: 'כל האתרים' }, ...options.sites]}
+            getOptionLabel={(option) => option.name || ''}
+            value={filters.sites === null 
               ? []
-              : options.sites.filter(site => filters.sites?.includes(site.id)) || []
-          }
-          onChange={(_, newValue) => {
-            if (newValue.some(v => v.id === 'all') || filters.sites === null) {
-              onFilterChange('sites', options.sites.map(site => site.id));
-            } else {
-              onFilterChange('sites', newValue.map(site => site.id));
+              : filters.sites?.length === options.sites.length
+                ? []
+                : options.sites.filter(site => filters.sites?.includes(site.id)) || []
             }
-          }}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          renderInput={(params) => renderTextField(params, "אתר")}
-          renderTags={(tagValue, getTagProps) =>
-            tagValue.map((option, index) => {
-              const { key, ...otherProps } = getTagProps({ index });
-              return (
-                <Chip
-                  key={option.id}
-                  label={option.name}
-                  {...otherProps}
-                />
-              );
-            })
-          }
-        />
+            onChange={(_, newValue) => {
+              if (newValue.some(v => v.id === 'all') || filters.sites === null) {
+                onFilterChange('sites', options.sites.map(site => site.id));
+              } else {
+                onFilterChange('sites', newValue.map(site => site.id));
+              }
+            }}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={params => renderTextField(params)}
+            renderTags={(tagValue, getTagProps) =>
+              tagValue.map((option, index) => {
+                const { key, ...otherProps } = getTagProps({ index });
+                return (
+                  <Chip
+                    key={option.id}
+                    label={option.name}
+                    {...otherProps}
+                  />
+                );
+              })
+            }
+          />
+        </FormField>
       </Box>
 
       <Box>

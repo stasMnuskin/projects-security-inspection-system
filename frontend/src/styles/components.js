@@ -549,11 +549,11 @@ export const pageStyles = {
     },
   },
   logo: {
-    height: '120px',
+    height: '140px',
     '@media (min-width:600px)': {
-      height: '140px',
+      height: '160px',
     },
-    marginBottom: '1rem',
+    // marginBottom: '2rem',
     filter: 'invert(1)'
   }
 };
@@ -811,6 +811,182 @@ export const contentStyles = {
   }
 };
 
+export const selectStyles = {
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: colors.background.darkGreyOpaque,
+    borderColor: state.isFocused ? colors.primary.orange : colors.border.grey,
+    borderRadius: '4px',
+    padding: '2px',
+    '&:hover': {
+      borderColor: colors.border.orange
+    },
+    boxShadow: 'none',
+    minHeight: '40px',
+    fontFamily: 'Assistant, sans-serif',
+    fontSize: '0.9rem',
+    flexDirection: 'row-reverse'
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: colors.background.darkGreyOpaque,
+    border: `1px solid ${colors.border.grey}`,
+    zIndex: 2,
+    direction: 'ltr'
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected 
+      ? colors.background.active 
+      : state.isFocused 
+        ? colors.background.hover 
+        : 'transparent',
+    color: colors.text.white,
+    padding: '8px 12px',
+    '&:hover': {
+      backgroundColor: colors.background.hover
+    },
+    fontFamily: 'Assistant, sans-serif',
+    fontSize: '0.9rem',
+    direction: 'ltr',
+    textAlign: 'left'
+  }),
+  multiValue: (base) => ({
+    ...base,
+    backgroundColor: colors.background.darkGrey,
+    margin: '2px',
+    direction: 'ltr'
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    color: colors.text.white,
+    padding: '2px 6px',
+    fontFamily: 'Assistant, sans-serif',
+    fontSize: '0.9rem',
+    direction: 'ltr',
+    textAlign: 'left'
+  }),
+  multiValueRemove: (base) => ({
+    ...base,
+    color: colors.text.grey,
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      color: colors.text.white
+    }
+  }),
+  input: (base) => ({
+    ...base,
+    color: colors.text.white,
+    margin: '0 2px',
+    fontFamily: 'Assistant, sans-serif',
+    direction: 'ltr'
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: colors.text.grey,
+    fontFamily: 'Assistant, sans-serif',
+    fontSize: '0.9rem',
+    direction: 'ltr'
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: colors.text.white,
+    fontFamily: 'Assistant, sans-serif',
+    fontSize: '0.9rem',
+    direction: 'ltr',
+    textAlign: 'left'
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    padding: '2px 8px',
+    gap: '2px',
+    direction: 'ltr',
+    textAlign: 'left'
+  }),
+  dropdownIndicator: (base) => ({
+    ...base,
+    color: colors.text.grey,
+    padding: '4px',
+    '&:hover': {
+      color: colors.text.white
+    }
+  }),
+  clearIndicator: (base) => ({
+    ...base,
+    color: colors.text.grey,
+    padding: '4px',
+    '&:hover': {
+      color: colors.text.white
+    }
+  }),
+  indicatorSeparator: (base) => ({
+    ...base,
+    backgroundColor: colors.border.grey
+  })
+};
+
+export const fieldStyles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  label: {
+    color: colors.text.grey,
+    fontSize: '0.9rem',
+    '&.required::after': {
+      content: '" *"',
+      color: colors.primary.orange,
+      marginRight: '4px'
+    }
+  }
+};
+
+export const formFieldStyles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  label: {
+    color: colors.text.grey,
+    fontSize: '0.9rem'
+  },
+  required: {
+    color: colors.primary.orange
+  }
+};
+
+export const datePickerStyles = {
+  textField: {
+    width: '100%',
+    '& .MuiOutlinedInput-root': {
+      ...selectStyles.control,
+      padding: '2px 8px',
+      '@media (max-width:600px)': {
+        minHeight: '48px !important',
+        height: '48px',
+        '& input': {
+          height: '36px',
+          padding: '6px 8px'
+        }
+      },
+      '@media (min-width:960px)': {
+        minHeight: '40px !important',
+        height: '40px',
+        '& input': {
+          height: '24px',
+          padding: '6px 8px'
+        }
+      },
+      '& input': {
+        color: colors.text.white
+      }
+    }
+  }
+};
+
 export const filterStyles = {
   filterBar: {
     display: 'flex',
@@ -828,18 +1004,10 @@ export const filterStyles = {
       flex: { xs: '1 1 100%', sm: '0.8 1 0' },
       minWidth: { xs: '100%', sm: '90px' },
       '& .MuiOutlinedInput-root': {
-        height: '36px',
-        '& .MuiInputBase-input': {
-          color: colors.text.white,
-          textAlign: 'center',
-          padding: '6px 8px',
-          height: '24px',
-          lineHeight: '24px',
-          fontSize: '0.875rem',
-          verticalAlign: 'middle',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+        ...selectStyles.control,
+        padding: '2px 8px',
+        '& input, & textarea, & select': {
+          color: colors.text.white
         }
       }
     },
@@ -869,128 +1037,34 @@ export const filterStyles = {
     height: '100%'
   },
   entrepreneurFilter: {
-    backgroundColor: colors.background.darkGrey,
     width: '100%',
-    '& .MuiAutocomplete-root': {
-      width: '100%'
-    },
-    '& .MuiAutocomplete-inputRoot': {
-      color: colors.text.white,
-      backgroundColor: colors.background.darkGrey,
-      height: '36px',
-      display: 'flex',
-      alignItems: 'center',
-      '& fieldset': {
-        borderColor: colors.border.grey,
-        borderRadius: '4px'
-      },
-      '&:hover fieldset': {
-        borderColor: colors.border.orange
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: colors.primary.orange
-      }
-    },
-    '& .MuiAutocomplete-input': {
-      color: `${colors.text.white} !important`,
-      textAlign: 'center !important',
-      padding: '6px 8px !important',
-      height: '24px !important',
-      lineHeight: '24px !important',
-      fontSize: '0.875rem !important',
-      verticalAlign: 'middle !important'
-    },
-    '& .MuiAutocomplete-endAdornment': {
-      '& .MuiSvgIcon-root': {
-        color: colors.text.grey,
-        fontSize: '14px'
-      }
-    },
-    '& .MuiAutocomplete-popper': {
-      backgroundColor: colors.background.darkGrey,
-      '& .MuiPaper-root': {
-        backgroundColor: colors.background.darkGrey,
-        color: colors.text.white,
-        border: `1px solid ${colors.border.grey}`,
-        '& .MuiAutocomplete-option': {
-          '&[aria-selected="true"]': {
-            backgroundColor: colors.background.active
-          },
-          '&.Mui-focused': {
-            backgroundColor: colors.background.hover
-          },
-          '&:hover': {
-            backgroundColor: colors.background.hover
-          }
-        }
+    '& .MuiOutlinedInput-root': {
+      ...selectStyles.control,
+      padding: '2px 8px',
+      '& input': {
+        color: colors.text.white
       }
     }
   },
   filterSelect: {
-    backgroundColor: colors.background.darkGrey,
     width: '100%',
     '& .MuiOutlinedInput-root': {
-      color: colors.text.white,
-      backgroundColor: colors.background.darkGrey,
-      height: '36px',
-      display: 'flex',
-      alignItems: 'center',
-      '& fieldset': {
-        borderColor: colors.border.grey,
-        borderRadius: '4px'
-      },
-      '&:hover fieldset': {
-        borderColor: colors.border.orange
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: colors.primary.orange
+      ...selectStyles.control,
+      padding: '2px 8px',
+      '& input, & textarea, & select': {
+        color: colors.text.white
       }
-    },
-    '& .MuiInputBase-input, & .MuiAutocomplete-input': {
-      color: `${colors.text.white} !important`,
-      textAlign: 'center !important',
-      padding: '6px 8px !important',
-      height: '24px !important',
-      lineHeight: '24px !important',
-      fontSize: '0.875rem !important',
-      verticalAlign: 'middle !important',
-      display: 'flex !important',
-      alignItems: 'center !important',
-      justifyContent: 'center !important'
-    },
-    '& .MuiSvgIcon-root': {
-      color: colors.text.grey,
-      fontSize: '14px'
     }
   },
   datePicker: {
-    backgroundColor: colors.background.darkGrey,
     width: '100%',
     minWidth: { xs: '100%', sm: '220px' },
     '& .MuiOutlinedInput-root': {
-      color: colors.text.white,
-      backgroundColor: colors.background.darkGrey,
-      height: '36px',
-      display: 'flex',
-      alignItems: 'center',
-      '& fieldset': {
-        borderColor: colors.border.grey,
-        borderRadius: '4px'
-      },
-      '&:hover fieldset': {
-        borderColor: colors.border.orange
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: colors.primary.orange
-      },
-      '& .MuiInputBase-input': {
+      ...selectStyles.control,
+      padding: '2px 8px',
+      '& input': {
         color: colors.text.white,
-        textAlign: 'center',
-        padding: '6px 8px',
-        height: '24px',
-        lineHeight: '24px',
-        fontSize: '0.875rem',
-        verticalAlign: 'middle'
+        textAlign: 'center'
       }
     },
     '& .MuiButtonBase-root': {
@@ -1016,3 +1090,5 @@ export const filterStyles = {
     }
   }
 };
+
+// Rest of the file remains the same...

@@ -136,6 +136,12 @@ function Sites({ mode = 'list', onModeChange }) {
 
   const handleFormSubmit = async (siteData) => {
     try {
+      if (siteData.hasErrors) {
+        const errorMessages = Object.values(siteData.errors).join('\n');
+        showNotification(errorMessages, 'error');
+        return;
+      }
+
       setLoading(true);
       if (selectedSite) {
         await updateSite(selectedSite.id, siteData);
@@ -151,7 +157,11 @@ function Sites({ mode = 'list', onModeChange }) {
         onModeChange('list');
       }
     } catch (error) {
-      showNotification(`שגיאה ב${selectedSite ? 'עדכון' : 'יצירת'} האתר`, 'error');
+      if (error.response?.data?.message) {
+        showNotification(error.response.data.message, 'error');
+      } else {
+        showNotification(`שגיאה ב${selectedSite ? 'עדכון' : 'יצירת'} האתר`, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -311,7 +321,7 @@ function Sites({ mode = 'list', onModeChange }) {
             initialData={selectedSite}
             onSubmit={handleFormSubmit}
             onCancel={handleFormClose}
-            submitLabel={loading ? 'שומר...' : selectedSite ? 'עדכן' : 'שמירה'}
+            submitLabel={loading ? 'שומר...' : 'שמירה'}
           />
         </DialogContent>
       </Dialog>
@@ -367,7 +377,13 @@ function Sites({ mode = 'list', onModeChange }) {
         autoHideDuration={6000}
         onClose={() => setNotification({ ...notification, open: false })}
       >
-        <Alert severity={notification.severity} onClose={() => setNotification({ ...notification, open: false })}>
+        <Alert 
+          severity={notification.severity} 
+          onClose={() => setNotification({ ...notification, open: false })}
+          sx={{
+            whiteSpace: 'pre-line'
+          }}
+        >
           {notification.message}
         </Alert>
       </Snackbar>

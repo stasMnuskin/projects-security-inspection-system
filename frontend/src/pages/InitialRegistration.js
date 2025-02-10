@@ -345,7 +345,7 @@ function InitialRegistration() {
                   disabled={loading}
                   sx={formStyles.submitButton}
                 >
-                  שלח קישור הרשמה
+                  שליחת קישור הרשמה
                 </Button>
               </Grid>
             </Grid>

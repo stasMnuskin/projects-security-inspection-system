@@ -6,16 +6,14 @@ import {
   Typography, 
   Box, 
   Paper,
-  FormControl,
   Snackbar,
   Alert,
-  InputAdornment
 } from '@mui/material';
 import { register } from '../services/api';
 import { AppError } from '../utils/errorHandler';
-import { pageStyles, formStyles } from '../styles/components';
+import { pageStyles, formStyles, selectStyles } from '../styles/components';
+import FormField from '../components/common/FormField';
 import logo from '../assets/logo.svg';
-import EmailIcon from '@mui/icons-material/Email';
 import { colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
 import { login as apiLogin } from '../services/api';
@@ -110,64 +108,92 @@ function Register() {
               הרשמה למערכת
             </Typography>
 
-            <FormControl fullWidth>
+            <FormField label="שם" required>
               <TextField
                 required
-                label="שם"
                 value={formData.name}
                 disabled={!!name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 sx={{
-                  ...formStyles.textField,
-                  '& .Mui-disabled': {
-                    WebkitTextFillColor: `${colors.text.grey} !important`,
-                    backgroundColor: `${colors.background.darkGrey} !important`
+                  width: '100%',
+                  '& .MuiOutlinedInput-root': {
+                    ...selectStyles.control,
+                    padding: '2px 8px',
+                    backgroundColor: name ? colors.background.darkGrey : colors.background.darkGreyOpaque,
+                    '@media (max-width:600px)': {
+                      minHeight: '48px !important',
+                      height: '48px !important'
+                    },
+                    '@media (min-width:960px)': {
+                      minHeight: '40px !important',
+                      height: '40px !important'
+                    },
+                    '& input': {
+                      color: name ? colors.text.grey : colors.text.white
+                    }
                   }
                 }}
               />
-            </FormControl>
+            </FormField>
 
-            <FormControl fullWidth>
+            <FormField label="אימייל" required>
               <TextField
                 required
                 type="email"
-                label="אימייל"
                 value={formData.email}
                 disabled={!!email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 sx={{
-                  ...formStyles.textField,
-                  '& .Mui-disabled': {
-                    WebkitTextFillColor: `${colors.text.grey} !important`,
-                    backgroundColor: `${colors.background.darkGrey} !important`
+                  width: '100%',
+                  '& .MuiOutlinedInput-root': {
+                    ...selectStyles.control,
+                    padding: '2px 8px',
+                    backgroundColor: email ? colors.background.darkGrey : colors.background.darkGreyOpaque,
+                    '@media (max-width:600px)': {
+                      minHeight: '48px !important',
+                      height: '48px !important'
+                    },
+                    '@media (min-width:960px)': {
+                      minHeight: '40px !important',
+                      height: '40px !important'
+                    },
+                    '& input': {
+                      color: email ? colors.text.grey : colors.text.white
+                    }
                   }
                 }}
                 inputProps={{
                   dir: "ltr"
                 }}
-                InputProps={{
-                  endAdornment: email && (
-                    <InputAdornment position="end">
-                      <EmailIcon sx={{ color: colors.text.grey }} />
-                    </InputAdornment>
-                  )
-                }}
               />
-            </FormControl>
+            </FormField>
 
-            <FormControl fullWidth>
+            <FormField label="סיסמה" required>
               <TextField
                 required
                 type="password"
-                label="סיסמה"
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                sx={formStyles.textField}
+                sx={{
+                  width: '100%',
+                  '& .MuiOutlinedInput-root': {
+                    ...selectStyles.control,
+                    padding: '2px 8px',
+                    '@media (max-width:600px)': {
+                      minHeight: '48px !important',
+                      height: '48px !important'
+                    },
+                    '@media (min-width:960px)': {
+                      minHeight: '40px !important',
+                      height: '40px !important'
+                    }
+                  }
+                }}
                 inputProps={{
                   dir: "ltr"
                 }}
               />
-            </FormControl>
+            </FormField>
 
             <Button
               type="submit"
@@ -191,6 +217,9 @@ function Register() {
         <Alert 
           severity={notification.severity}
           onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+          sx={{
+            whiteSpace: 'pre-line'
+          }}
         >
           {notification.message}
         </Alert>

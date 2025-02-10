@@ -28,6 +28,8 @@ import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
 import { colors } from '../styles/colors';
 import Sidebar from '../components/Sidebar';
+import FormField from '../components/common/FormField';
+import { selectStyles } from '../styles/components';
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -454,162 +456,170 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
 
-              {/* Entrepreneur Selection - Modified to show organization name */}
-              <Autocomplete
-                options={entrepreneurs}
-                getOptionLabel={(option) => {
-                  if (!option) return '';
-                  return option.organization?.name || option.name;
-                }}
-                value={selectedEntrepreneur}
-                onChange={handleEntrepreneurChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="יזם"
-                    error={!!validationErrors.entrepreneur}
-                    helperText={validationErrors.entrepreneur}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        color: colors.text.white
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: colors.text.grey
-                      }
-                    }}
-                  />
-                )}
-              />
-
-              {/* Site Selection */}
-  <Autocomplete
-                options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
-                getOptionLabel={(option) => option?.name || ''}
-                value={selectedSite}
-                onChange={handleSiteChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="אתר"
-                    error={!!validationErrors.site}
-                    helperText={validationErrors.site}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        color: colors.text.white
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: colors.text.grey
-                      }
-                    }}
-                  />
-                )}
-              />
-
-              {/* Type Selection (only for inspections) */}
-              {!isDrill && (
+              {/* Entrepreneur Selection */}
+              <FormField label="יזם" error={validationErrors.entrepreneur}>
                 <Autocomplete
-                  options={inspectionTypes}
-                  getOptionLabel={(option) => option?.name || ''}
-                  value={selectedType}
-                  onChange={handleTypeChange}
+                  options={entrepreneurs}
+                  getOptionLabel={(option) => {
+                    if (!option) return '';
+                    return option.organization?.name || option.name;
+                  }}
+                  value={selectedEntrepreneur}
+                  onChange={handleEntrepreneurChange}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="סוג ביקורת"
-                      error={!!validationErrors.type}
-                      helperText={validationErrors.type}
-                      required
+                      error={!!validationErrors.entrepreneur}
                       sx={{
+                        width: '100%',
                         '& .MuiOutlinedInput-root': {
-                          color: colors.text.white
-                        },
-                        '& .MuiInputLabel-root': {
-                          color: colors.text.grey
+                          ...selectStyles.control,
+                          padding: '2px 8px',
+                          '& input': {
+                            color: colors.text.white
+                          }
                         }
                       }}
                     />
                   )}
                 />
+              </FormField>
+
+              {/* Site Selection */}
+              <FormField label="אתר" error={validationErrors.site}>
+                <Autocomplete
+                  options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
+                  getOptionLabel={(option) => option?.name || ''}
+                  value={selectedSite}
+                  onChange={handleSiteChange}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      error={!!validationErrors.site}
+                      sx={{
+                        width: '100%',
+                        '& .MuiOutlinedInput-root': {
+                          ...selectStyles.control,
+                          padding: '2px 8px',
+                          '& input': {
+                            color: colors.text.white
+                          }
+                        }
+                      }}
+                    />
+                  )}
+                />
+              </FormField>
+
+              {/* Type Selection (only for inspections) */}
+              {!isDrill && (
+                <FormField label="סוג ביקורת" required error={validationErrors.type}>
+                  <Autocomplete
+                    options={inspectionTypes}
+                    getOptionLabel={(option) => option?.name || ''}
+                    value={selectedType}
+                    onChange={handleTypeChange}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        error={!!validationErrors.type}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': {
+                            ...selectStyles.control,
+                            padding: '2px 8px',
+                            '& input': {
+                              color: colors.text.white
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </FormField>
               )}
 
               {/* Drill Type Selection - Only show for drills */}
               {isDrill && selectedSite && (
-                <TextField
-                  select
-                  fullWidth
-                  label="סוג תרגיל"
-                  value={formData.drill_type || ''}
-                  onChange={handleDrillTypeSelect}
-                  required
-                  error={!!validationErrors.drill_type}
-                  helperText={validationErrors.drill_type}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: colors.text.white
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: colors.text.grey
-                    }
-                  }}
-                >
-                  {drillTypes.map(type => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </TextField>
+                <FormField label="סוג תרגיל" required error={validationErrors.drill_type}>
+                  <TextField
+                    select
+                    fullWidth
+                    value={formData.drill_type || ''}
+                    onChange={handleDrillTypeSelect}
+                    error={!!validationErrors.drill_type}
+                    sx={{
+                      width: '100%',
+                      '& .MuiOutlinedInput-root': {
+                        ...selectStyles.control,
+                        padding: '2px 8px',
+                        '& .MuiSelect-select': {
+                          color: colors.text.white
+                        }
+                      }
+                    }}
+                  >
+                    {drillTypes.map(type => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </TextField>
+                </FormField>
               )}
 
-      {/* Status Selection - Only show if drill type is selected and not 'אחר' */}
-      {isDrill && formData.drill_type && formData.drill_type !== 'אחר' && (
-        <TextField
-          select
-          fullWidth
-          label="סטטוס"
-          value={formData.status || ''}
-          onChange={handleStatusChange}
-          required
-          error={!!validationErrors.status}
-          helperText={validationErrors.status}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              color: colors.text.white
-            },
-            '& .MuiInputLabel-root': {
-              color: colors.text.grey
-            }
-          }}
-        >
-          {DRILL_STATUSES.map(status => (
-            <MenuItem key={status} value={status}>{status}</MenuItem>
-          ))}
-        </TextField>
-      )}
+              {/* Status Selection - Only show if drill type is selected and not 'אחר' */}
+              {isDrill && formData.drill_type && formData.drill_type !== 'אחר' && (
+                <FormField label="סטטוס" required error={validationErrors.status}>
+                  <TextField
+                    select
+                    fullWidth
+                    value={formData.status || ''}
+                    onChange={handleStatusChange}
+                    error={!!validationErrors.status}
+                    sx={{
+                      width: '100%',
+                      '& .MuiOutlinedInput-root': {
+                        ...selectStyles.control,
+                        padding: '2px 8px',
+                        '& .MuiSelect-select': {
+                          color: colors.text.white
+                        }
+                      }
+                    }}
+                  >
+                    {DRILL_STATUSES.map(status => (
+                      <MenuItem key={status} value={status}>{status}</MenuItem>
+                    ))}
+                  </TextField>
+                </FormField>
+              )}
 
-      {/* Notes - Always show when drill type is selected, but required only in specific cases */}
-{isDrill && formData.drill_type && (
-  <TextField
-    fullWidth
-    multiline
-    rows={4}
-    label={`הערות${(formData.drill_type === 'אחר' || 
-      formData.status === 'כישלון' || 
-      formData.status === 'הצלחה חלקית') ? ' *' : ''}`}
-    value={formData.notes || ''}
-    onChange={(e) => handleInputChange('notes', e.target.value)}
-    required={formData.drill_type === 'אחר' || 
-      formData.status === 'כישלון' || 
-      formData.status === 'הצלחה חלקית'}
-    error={!!validationErrors.notes}
-    helperText={validationErrors.notes}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              color: colors.text.white
-            },
-            '& .MuiInputLabel-root': {
-              color: colors.text.grey
-            }
-          }}
-        />
-      )}
+              {/* Notes - Always show when drill type is selected, but required only in specific cases */}
+              {isDrill && formData.drill_type && (
+                <FormField 
+                  label="הערות" 
+                  required={formData.drill_type === 'אחר' || formData.status === 'כישלון' || formData.status === 'הצלחה חלקית'}
+                  error={validationErrors.notes}
+                >
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    value={formData.notes || ''}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    error={!!validationErrors.notes}
+                    sx={{
+                      width: '100%',
+                      '& .MuiOutlinedInput-root': {
+                        ...selectStyles.control,
+                        padding: '2px 8px',
+                        '& textarea': {
+                          color: colors.text.white
+                        }
+                      }
+                    }}
+                  />
+                </FormField>
+              )}
 
 </Box>
           </DialogContent>
@@ -642,42 +652,47 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
               <Box sx={{ mt: 3 }}>
                 {/* Display form fields */}
                 {formStructure?.map((field) => (
-                  <TextField
+                  <FormField 
                     key={field.id}
-                    fullWidth
                     label={field.label}
-                    value={formData[field.id] || ''}
-                    onChange={(e) => handleInputChange(field.id, e.target.value)}
                     required={field.required}
-                    error={!!validationErrors[field.id]}
-                    helperText={validationErrors[field.id]}
-                    margin="normal"
-                    multiline={field.type === 'textarea'}
-                    rows={field.type === 'textarea' ? 4 : undefined}
-                    select={field.type === 'select' || field.type === 'boolean'}
-                    SelectProps={field.type === 'select' || field.type === 'boolean' ? { native: true } : undefined}
-                    disabled={field.autoFill}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        color: colors.text.white
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: colors.text.grey
-                      }
-                    }}
+                    error={validationErrors[field.id]}
                   >
-                    {field.type === 'select' && [
-                      <option key="" value="" />,
-                      ...(field.options || []).map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))
-                    ]}
-                    {field.type === 'boolean' && [
-                      <option key="" value="" />,
-                      <option key="תקין" value="תקין">תקין</option>,
-                      <option key="לא תקין" value="לא תקין">לא תקין</option>
-                    ]}
-                  </TextField>
+                    <TextField
+                      fullWidth
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                      error={!!validationErrors[field.id]}
+                      margin="normal"
+                      multiline={field.type === 'textarea'}
+                      rows={field.type === 'textarea' ? 4 : undefined}
+                      select={field.type === 'select' || field.type === 'boolean'}
+                      SelectProps={field.type === 'select' || field.type === 'boolean' ? { native: true } : undefined}
+                      disabled={field.autoFill}
+                      sx={{
+                        width: '100%',
+                        '& .MuiOutlinedInput-root': {
+                          ...selectStyles.control,
+                          padding: '2px 8px',
+                          '& input, & textarea, & select': {
+                            color: colors.text.white
+                          }
+                        }
+                      }}
+                    >
+                      {field.type === 'select' && [
+                        <option key="" value="" />,
+                        ...(field.options || []).map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))
+                      ]}
+                      {field.type === 'boolean' && [
+                        <option key="" value="" />,
+                        <option key="תקין" value="תקין">תקין</option>,
+                        <option key="לא תקין" value="לא תקין">לא תקין</option>
+                      ]}
+                    </TextField>
+                  </FormField>
                 ))}
               </Box>
 
@@ -692,7 +707,7 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
                     }
                   }}
                 >
-                  הגש {isDrill ? 'תרגיל' : 'ביקורת'}
+                  הגשת {isDrill ? 'תרגיל' : 'ביקורת'}
                 </Button>
               </Box>
             </form>

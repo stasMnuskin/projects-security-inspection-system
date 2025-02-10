@@ -2,9 +2,9 @@ const cron = require('node-cron');
 const { processOpenFaultReminders } = require('../utils/emailFaultProcessor');
 const logger = require('../utils/logger');
 
-// Schedule the job to run every day at midnight
+// Schedule the job to run every day at 8:00 AM
 const scheduleJob = () => {
-  cron.schedule('0 0 * * *', async () => {
+  cron.schedule('0 8 * * *', async () => {
     try {
       logger.info('Starting daily fault reminder job');
       await processOpenFaultReminders();

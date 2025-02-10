@@ -5,7 +5,9 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import heLocale from 'date-fns/locale/he';
-import { filterStyles } from '../styles/components';
+import { filterStyles, datePickerStyles } from '../styles/components';
+import FormField from './common/FormField';
+import { colors } from '../styles/colors';
 
 const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateChange }) => {
   const preventSubmit = (event) => {
@@ -32,48 +34,50 @@ const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateCha
         onKeyDown={preventSubmit}
         role="presentation"
       >
-        <DatePicker
-          label="מתאריך"
-          value={startDate}
-          onChange={onStartDateChange}
-          maxDate={endDate}
-          onKeyDown={preventSubmit}
-          slots={{
-            textField: (params) => (
-              <TextField 
-                {...params}
-                {...commonTextFieldProps}
-                sx={filterStyles.datePicker}
-              />
-            ),
-            openPickerButton: ({ onClick }) => (
-              <InputAdornment position="end" sx={{ cursor: 'pointer' }} onClick={onClick}>
-                <CalendarTodayIcon />
-              </InputAdornment>
-            )
-          }}
-        />
-        <DatePicker
-          label="עד תאריך"
-          value={endDate}
-          onChange={onEndDateChange}
-          minDate={startDate}
-          onKeyDown={preventSubmit}
-          slots={{
-            textField: (params) => (
-              <TextField 
-                {...params}
-                {...commonTextFieldProps}
-                sx={filterStyles.datePicker}
-              />
-            ),
-            openPickerButton: ({ onClick }) => (
-              <InputAdornment position="end" sx={{ cursor: 'pointer' }} onClick={onClick}>
-                <CalendarTodayIcon />
-              </InputAdornment>
-            )
-          }}
-        />
+        <FormField label="מתאריך">
+          <DatePicker
+            value={startDate}
+            onChange={onStartDateChange}
+            maxDate={endDate}
+            onKeyDown={preventSubmit}
+            slots={{
+              textField: (params) => (
+                <TextField 
+                  {...params}
+                  {...commonTextFieldProps}
+                  sx={datePickerStyles.textField}
+                />
+              ),
+              openPickerButton: ({ onClick }) => (
+                <InputAdornment position="end" sx={{ cursor: 'pointer' }} onClick={onClick}>
+                  <CalendarTodayIcon sx={{ color: colors.text.grey }} />
+                </InputAdornment>
+              )
+            }}
+          />
+        </FormField>
+        <FormField label="עד תאריך">
+          <DatePicker
+            value={endDate}
+            onChange={onEndDateChange}
+            minDate={startDate}
+            onKeyDown={preventSubmit}
+            slots={{
+              textField: (params) => (
+                <TextField 
+                  {...params}
+                  {...commonTextFieldProps}
+                  sx={datePickerStyles.textField}
+                />
+              ),
+              openPickerButton: ({ onClick }) => (
+                <InputAdornment position="end" sx={{ cursor: 'pointer' }} onClick={onClick}>
+                  <CalendarTodayIcon sx={{ color: colors.text.grey }} />
+                </InputAdornment>
+              )
+            }}
+          />
+        </FormField>
       </Box>
     </LocalizationProvider>
   );
