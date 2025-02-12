@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Typography, Box, CircularProgress, Alert, Container, Paper } from '@mui/material';
+import { Typography, Box, CircularProgress, Alert, Container, Paper, Grid } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
+import CustomPieChart from '../components/PieChart';
 import { getDashboardData } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import FaultTables from '../components/FaultTables';
@@ -133,28 +134,90 @@ const Dashboard = () => {
             </Box>
           )}
 
-          {/* Overview */}
-          <Box sx={dashboardStyles.overviewContainer}>
-            <Box 
-              sx={dashboardStyles.overviewBox}
-              onClick={() => handleBoxClick('/inspections')}
-            >
-              <Typography variant="h6">ביקורות</Typography>
-              <Typography variant="h3">{dashboardData.overview.inspections}</Typography>
-            </Box>
-            <Box 
-              sx={dashboardStyles.overviewBox}
-              onClick={() => handleBoxClick('/drills')}
-            >
-              <Typography variant="h6">תרגילים</Typography>
-              <Typography variant="h3">{dashboardData.overview.drills}</Typography>
-            </Box>
-          </Box>
+          {/* Charts Row */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={4}>
+              <Paper 
+                sx={{
+                  ...dashboardStyles.chartPaper,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    borderColor: colors.border.orangeHover
+                  }
+                }}
+                onClick={() => handleBoxClick('/inspections')}
+              >
+                <CustomPieChart
+                  title="ביקורות/תרגילים"
+                  data={[
+                    { name: 'ביקורות', value: dashboardData.overview.inspections },
+                    { name: 'תרגילים', value: dashboardData.overview.drills }
+                  ]}
+                  chartColors={[colors.text.grey, colors.primary.orange]}
+                />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Paper 
+                sx={{
+                  ...dashboardStyles.chartPaper,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    borderColor: colors.border.orangeHover
+                  }
+                }}
+                onClick={() => handleBoxClick('/faults')}
+              >
+                <CustomPieChart
+                  title="תקלות נפוצות"
+                  data={dashboardData.faults.recurring
+                    .slice(0, 5)
+                    .map(fault => ({
+                      name: fault.type === 'אחר' ? fault.description : fault.type,
+                      value: fault.count
+                    }))}
+                  chartColors={[
+                    colors.primary.orange,
+                    'rgba(166, 166, 166, 1)',    // אפור כהה
+                    'rgba(166, 166, 166, 0.8)',  // אפור בינוני
+                    'rgba(166, 166, 166, 0.6)',  // אפור בהיר
+                    'rgba(166, 166, 166, 0.4)'   // אפור בהיר מאוד
+                  ]}
+                />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Paper 
+                sx={{
+                  ...dashboardStyles.chartPaper,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    borderColor: colors.border.orangeHover
+                  }
+                }}
+                onClick={() => handleBoxClick('/faults')}
+              >
+                <CustomPieChart
+                  title="תקלות"
+                  data={[
+                    { 
+                      name: 'תקלות משביתות', 
+                      value: dashboardData.faults.critical.length 
+                    },
+                    { 
+                      name: 'תקלות רגילות',
+                      value: dashboardData.faults.open.filter(f => !f.isCritical).length 
+                    }
+                  ]}
+                  chartColors={[colors.primary.orange, colors.text.grey]}
+                />
+              </Paper>
+            </Grid>
+          </Grid>
 
           {/* Fault Tables */}
-          <Box sx={{ mt: 4 }}>
+          <Box>
             <FaultTables
-              recurringFaults={dashboardData.faults.recurring}
               openFaults={dashboardData.faults.open}
               criticalFaults={dashboardData.faults.critical}
             />

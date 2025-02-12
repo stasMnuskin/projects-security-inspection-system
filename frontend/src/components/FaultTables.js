@@ -173,21 +173,8 @@ FaultTable.propTypes = {
   onRowClick: PropTypes.func
 };
 
-const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [] }) => {
+const FaultTables = ({ openFaults = [], criticalFaults = [] }) => {
   const navigate = useNavigate();
-
-  const handleRecurringFaultClick = (row) => {
-    const filters = {
-      type: row.type,
-      description: row.type === 'אחר' ? row.description : null
-    };
-
-    navigate('/faults', { 
-      state: { 
-        initialFilters: filters
-      }
-    });
-  };
 
   const handleOpenFaultClick = (row) => {
     navigate('/faults', {
@@ -211,24 +198,6 @@ const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [
 
   const tables = [
     {
-      title: 'תקלות נפוצות',
-      headers: ['מס"ד', 'תקלה', 'כמות'],
-      columns: ['serialNumber', 'fault', 'count'],
-      data: recurringFaults.map(fault => ({
-        type: fault.type,
-        description: fault.description,
-        fault: fault.type === 'אחר' ? fault.description : fault.type,
-        count: parseInt(fault.count),
-        serialNumber: fault.serialNumber
-      }))
-      .sort((a, b) => b.count - a.count)
-      .map((fault, index) => ({
-        ...fault,
-        serialNumber: index + 1
-      })),
-      onRowClick: handleRecurringFaultClick
-    },
-    {
       title: 'תקלות פתוחות',
       headers: ['מס"ד', 'אתר', 'תקלה'],
       columns: ['serialNumber', 'site', 'fault'],
@@ -247,7 +216,7 @@ const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [
   return (
     <Grid container spacing={3}>
       {tables.map((table, index) => (
-        <Grid item xs={12} md={4} key={index}>
+        <Grid item xs={12} md={6} key={index}>
           <FaultTable {...table} />
         </Grid>
       ))}
@@ -255,18 +224,7 @@ const FaultTables = ({ recurringFaults = [], openFaults = [], criticalFaults = [
   );
 };
 
-const RecurringFaultShape = PropTypes.shape({
-  type: PropTypes.string.isRequired,
-  description: PropTypes.string,
-  site: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    name: PropTypes.string
-  }),
-  count: PropTypes.number.isRequired,
-  serialNumber: PropTypes.number
-});
-
-const FaultWithSiteShape = PropTypes.shape({
+const FaultShape = PropTypes.shape({
   id: PropTypes.number.isRequired,
   type: PropTypes.string.isRequired,
   description: PropTypes.string,
@@ -279,9 +237,8 @@ const FaultWithSiteShape = PropTypes.shape({
 });
 
 FaultTables.propTypes = {
-  recurringFaults: PropTypes.arrayOf(RecurringFaultShape),
-  openFaults: PropTypes.arrayOf(FaultWithSiteShape),
-  criticalFaults: PropTypes.arrayOf(FaultWithSiteShape)
+  openFaults: PropTypes.arrayOf(FaultShape),
+  criticalFaults: PropTypes.arrayOf(FaultShape)
 };
 
 export default FaultTables;

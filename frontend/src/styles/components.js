@@ -1004,25 +1004,46 @@ export const datePickerStyles = {
 export const filterStyles = {
   filterBar: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
+    alignItems: 'flex-start',
+    gap: '8px',
     padding: '12px',
     backgroundColor: colors.background.darkGrey,
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     marginBottom: { xs: '12px', sm: '20px' },
     flexDirection: { xs: 'column', sm: 'row-reverse' },
-    flexWrap: { xs: 'wrap', sm: 'nowrap' },
+    flexWrap: { xs: 'wrap', sm: 'wrap', md: 'nowrap' },
     width: '100%',
+    boxSizing: 'border-box',
     '& > div': {
-      flex: { xs: '1 1 100%', sm: '0.8 1 0' },
-      minWidth: { xs: '100%', sm: '90px' },
+      flex: { 
+        xs: '1 1 100%', 
+        sm: '0 1 calc(50% - 8px)',
+        md: '0.8 1 0' 
+      },
+      minWidth: { 
+        xs: '100%', 
+        sm: 'calc(50% - 8px)',
+        md: '140px' 
+      },
+      maxWidth: '100%',
       '& .MuiOutlinedInput-root': {
         ...selectStyles.control,
         padding: '2px 8px',
         '& input, & textarea, & select': {
           color: colors.text.white
         }
+      }
+    },
+    '@media (max-width: 1300px)': {
+      flexWrap: 'wrap',
+      '& > div': {
+        flex: '0 1 calc(33.33% - 8px)',
+        minWidth: 'calc(33.33% - 8px)',
+      },
+      '& > div:last-child': {
+        flex: '0 1 100%',
+        minWidth: '100%'
       }
     },
     '& > div:first-of-type': {
@@ -1128,10 +1149,27 @@ export const filterStyles = {
   dateRangeContainer: {
     display: 'flex',
     flexDirection: { xs: 'column', sm: 'row' },
-    gap: '4px',
+    gap: '8px',
+    width: '100%',
     '& > div': {
-      flex: { xs: '1 1 100%', sm: '1.5 1 0' },
-      minWidth: { xs: '100%', sm: '130px' }
+      flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 4px)' },
+      minWidth: { xs: '100%', sm: 'calc(50% - 4px)' },
+      maxWidth: '100%'
+    },
+    '@media (max-width: 1300px)': {
+      flexDirection: 'row',
+      flexWrap: 'nowrap',
+      '& > div': {
+        flex: '1 1 calc(50% - 4px)',
+        minWidth: 'calc(50% - 4px)',
+      }
+    },
+    '@media (max-width: 960px)': {
+      flexDirection: 'column',
+      '& > div': {
+        flex: '1 1 100%',
+        minWidth: '100%'
+      }
     }
   }
 };

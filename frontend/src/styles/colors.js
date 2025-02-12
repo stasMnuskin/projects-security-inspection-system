@@ -1,7 +1,8 @@
 export const colors = {
   primary: {
     orange: 'rgb(241, 89, 35)',
-    orangeHover: 'rgba(241, 89, 35, 0.8)'
+    orangeHover: 'rgba(241, 89, 35, 0.8)',
+    blue: '#007bff'
   },
   background: {
     black: 'rgb(13, 13, 13)',
@@ -19,10 +20,27 @@ export const colors = {
   border: {
     grey: 'rgba(166, 166, 166, 0.3)',
     orange: 'rgb(241, 89, 35)',
-    orangeLight: 'rgba(241, 89, 35, 0.3)'
+    orangeLight: 'rgba(241, 89, 35, 0.3)',
+    orangeHover: 'rgba(241, 89, 35, 0.8)'
   },
   status: {
     error: '#FF4444',
     success: '#4CAF50'
+  },
+  error: {
+    main: '#FF4444',
+    light: '#FF7777'
+  },
+  warning: {
+    main: '#FFA726',
+    light: '#FFB74D'
+  },
+  success: {
+    main: '#4CAF50',
+    light: '#81C784'
+  },
+  info: {
+    main: '#2196F3',
+    light: '#64B5F6'
   }
 };

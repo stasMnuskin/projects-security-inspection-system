@@ -104,6 +104,20 @@ const dashboardStyles = {
         borderBottom: 'none'
       }
     }
+  },
+  // Chart paper styles
+  chartPaper: {
+    backgroundColor: colors.background.darkGrey,
+    padding: { xs: '12px', sm: '16px' },
+    borderRadius: '8px',
+    border: `2px solid ${colors.primary.orange}`,
+    height: '100%',
+    '& h6': {
+      color: colors.text.white,
+      marginBottom: { xs: '8px', sm: '12px' },
+      fontSize: { xs: '0.875rem', sm: '1rem' },
+      fontWeight: 'normal'
+    }
   }
 };
 
