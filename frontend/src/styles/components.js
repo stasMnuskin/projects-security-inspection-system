@@ -1036,14 +1036,19 @@ export const filterStyles = {
       }
     },
     '@media (max-width: 1300px)': {
-      flexWrap: 'wrap',
+      flexWrap: 'nowrap',
+      gap: '8px',
       '& > div': {
-        flex: '0 1 calc(33.33% - 8px)',
-        minWidth: 'calc(33.33% - 8px)',
+        flex: '1 1 calc((100% - 56px) / 7)', 
+        minWidth: 'calc((100% - 56px) / 7)',
+      },
+      '& > div:first-of-type': {
+        flex: '0 0 12px',
+        minWidth: '12px'
       },
       '& > div:last-child': {
-        flex: '0 1 100%',
-        minWidth: '100%'
+        flex: '2 1 calc(((100% - 56px) / 7) * 2)', // Double width for date range container
+        minWidth: 'calc(((100% - 56px) / 7) * 2)'
       }
     },
     '& > div:first-of-type': {
@@ -1160,8 +1165,8 @@ export const filterStyles = {
       flexDirection: 'row',
       flexWrap: 'nowrap',
       '& > div': {
-        flex: '1 1 calc(50% - 4px)',
-        minWidth: 'calc(50% - 4px)',
+        flex: '1 1 calc((100% - 8px) / 2)', // 2 date fields with 8px gap
+        minWidth: 'calc((100% - 8px) / 2)',
       }
     },
     '@media (max-width: 960px)': {
