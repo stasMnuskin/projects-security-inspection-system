@@ -279,7 +279,7 @@ const Dashboard = () => {
                       status: 'הצלחה חלקית'
                     },
                     { 
-                      name: 'נכשל',
+                      name: 'כישלון',
                       value: dashboardData.overview.drillResults['כישלון'] || 0,
                       status: 'כישלון'
                     }
@@ -326,9 +326,15 @@ const Dashboard = () => {
                 }
                 return acc;
               }, {}))
-              .sort((a, b) => (b.criticalCount + b.regularCount) - (a.criticalCount + a.regularCount))
-              .slice(0, 10)
-              .reverse()}
+              .sort((a, b) => {
+                // First compare by critical faults
+                if (a.criticalCount !== b.criticalCount) {
+                  return b.criticalCount - a.criticalCount;  // descending order
+                }
+                // If critical faults are equal, compare by regular faults
+                return b.regularCount - a.regularCount;  // descending order
+              })
+              .slice(0, 10)}
               onBarClick={({ site, isCritical }) => {
                 const siteData = dashboardData.faults.open.find(fault => fault.site.name === site);
                 if (siteData) {
