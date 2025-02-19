@@ -173,7 +173,7 @@ FaultTable.propTypes = {
   onRowClick: PropTypes.func
 };
 
-const FaultTables = ({ openFaults = [], criticalFaults = [] }) => {
+const FaultTables = ({ openFaults = [], criticalFaults = [], recurringFaults = [] }) => {
   const navigate = useNavigate();
 
   const handleOpenFaultClick = (row) => {
@@ -196,30 +196,37 @@ const FaultTables = ({ openFaults = [], criticalFaults = [] }) => {
     });
   };
 
-  const tables = [
-    {
-      title: 'תקלות פתוחות',
-      headers: ['מס"ד', 'אתר', 'תקלה'],
-      columns: ['serialNumber', 'site', 'fault'],
-      data: openFaults,
-      onRowClick: handleOpenFaultClick
-    },
-    {
-      title: 'תקלות משביתות',
-      headers: ['מס"ד', 'אתר', 'תקלה'],
-      columns: ['serialNumber', 'site', 'fault'],
-      data: criticalFaults,
-      onRowClick: handleCriticalFaultClick
-    }
-  ];
+  if (recurringFaults.length > 0) {
+    return (
+      <FaultTable
+        title="תקלות נפוצות"
+        headers={['מס"ד', 'תקלה', 'כמות']}
+        columns={['serialNumber', 'fault', 'count']}
+        data={recurringFaults}
+      />
+    );
+  }
 
   return (
     <Grid container spacing={3}>
-      {tables.map((table, index) => (
-        <Grid item xs={12} md={6} key={index}>
-          <FaultTable {...table} />
-        </Grid>
-      ))}
+      <Grid item xs={12} md={6}>
+        <FaultTable
+          title="תקלות פתוחות"
+          headers={['מס"ד', 'אתר', 'תקלה']}
+          columns={['serialNumber', 'site', 'fault']}
+          data={openFaults}
+          onRowClick={handleOpenFaultClick}
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <FaultTable
+          title="תקלות משביתות"
+          headers={['מס"ד', 'אתר', 'תקלה']}
+          columns={['serialNumber', 'site', 'fault']}
+          data={criticalFaults}
+          onRowClick={handleCriticalFaultClick}
+        />
+      </Grid>
     </Grid>
   );
 };
@@ -238,7 +245,13 @@ const FaultShape = PropTypes.shape({
 
 FaultTables.propTypes = {
   openFaults: PropTypes.arrayOf(FaultShape),
-  criticalFaults: PropTypes.arrayOf(FaultShape)
+  criticalFaults: PropTypes.arrayOf(FaultShape),
+  recurringFaults: PropTypes.arrayOf(PropTypes.shape({
+    type: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    count: PropTypes.number.isRequired,
+    serialNumber: PropTypes.number
+  }))
 };
 
 export default FaultTables;

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -30,28 +30,38 @@ import { PERMISSIONS } from '../constants/roles';
 
 const Drills = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [drills, setDrills] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [drillToDelete, setDrillToDelete] = useState(null);
-  const [filters, setFilters] = useState({
-    sites: [],
-    startDate: (() => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - 6);
-      date.setHours(0, 0, 0, 0);
-      return date;
-    })(),
-    endDate: (() => {
-      const date = new Date();
-      date.setHours(23, 59, 59, 999);
-      return date;
-    })(),
-    drillType: '',
-    securityOfficer: '',
-    entrepreneur: ''
+  const [filters, setFilters] = useState(() => {
+    if (location.state?.initialFilters) {
+      const { sites, ...otherFilters } = location.state.initialFilters;
+      return {
+        ...otherFilters,
+        sites: sites || []
+      };
+    }
+    return {
+      sites: [], 
+      startDate: (() => {
+        const date = new Date();
+        date.setMonth(date.getMonth() - 6);
+        date.setHours(0, 0, 0, 0);
+        return date;
+      })(),
+      endDate: (() => {
+        const date = new Date();
+        date.setHours(23, 59, 59, 999);
+        return date;
+      })(),
+      drillType: '',
+      securityOfficer: '',
+      entrepreneur: ''
+    };
   });
 
   const columns = [
@@ -168,6 +178,12 @@ const fetchDrills = useCallback(async () => {
     if (filters.entrepreneur) {
       queryParams.entrepreneur = filters.entrepreneur;
     }
+    if (filters.maintenance) {
+      queryParams.maintenanceOrg = filters.maintenance;
+    }
+    if (filters.integrator) {
+      queryParams.integratorOrg = filters.integrator;
+    }
 
     let response;
     if (filters.sites && filters.sites.length > 0) {
@@ -179,7 +195,8 @@ const fetchDrills = useCallback(async () => {
       // Combine and deduplicate drills from all sites
       response = Array.from(new Set(responses.flat()));
     } else {
-      response = await getInspections();
+      // If no sites selected, get all drills with filters
+      response = await getInspections(queryParams);
     }
 
     const filteredDrills = (response || [])
@@ -189,6 +206,11 @@ const fetchDrills = useCallback(async () => {
         
         // Then filter by drill type if specified
         if (filters.drillType && item.formData?.drill_type !== filters.drillType) {
+          return false;
+        }
+
+        // Filter by status if specified
+        if (filters.formData?.status && item.formData?.status !== filters.formData.status) {
           return false;
         }
         

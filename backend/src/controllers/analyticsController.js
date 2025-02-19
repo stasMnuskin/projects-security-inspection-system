@@ -92,6 +92,24 @@ exports.getDashboardOverview = async (req, res, next) => {
       }
     });
 
+    const drills = await db.Inspection.findAll({
+      where: {
+        siteId: { [Op.in]: siteIds },
+        type: 'drill',
+        formData: {
+          date: dateRange
+        }
+      }
+    });
+
+    const drillStatusCounts = drills.reduce((acc, drill) => {
+      const status = drill.getDrillStatus();
+      if (status) {
+        acc[status] = (acc[status] || 0) + 1;
+      }
+      return acc;
+    }, { 'הצלחה': 0, 'הצלחה חלקית': 0, 'נכשל': 0 });
+
     const [openFaults, criticalFaults, recurringFaults] = await Promise.all([
       db.Fault.findAll({
         where: {
@@ -150,7 +168,8 @@ exports.getDashboardOverview = async (req, res, next) => {
     const formattedResponse = {
       overview: {
         inspections: inspectionsCount,
-        drills: drillsCount
+        drills: drillsCount,
+        drillResults: drillStatusCounts
       },
       faults: {
         open: openFaults.map((fault, index) => ({

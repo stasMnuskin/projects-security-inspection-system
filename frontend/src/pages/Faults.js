@@ -64,18 +64,29 @@ const Faults = () => {
   const canEditDescription = ['admin', 'security_officer', 'integrator', 'maintenance'].includes(user.role);
 
   const initialDateRange = getInitialDateRange();
-  const [filters, setFilters] = useState({
-    startDate: initialDateRange.startDate,
-    endDate: initialDateRange.endDate,
-    sites: initialFilters.sites || null,
-    isCritical: initialFilters.isCritical !== undefined ? initialFilters.isCritical : null,
-    maintenance: initialFilters.maintenance || '',
-    integrator: initialFilters.integrator || '',
-    entrepreneur: initialFilters.entrepreneur || '',
-    type: initialFilters.type || '',
-    description: initialFilters.description || '',
-    status: initialFilters.status || null,
-    id: initialFilters.id || null
+  const [filters, setFilters] = useState(() => {
+    if (initialFilters) {
+      const { sites, ...otherFilters } = initialFilters;
+      return {
+        startDate: initialDateRange.startDate,
+        endDate: initialDateRange.endDate,
+        sites: sites || [],
+        ...otherFilters
+      };
+    }
+    return {
+      startDate: initialDateRange.startDate,
+      endDate: initialDateRange.endDate,
+      sites: [],
+      isCritical: null,
+      maintenance: '',
+      integrator: '',
+      entrepreneur: '',
+      type: '',
+      description: '',
+      status: null,
+      id: null
+    };
   });
 
   const [newFaultDialog, setNewFaultDialog] = useState(false);

@@ -1,7 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Typography, Box, CircularProgress, Alert, Container, Paper, Grid } from '@mui/material';
+import { 
+  Typography, 
+  Box, 
+  CircularProgress, 
+  Alert, 
+  Container, 
+  Paper, 
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
 import CustomPieChart from '../components/PieChart';
+import CustomBarChart from '../components/BarChart';
 import { getDashboardData } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import FaultTables from '../components/FaultTables';
@@ -17,13 +31,23 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState({
-    overview: { inspections: 0, drills: 0 },
+    overview: { 
+      inspections: 0, 
+      drills: 0,
+      drillResults: {
+        'הצלחה': 0,
+        'הצלחה חלקית': 0,
+        'נכשל': 0
+      }
+    },
     faults: {
       recurring: [],
       open: [],
       critical: []
     }
   });
+  const [faultDialogOpen, setFaultDialogOpen] = useState(false);
+  const [selectedFaultType, setSelectedFaultType] = useState(null);
   const [filters, setFilters] = useState({
     startDate: (() => {
       const date = new Date();
@@ -31,7 +55,7 @@ const Dashboard = () => {
       return date;
     })(),
     endDate: new Date(),
-    site: '',
+    sites: [],
     securityOfficer: '',
     maintenance: '',
     integrator: ''
@@ -82,9 +106,6 @@ const Dashboard = () => {
     }));
   }, []);
 
-  const handleBoxClick = (path) => {
-    navigate(path);
-  };
 
   if (!canViewDashboard) {
     return (
@@ -136,37 +157,41 @@ const Dashboard = () => {
 
           {/* Charts Row */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
-                  cursor: 'pointer',
                   '&:hover': {
                     borderColor: colors.border.orangeHover
                   }
                 }}
-                onClick={() => handleBoxClick('/inspections')}
               >
                 <CustomPieChart
                   title="ביקורות/תרגילים"
                   data={[
-                    { name: 'ביקורות', value: dashboardData.overview.inspections },
-                    { name: 'תרגילים', value: dashboardData.overview.drills }
+                    { name: 'ביקורות', value: dashboardData.overview.inspections, path: '/inspections' },
+                    { name: 'תרגילים', value: dashboardData.overview.drills, path: '/drills' }
                   ]}
                   chartColors={[colors.text.grey, colors.primary.orange]}
+                  onSliceClick={(entry) => navigate(entry.path, {
+                    state: {
+                      initialFilters: {
+                        ...filters,
+                        sites: filters.sites || []
+                      }
+                    }
+                  })}
                 />
               </Paper>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
-                  cursor: 'pointer',
                   '&:hover': {
                     borderColor: colors.border.orangeHover
                   }
                 }}
-                onClick={() => handleBoxClick('/faults')}
               >
                 <CustomPieChart
                   title="תקלות נפוצות"
@@ -174,7 +199,8 @@ const Dashboard = () => {
                     .slice(0, 5)
                     .map(fault => ({
                       name: fault.type === 'אחר' ? fault.description : fault.type,
-                      value: fault.count
+                      value: fault.count,
+                      originalData: fault
                     }))}
                   chartColors={[
                     colors.primary.orange,
@@ -183,37 +209,142 @@ const Dashboard = () => {
                     'rgba(166, 166, 166, 0.6)',  // אפור בהיר
                     'rgba(166, 166, 166, 0.4)'   // אפור בהיר מאוד
                   ]}
+                  onSliceClick={(entry) => {
+                    setSelectedFaultType({
+                      type: entry.originalData.type,
+                      description: entry.originalData.type === 'אחר' ? entry.originalData.description : null
+                    });
+                    setFaultDialogOpen(true);
+                  }}
                 />
               </Paper>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
-                  cursor: 'pointer',
                   '&:hover': {
                     borderColor: colors.border.orangeHover
                   }
                 }}
-                onClick={() => handleBoxClick('/faults')}
               >
                 <CustomPieChart
                   title="תקלות"
                   data={[
                     { 
                       name: 'תקלות משביתות', 
-                      value: dashboardData.faults.critical.length 
+                      value: dashboardData.faults.critical.length,
+                      isCritical: true
                     },
                     { 
                       name: 'תקלות רגילות',
-                      value: dashboardData.faults.open.filter(f => !f.isCritical).length 
+                      value: dashboardData.faults.open.filter(f => !f.isCritical).length,
+                      isCritical: false
                     }
                   ]}
                   chartColors={[colors.primary.orange, colors.text.grey]}
+                  onSliceClick={(entry) => {
+                    navigate('/faults', { 
+                      state: { 
+                        initialFilters: {
+                          ...filters,
+                          isCritical: entry.isCritical
+                        }
+                      }
+                    });
+                  }}
+                />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper 
+                sx={{
+                  ...dashboardStyles.chartPaper,
+                  '&:hover': {
+                    borderColor: colors.border.orangeHover
+                  }
+                }}
+              >
+                <CustomPieChart
+                  title="תרגילים"
+                  data={[
+                    { 
+                      name: 'הצלחה', 
+                      value: dashboardData.overview.drillResults['הצלחה'] || 0,
+                      status: 'הצלחה'
+                    },
+                    { 
+                      name: 'הצלחה חלקית',
+                      value: dashboardData.overview.drillResults['הצלחה חלקית'] || 0,
+                      status: 'הצלחה חלקית'
+                    },
+                    { 
+                      name: 'נכשל',
+                      value: dashboardData.overview.drillResults['כישלון'] || 0,
+                      status: 'כישלון'
+                    }
+                  ]}
+                  chartColors={[
+                    colors.text.grey,          // אפור להצלחה
+                    colors.text.grey,          // אפור להצלחה חלקית
+                    colors.primary.orange      // כתום לכישלון
+                  ]}
+                  onSliceClick={(entry) => {
+                    navigate('/drills', {
+                      state: {
+                        initialFilters: {
+                          ...filters,
+                          formData: {
+                            status: entry.name
+                          }
+                        }
+                      }
+                    });
+                  }}
                 />
               </Paper>
             </Grid>
           </Grid>
+
+          {/* Site Faults Bar Chart */}
+          <Box sx={{ mb: 4 }}>
+            <CustomBarChart 
+              title="תקלות לפי אתר"
+              data={Object.values(dashboardData.faults.open.reduce((acc, fault) => {
+                const siteId = fault.site.id;
+                if (!acc[siteId]) {
+                  acc[siteId] = {
+                    name: fault.site.name,
+                    criticalCount: 0,
+                    regularCount: 0
+                  };
+                }
+                if (fault.isCritical) {
+                  acc[siteId].criticalCount++;
+                } else {
+                  acc[siteId].regularCount++;
+                }
+                return acc;
+              }, {}))
+              .sort((a, b) => (b.criticalCount + b.regularCount) - (a.criticalCount + a.regularCount))
+              .slice(0, 10)
+              .reverse()}
+              onBarClick={({ site, isCritical }) => {
+                const siteData = dashboardData.faults.open.find(fault => fault.site.name === site);
+                if (siteData) {
+                  navigate('/faults', {
+                    state: {
+                      initialFilters: {
+                        ...filters,
+                        sites: [siteData.site.id],
+                        isCritical
+                      }
+                    }
+                  });
+                }
+              }}
+            />
+          </Box>
 
           {/* Fault Tables */}
           <Box>
@@ -222,6 +353,53 @@ const Dashboard = () => {
               criticalFaults={dashboardData.faults.critical}
             />
           </Box>
+
+          {/* Fault Details Dialog */}
+          <Dialog
+            open={faultDialogOpen}
+            onClose={() => setFaultDialogOpen(false)}
+            maxWidth="lg"
+            fullWidth
+            PaperProps={{
+              sx: {
+                backgroundColor: colors.background.black,
+                color: colors.text.white
+              }
+            }}
+          >
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography>
+                {selectedFaultType?.type === 'אחר' ? selectedFaultType.description : selectedFaultType?.type}
+              </Typography>
+              <IconButton
+                onClick={() => setFaultDialogOpen(false)}
+                sx={{ color: colors.text.grey }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent sx={{ 
+              display: 'flex', 
+              justifyContent: 'center',
+              padding: '24px'
+            }}>
+              <Box sx={{ 
+                width: '100%',
+                maxWidth: '800px'
+              }}>
+                <FaultTables
+                recurringFaults={dashboardData.faults.recurring.filter(fault => 
+                  fault.type === selectedFaultType?.type &&
+                  (selectedFaultType?.type !== 'אחר' || fault.description === selectedFaultType?.description)
+                ).map((fault, index) => ({
+                  ...fault,
+                  fault: fault.type === 'אחר' ? fault.description : fault.type,
+                  serialNumber: index + 1
+                }))}
+                />
+              </Box>
+            </DialogContent>
+          </Dialog>
         </Box>
       </Box>
     </Box>

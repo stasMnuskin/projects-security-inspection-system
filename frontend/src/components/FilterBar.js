@@ -48,15 +48,11 @@ const FilterBar = ({
         let sitesData = [], maintenanceOrgs = [], integratorOrgs = [], securityOfficersData = [];
         
         try {
-          sitesData = await getSites();
-          setOptions(prev => ({
-            ...prev,
-            sites: sitesData || []
-          }));
-          // Trigger "All Sites" behavior right after loading sites
-          if (variant === 'inspections') {
-            onFilterChange('sites', sitesData.map(site => site.id));
-          }
+        sitesData = await getSites();
+        setOptions(prev => ({
+          ...prev,
+          sites: sitesData || []
+        }));
         } catch (error) {
           console.error('Error loading sites:', error);
           sitesData = [];

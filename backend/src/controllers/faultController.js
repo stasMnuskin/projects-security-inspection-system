@@ -210,14 +210,6 @@ exports.getAllFaults = async (req, res, next) => {
       whereClause.type = type;
     }
 
-    // Handle organization filters
-    if (maintenanceOrg) {
-      whereClause.maintenanceOrganizationId = maintenanceOrg;
-    }
-    if (integratorOrg) {
-      whereClause.integratorOrganizationId = integratorOrg;
-    }
-
     // Get sites based on user role and entrepreneur filter
     let userSites;
     if (role === 'admin' && entrepreneur) {
@@ -239,40 +231,60 @@ exports.getAllFaults = async (req, res, next) => {
       finalSiteIds = allowedSiteIds;
     }
 
-    // Add site filter to where clause
-    whereClause.siteId = {
-      [db.Sequelize.Op.in]: finalSiteIds
+    // Get filtered sites first
+    const siteQuery = {
+      where: { id: { [db.Sequelize.Op.in]: finalSiteIds } },
+      include: [{
+        model: db.Organization,
+        as: 'serviceOrganizations',
+        attributes: ['id', 'name', 'type']
+      }]
     };
 
-    const includes = [
-      {
-        model: db.Site,
-        as: 'site',
-        attributes: ['id', 'name']
-      },
-      {
-        model: db.Organization,
-        as: 'maintenanceOrganization',
-        attributes: ['id', 'name', 'type']
-      },
-      {
-        model: db.Organization,
-        as: 'integratorOrganization',
-        attributes: ['id', 'name', 'type']
-      }
-    ];
+    // Add organization filters to site query
+    if (maintenanceOrg || integratorOrg) {
+      siteQuery.include[0].where = {
+        [db.Sequelize.Op.or]: [
+          maintenanceOrg ? { id: maintenanceOrg, type: 'maintenance' } : null,
+          integratorOrg ? { id: integratorOrg, type: 'integrator' } : null
+        ].filter(Boolean)
+      };
+      siteQuery.include[0].required = true;
+    }
 
-    logger.info('Final query:', {
-      whereClause,
-      includes,
-      order: [['reportedTime', 'DESC']]
-    });
+    // Get filtered sites
+    const filteredSites = await db.Site.findAll(siteQuery);
+    const filteredSiteIds = filteredSites.map(site => site.id);
 
+    // Update where clause with filtered site IDs
+    whereClause.siteId = {
+      [db.Sequelize.Op.in]: filteredSiteIds
+    };
+
+    // Query faults with filtered sites
     const query = {
       where: whereClause,
-      include: includes,
+      include: [
+        {
+          model: db.Site,
+          as: 'site',
+          attributes: ['id', 'name']
+        },
+        {
+          model: db.Organization,
+          as: 'maintenanceOrganization',
+          attributes: ['id', 'name', 'type']
+        },
+        {
+          model: db.Organization,
+          as: 'integratorOrganization',
+          attributes: ['id', 'name', 'type']
+        }
+      ],
       order: [['reportedTime', 'DESC']]
     };
+
+    logger.info('Final query:', query);
 
     const faults = await db.Fault.findAll(query);
 

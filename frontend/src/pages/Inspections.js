@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Typography, 
   Paper, 
@@ -86,15 +86,28 @@ const Inspections = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inspectionToDelete, setInspectionToDelete] = useState(null);
   const [error, setError] = useState(null);
+  const location = useLocation();
+  const { user } = useAuth();
   const [filters, setFilters] = useState({
-    sites: null, // Use null to indicate initial state
+    sites: [], 
     startDate: subMonths(new Date(), 6),
     endDate: new Date(),
     securityOfficer: '',
     maintenance: '',
     integrator: ''
   });
-  const { user } = useAuth();
+
+  // Handle initial filters from navigation
+  useEffect(() => {
+    if (location.state?.initialFilters) {
+      const { sites, ...otherFilters } = location.state.initialFilters;
+      setFilters(prev => ({
+        ...prev,
+        ...otherFilters,
+        sites: sites || []
+      }));
+    }
+  }, [location.state]);
 
   // Load enabled fields for inspections when sites change
   const loadEnabledFields = useCallback(async (sites) => {
@@ -169,7 +182,7 @@ const Inspections = () => {
       setLoading(true);
       const queryParams = {
         type: 'inspection',
-        sites: filters.sites || [],  
+        sites: filters.sites || [],
         ...(filters.startDate && { startDate: filters.startDate.toISOString() }),
         ...(filters.endDate && { endDate: filters.endDate.toISOString() }),
         ...(filters.maintenance && { maintenanceOrg: filters.maintenance }),
