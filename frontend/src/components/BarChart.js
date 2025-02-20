@@ -5,6 +5,53 @@ import { Box, Typography, Paper } from '@mui/material';
 import { colors } from '../styles/colors';
 
 const CustomBarChart = ({ data, title, onBarClick }) => {
+  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const getXAxisConfig = (width) => {
+    if (width < 600) {
+      return {
+        angle: -45,
+        fontSize: 10,
+        dy: 8,
+        dx: -8,
+        height: 80
+      };
+    }
+    if (width < 950) {
+      return {
+        angle: -45,
+        fontSize: 11,
+        dy: 10,
+        dx: -10,
+        height: 90
+      };
+    }
+    if (width < 1200) {
+      return {
+        angle: -45,
+        fontSize: 12,
+        dy: 12,
+        dx: -12,
+        height: 100
+      };
+    }
+    return {
+      angle: 0,
+      fontSize: 12,
+      dy: 8,
+      dx: 0,
+      height: 60
+    };
+  };
+
+  const xAxisConfig = getXAxisConfig(windowWidth);
+
   return (
     <Paper sx={{ 
       p: 2, 
@@ -49,7 +96,12 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
             data={data}
             barGap={0}
             barCategoryGap="15%"
-            margin={{ top: 0, right: 20, left: 20, bottom: 5 }}
+            margin={{ 
+              top: 0, 
+              right: 20, 
+              left: 20, 
+              bottom: xAxisConfig.angle !== 0 ? 20 : 5 
+            }}
             reverseStackOrder={true}
           >
             <XAxis 
@@ -57,12 +109,13 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
               tick={{ 
                 fill: colors.text.white,
                 backgroundColor: 'transparent',
-                fontSize: { xs: '10px', sm: '12px' },
-                angle: -45,
-                textAnchor: 'end',
-                dy: 10
+                fontSize: xAxisConfig.fontSize,
+                angle: xAxisConfig.angle,
+                textAnchor: xAxisConfig.angle !== 0 ? 'end' : 'middle',
+                dy: xAxisConfig.dy,
+                dx: xAxisConfig.dx
               }}
-              height={60}
+              height={xAxisConfig.height}
               axisLine={{ stroke: colors.border.grey }}
               interval={0}
               padding={{ left: 10, right: 10 }}
