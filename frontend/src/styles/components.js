@@ -1015,18 +1015,23 @@ export const filterStyles = {
     flexWrap: { xs: 'wrap', sm: 'wrap', md: 'nowrap' },
     width: '100%',
     boxSizing: 'border-box',
+    overflowX: 'hidden',
     '& > div': {
       flex: { 
-        xs: '1 1 100%', 
+        xs: '1 1 100%',
         sm: '0 1 calc(50% - 8px)',
         md: '0.8 1 0' 
       },
       minWidth: { 
-        xs: '100%', 
+        xs: '100%',
         sm: 'calc(50% - 8px)',
         md: '140px' 
       },
       maxWidth: '100%',
+      '@media (min-width: 350px) and (max-width: 600px)': {
+        flex: '1 1 calc(50% - 8px)',
+        minWidth: 'calc(50% - 8px)',
+      },
       '& .MuiOutlinedInput-root': {
         ...selectStyles.control,
         padding: '2px 8px',
@@ -1036,32 +1041,51 @@ export const filterStyles = {
       }
     },
     '@media (max-width: 1300px)': {
-      flexWrap: 'nowrap',
+      flexWrap: 'wrap',
       gap: '8px',
       '& > div': {
         flex: '1 1 calc((100% - 56px) / 7)', 
         minWidth: 'calc((100% - 56px) / 7)',
+        '@media (max-width: 960px)': {
+          flex: '1 1 calc(50% - 8px)',
+          minWidth: 'calc(50% - 8px)',
+        },
+        '@media (max-width: 600px)': {
+          flex: '1 1 100%',
+          minWidth: '100%',
+        },
+        '@media (min-width: 350px) and (max-width: 600px)': {
+          flex: '1 1 calc(50% - 8px)',
+          minWidth: 'calc(50% - 8px)',
+        }
       },
       '& > div:first-of-type': {
         flex: '0 0 12px',
         minWidth: '12px'
       },
       '& > div:last-child': {
-        flex: '2 1 calc(((100% - 56px) / 7) * 2)', // Double width for date range container
-        minWidth: 'calc(((100% - 56px) / 7) * 2)'
+        flex: '2 1 calc(((100% - 56px) / 7) * 2)',
+        minWidth: 'calc(((100% - 56px) / 7) * 2)',
+        '@media (max-width: 960px)': {
+          flex: '1 1 100%',
+          minWidth: '100%',
+        }
       }
     },
     '& > div:first-of-type': {
       order: 1,
-      width: { xs: '100%', sm: '12px' },
-      minWidth: { xs: '100%', sm: '12px' },
-      maxWidth: { xs: '100%', sm: '12px' },
+      width: '12px',
+      minWidth: '12px',
+      maxWidth: '12px',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
       padding: 0,
       margin: '2px',
-      alignSelf: 'center'
+      alignSelf: 'center',
+      '@media (max-width: 1200px)': {
+        display: 'none'
+      }
     },
     '& > div:last-child': {
       flex: { xs: '1 1 100%', sm: '1.5 1 0' }
@@ -1159,17 +1183,28 @@ export const filterStyles = {
     '& > div': {
       flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 4px)' },
       minWidth: { xs: '100%', sm: 'calc(50% - 4px)' },
-      maxWidth: '100%'
+      maxWidth: '100%',
+      '@media (min-width: 350px) and (max-width: 600px)': {
+        flex: '1 1 calc(50% - 4px)',
+        minWidth: 'calc(50% - 4px)',
+      }
     },
     '@media (max-width: 1300px)': {
       flexDirection: 'row',
       flexWrap: 'nowrap',
       '& > div': {
-        flex: '1 1 calc((100% - 8px) / 2)', // 2 date fields with 8px gap
+        flex: '1 1 calc((100% - 8px) / 2)',
         minWidth: 'calc((100% - 8px) / 2)',
       }
     },
     '@media (max-width: 960px)': {
+      flexDirection: 'row',
+      '& > div': {
+        flex: '1 1 calc(50% - 4px)',
+        minWidth: 'calc(50% - 4px)',
+      }
+    },
+    '@media (max-width: 350px)': {
       flexDirection: 'column',
       '& > div': {
         flex: '1 1 100%',

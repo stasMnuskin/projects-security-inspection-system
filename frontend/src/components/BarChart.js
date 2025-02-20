@@ -56,8 +56,13 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
               dataKey="name" 
               tick={{ 
                 fill: colors.text.white,
-                backgroundColor: 'transparent'
+                backgroundColor: 'transparent',
+                fontSize: { xs: '10px', sm: '12px' },
+                angle: -45,
+                textAnchor: 'end',
+                dy: 10
               }}
+              height={60}
               axisLine={{ stroke: colors.border.grey }}
               interval={0}
               padding={{ left: 10, right: 10 }}
