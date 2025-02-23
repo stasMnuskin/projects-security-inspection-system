@@ -1,10 +1,41 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, Tooltip } from '@mui/material';
 import { colors } from '../styles/colors';
 
+const CustomTick = ({ x, y, payload, width, dataLength }) => {
+  const maxWidth = width / dataLength - 10;
+  
+  return (
+    <Tooltip title={payload.value} placement="top">
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={12}
+          textAnchor="middle"
+          fill={colors.text.white}
+          style={{
+            fontSize: '12px',
+            width: maxWidth,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          {payload.value.length > maxWidth/8 ? 
+            payload.value.substring(0, Math.floor(maxWidth/8) - 3) + '...' :
+            payload.value
+          }
+        </text>
+      </g>
+    </Tooltip>
+  );
+};
+
 const CustomBarChart = ({ data, title, onBarClick }) => {
+  const [chartWidth, setChartWidth] = React.useState(0);
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
 
   React.useEffect(() => {
@@ -13,44 +44,16 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const getXAxisConfig = (width) => {
-    if (width < 600) {
-      return {
-        angle: -45,
-        fontSize: 10,
-        dy: 8,
-        dx: -8,
-        height: 80
-      };
-    }
-    if (width < 950) {
-      return {
-        angle: -45,
-        fontSize: 11,
-        dy: 10,
-        dx: -10,
-        height: 90
-      };
-    }
-    if (width < 1200) {
-      return {
-        angle: -45,
-        fontSize: 12,
-        dy: 12,
-        dx: -12,
-        height: 100
-      };
-    }
-    return {
-      angle: 0,
-      fontSize: 12,
-      dy: 8,
-      dx: 0,
-      height: 60
-    };
-  };
+  const handleChartResize = React.useCallback((width) => {
+    setChartWidth(width);
+  }, []);
 
-  const xAxisConfig = getXAxisConfig(windowWidth);
+  const chartMargins = React.useMemo(() => {
+    if (windowWidth < 600) {
+      return { top: 5, right: 10, left: 10, bottom: 10 };
+    }
+    return { top: 0, right: 20, left: 20, bottom: 20 };
+  }, [windowWidth]);
 
   return (
     <Paper sx={{ 
@@ -67,7 +70,13 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
       }}>
         {title}
       </Typography>
-      <Box sx={{ width: '100%', height: { xs: 250, sm: 300 } }}>
+      <Box sx={{ 
+        width: '100%', 
+        height: { xs: 250, sm: 300 },
+        '& .recharts-wrapper': {
+          transform: windowWidth < 600 ? 'scale(0.95)' : 'none'
+        }
+      }}>
         {/* Custom Legend */}
         <Box sx={{ 
           display: 'flex', 
@@ -91,34 +100,21 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
         </Box>
 
         {/* Chart */}
-        <ResponsiveContainer>
+        <ResponsiveContainer onResize={handleChartResize}>
           <BarChart 
             data={data}
             barGap={0}
             barCategoryGap="15%"
-            margin={{ 
-              top: 0, 
-              right: 20, 
-              left: 20, 
-              bottom: xAxisConfig.angle !== 0 ? 20 : 5 
-            }}
+            margin={chartMargins}
             reverseStackOrder={true}
           >
             <XAxis 
               dataKey="name" 
-              tick={{ 
-                fill: colors.text.white,
-                backgroundColor: 'transparent',
-                fontSize: xAxisConfig.fontSize,
-                angle: xAxisConfig.angle,
-                textAnchor: xAxisConfig.angle !== 0 ? 'end' : 'middle',
-                dy: xAxisConfig.dy,
-                dx: xAxisConfig.dx
-              }}
-              height={xAxisConfig.height}
+              tick={<CustomTick width={chartWidth} dataLength={data.length} />}
+              height={40}
               axisLine={{ stroke: colors.border.grey }}
               interval={0}
-              padding={{ left: 10, right: 10 }}
+              padding={{ left: 5, right: 5 }}
             />
             <YAxis hide />
             <Bar 
@@ -134,7 +130,7 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
               label={{ 
                 position: 'center',
                 fill: colors.text.white,
-                fontSize: 14,
+                fontSize: windowWidth < 600 ? 12 : 14,
                 fontWeight: 'bold',
                 formatter: (value) => value > 0 ? value : ''
               }}
@@ -152,7 +148,7 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
               label={{ 
                 position: 'center',
                 fill: colors.text.white,
-                fontSize: 14,
+                fontSize: windowWidth < 600 ? 12 : 14,
                 fontWeight: 'bold',
                 formatter: (value) => value > 0 ? value : ''
               }}
