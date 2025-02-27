@@ -46,9 +46,7 @@ const FaultList = ({
   onStatusChange, 
   onTechnicianChange,
   onDescriptionChange,
-  onDeleteFault,
-  maintenanceOrgs,
-  integratorOrgs
+  onDeleteFault
 }) => {
   const { user } = useAuth();
   const [deleteDialog, setDeleteDialog] = useState(false);
@@ -142,10 +140,10 @@ const FaultList = ({
     return `${hours} שעות`;
   };
 
-  const getOrganizationByType = (organizations, type) => {
-    if (!organizations) return null;
-    return organizations.find(org => org.type === type);
-  };
+  // const getOrganizationByType = (organizations, type) => {
+  //   if (!organizations) return null;
+  //   return organizations.find(org => org.type === type);
+  // };
 
   const getStatusStyle = () => ({
     display: 'inline-block',
@@ -269,8 +267,6 @@ const FaultList = ({
             <TableHead>
               <TableRow>
                 <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '120px' }}>מתקן</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '120px' }}>אחזקה</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '120px' }}>אינטגרטור</TableCell>
                 <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '120px' }}>שם הטכנאי</TableCell>
                 <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>רכיב</TableCell>
                 <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>סוג התקלה</TableCell>
@@ -291,8 +287,8 @@ const FaultList = ({
                 </TableRow>
               ) : (
                 faults.map((fault) => {
-                  const maintenanceOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'maintenance');
-                  const integratorOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'integrator');
+                  // const maintenanceOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'maintenance');
+                  // const integratorOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'integrator');
 
                   return (
                     <TableRow key={fault.id}>
@@ -308,17 +304,6 @@ const FaultList = ({
                           {fault.site?.name || ''}
                         </span>
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        <span style={{ color: colors.text.white }}>
-                          {maintenanceOrg?.name || ''}
-                        </span>
-                      </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        <span style={{ color: colors.text.white }}>
-                          {integratorOrg?.name || ''}
-                        </span>
-                      </TableCell>
-
                       <TableCell 
                         onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`, fault.technician)}
                         sx={{ 
@@ -489,9 +474,7 @@ FaultList.propTypes = {
   onStatusChange: PropTypes.func,
   onTechnicianChange: PropTypes.func,
   onDescriptionChange: PropTypes.func,
-  onDeleteFault: PropTypes.func,
-  maintenanceOrgs: PropTypes.array,
-  integratorOrgs: PropTypes.array
+  onDeleteFault: PropTypes.func
 };
 
 export default FaultList;

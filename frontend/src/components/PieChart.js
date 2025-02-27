@@ -13,9 +13,27 @@ const chartContainerStyles = {
   '& h6': {
     color: colors.text.white,
     marginBottom: { xs: '10px', sm: '12px', md: '14px', lg: '16px' },
-    fontSize: { xs: '0.875rem', sm: '1rem' },
+    fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.925rem', lg: '1rem' },
     fontWeight: 'normal',
-    width: '100%'
+    width: '100%',
+    textAlign: 'center',
+    lineHeight: { xs: 1.2, sm: 1.3, md: 1.4 },
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    maxHeight: { xs: '2.4em', sm: '2.6em', md: '2.8em' },
+    padding: { xs: '0 4px', sm: '0 6px', md: '0 8px' }
+  },
+  '@media (min-width: 900px) and (max-width: 960px)': {
+    padding: 1.5,
+    '& h6': {
+      fontSize: '0.8rem',
+      marginBottom: '10px',
+      maxHeight: '2.4em',
+      lineHeight: 1.2
+    }
   }
 };
 
@@ -31,9 +49,7 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
 
   const getChartSize = (width) => {
     if (width < 600) return { size: 200, outer: 70, inner: 50, labelOffset: 3, fontSize: 10 };
-    if (width < 950) return { size: 160, outer: 50, inner: 35, labelOffset: 2, fontSize: 9 };
-    if (width < 1200) return { size: 180, outer: 60, inner: 45, labelOffset: 3, fontSize: 10 };
-    if (width < 1500) return { size: 220, outer: 80, inner: 60, labelOffset: 4, fontSize: 11 };
+    if (width < 1200) return { size: 250, outer: 90, inner: 65, labelOffset: 4, fontSize: 11 };
     return { size: 250, outer: 100, inner: 80, labelOffset: 5, fontSize: 12 };
   };
 
@@ -56,7 +72,7 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
           fill={colors.text.white}
           textAnchor={x > cx ? 'start' : 'end'}
           dominantBaseline="central"
-          onClick={() => onSliceClick?.({ site: name, isCritical: index === 0 })}
+          onClick={() => onSliceClick?.(data[index])}
           style={{
             fontSize: `${chartSize.fontSize}px`,
             fontWeight: 'medium',
@@ -82,11 +98,15 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
       <Typography variant="h6" align="center">
         {title}
       </Typography>
-      <Box sx={{ 
-        width: chartSize.size, 
-        height: chartSize.size,
-        position: 'relative'
-      }}>
+      <Box 
+        sx={{ 
+          width: chartSize.size, 
+          height: chartSize.size,
+          position: 'relative',
+          outline: 'none'
+        }}
+        tabIndex={-1}
+      >
         <PieChart width={chartSize.size} height={chartSize.size}>
           <Pie
             data={data}
@@ -114,7 +134,9 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
                   cursor: onSliceClick ? 'pointer' : 'default',
                   outline: 'none',
                   filter: activeIndex === index ? 'brightness(1.2)' : 'none',
-                  transition: 'filter 0.2s ease'
+                  transform: activeIndex === index ? 'scale(1.05)' : 'scale(1)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.2s ease'
                 }}
               />
             ))}

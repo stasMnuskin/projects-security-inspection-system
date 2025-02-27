@@ -18,7 +18,7 @@ import CustomPieChart from '../components/PieChart';
 import CustomBarChart from '../components/BarChart';
 import { getDashboardData } from '../services/api';
 import FilterBar from '../components/FilterBar';
-import FaultTables from '../components/FaultTables';
+// import FaultTables from '../components/FaultTables';
 import Sidebar from '../components/Sidebar';
 import { colors } from '../styles/colors';
 import { dashboardStyles } from '../styles/dashboardStyles';
@@ -37,8 +37,10 @@ const Dashboard = () => {
       drillResults: {
         'הצלחה': 0,
         'הצלחה חלקית': 0,
-        'נכשל': 0
-      }
+        'כישלון': 0
+      },
+      inspectionDetails: [],
+      drillDetails: []
     },
     faults: {
       recurring: [],
@@ -48,6 +50,9 @@ const Dashboard = () => {
   });
   const [faultDialogOpen, setFaultDialogOpen] = useState(false);
   const [selectedFaultType, setSelectedFaultType] = useState(null);
+  const [inspectionDialogOpen, setInspectionDialogOpen] = useState(false);
+  const [selectedInspectionType, setSelectedInspectionType] = useState(null);
+  const [selectedDrillStatus, setSelectedDrillStatus] = useState(null);
   const [filters, setFilters] = useState({
     startDate: (() => {
       const date = new Date();
@@ -106,7 +111,6 @@ const Dashboard = () => {
     }));
   }, []);
 
-
   if (!canViewDashboard) {
     return (
       <Container maxWidth="lg">
@@ -157,7 +161,7 @@ const Dashboard = () => {
 
           {/* Charts Row */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={12} md={6} lg={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
@@ -169,22 +173,19 @@ const Dashboard = () => {
                 <CustomPieChart
                   title="ביקורות/תרגילים"
                   data={[
-                    { name: 'ביקורות', value: dashboardData.overview.inspections, path: '/inspections' },
-                    { name: 'תרגילים', value: dashboardData.overview.drills, path: '/drills' }
+                    { name: 'ביקורות', value: dashboardData.overview.inspections },
+                    { name: 'תרגילים', value: dashboardData.overview.drills }
                   ]}
                   chartColors={[colors.text.grey, colors.primary.orange]}
-                  onSliceClick={(entry) => navigate(entry.path, {
-                    state: {
-                      initialFilters: {
-                        ...filters,
-                        sites: filters.sites || []
-                      }
-                    }
-                  })}
+                  onSliceClick={(entry) => {
+                    setSelectedInspectionType(entry.name);
+                    setSelectedDrillStatus(entry.name === 'תרגילים' ? null : selectedDrillStatus);
+                    setInspectionDialogOpen(true);
+                  }}
                 />
               </Paper>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={12} md={6} lg={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
@@ -210,16 +211,22 @@ const Dashboard = () => {
                     'rgba(166, 166, 166, 0.4)'   // אפור בהיר מאוד
                   ]}
                   onSliceClick={(entry) => {
+                    const details = entry.originalData.details.map((detail, index) => ({
+                      serialNumber: index + 1,
+                      site: detail.site,
+                      type: entry.originalData.type === 'אחר' ? entry.originalData.description : entry.originalData.type,
+                      reportedTime: new Date(detail.reportedTime).toLocaleDateString('he-IL')
+                    }));
                     setSelectedFaultType({
-                      type: entry.originalData.type,
-                      description: entry.originalData.type === 'אחר' ? entry.originalData.description : null
+                      title: entry.name,
+                      data: details
                     });
                     setFaultDialogOpen(true);
                   }}
                 />
               </Paper>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={12} md={6} lg={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
@@ -244,19 +251,22 @@ const Dashboard = () => {
                   ]}
                   chartColors={[colors.primary.orange, colors.text.grey]}
                   onSliceClick={(entry) => {
-                    navigate('/faults', { 
-                      state: { 
-                        initialFilters: {
-                          ...filters,
-                          isCritical: entry.isCritical
-                        }
-                      }
+                    const data = entry.isCritical ? dashboardData.faults.critical : dashboardData.faults.open;
+                    setSelectedFaultType({
+                      title: entry.name,
+                      data: data.map((fault, index) => ({
+                        serialNumber: index + 1,
+                        site: fault.site.name,
+                        type: fault.type === 'אחר' ? fault.description : fault.type,
+                        reportedTime: new Date(fault.reportedTime).toLocaleDateString('he-IL')
+                      }))
                     });
+                    setFaultDialogOpen(true);
                   }}
                 />
               </Paper>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={12} md={6} lg={3}>
               <Paper 
                 sx={{
                   ...dashboardStyles.chartPaper,
@@ -270,18 +280,15 @@ const Dashboard = () => {
                   data={[
                     { 
                       name: 'הצלחה', 
-                      value: dashboardData.overview.drillResults['הצלחה'] || 0,
-                      status: 'הצלחה'
+                      value: dashboardData.overview.drillResults['הצלחה'] || 0
                     },
                     { 
                       name: 'הצלחה חלקית',
-                      value: dashboardData.overview.drillResults['הצלחה חלקית'] || 0,
-                      status: 'הצלחה חלקית'
+                      value: dashboardData.overview.drillResults['הצלחה חלקית'] || 0
                     },
                     { 
                       name: 'כישלון',
-                      value: dashboardData.overview.drillResults['כישלון'] || 0,
-                      status: 'כישלון'
+                      value: dashboardData.overview.drillResults['כישלון'] || 0
                     }
                   ]}
                   chartColors={[
@@ -290,16 +297,9 @@ const Dashboard = () => {
                     colors.primary.orange      // כתום לכישלון
                   ]}
                   onSliceClick={(entry) => {
-                    navigate('/drills', {
-                      state: {
-                        initialFilters: {
-                          ...filters,
-                          formData: {
-                            status: entry.name
-                          }
-                        }
-                      }
-                    });
+                    setSelectedInspectionType(`תרגילים - ${entry.name}`);
+                    setSelectedDrillStatus(entry.name);
+                    setInspectionDialogOpen(true);
                   }}
                 />
               </Paper>
@@ -353,12 +353,12 @@ const Dashboard = () => {
           </Box>
 
           {/* Fault Tables */}
-          <Box>
+          {/* <Box>
             <FaultTables
               openFaults={dashboardData.faults.open}
               criticalFaults={dashboardData.faults.critical}
             />
-          </Box>
+          </Box> */}
 
           {/* Fault Details Dialog */}
           <Dialog
@@ -366,6 +366,7 @@ const Dashboard = () => {
             onClose={() => setFaultDialogOpen(false)}
             maxWidth="lg"
             fullWidth
+            disableEnforceFocus
             PaperProps={{
               sx: {
                 backgroundColor: colors.background.black,
@@ -375,7 +376,7 @@ const Dashboard = () => {
           >
             <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography>
-                {selectedFaultType?.type === 'אחר' ? selectedFaultType.description : selectedFaultType?.type}
+                {selectedFaultType?.title}
               </Typography>
               <IconButton
                 onClick={() => setFaultDialogOpen(false)}
@@ -393,16 +394,145 @@ const Dashboard = () => {
                 width: '100%',
                 maxWidth: '800px'
               }}>
-                <FaultTables
-                recurringFaults={dashboardData.faults.recurring.filter(fault => 
-                  fault.type === selectedFaultType?.type &&
-                  (selectedFaultType?.type !== 'אחר' || fault.description === selectedFaultType?.description)
-                ).map((fault, index) => ({
-                  ...fault,
-                  fault: fault.type === 'אחר' ? fault.description : fault.type,
-                  serialNumber: index + 1
-                }))}
-                />
+                {selectedFaultType && (
+                  <Box sx={{ overflowX: 'auto' }}>
+                    <table style={{ 
+                      width: '100%', 
+                      borderCollapse: 'collapse',
+                      color: colors.text.white
+                    }}>
+                      <thead>
+                        <tr style={{ 
+                          backgroundColor: colors.background.darkGrey,
+                          textAlign: 'right'
+                        }}>
+                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>מס"ד</th>
+                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>אתר</th>
+                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>רכיב</th>
+                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>תאריך פתיחה</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedFaultType.data.map((item) => (
+                          <tr key={`${item.site}-${item.reportedTime}-${item.serialNumber}`} style={{
+                            '&:hover': {
+                              backgroundColor: colors.background.darkGrey
+                            }
+                          }}>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                              {item.serialNumber}
+                            </td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                              {item.site}
+                            </td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                              {item.type}
+                            </td>
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                              {item.reportedTime}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Box>
+                )}
+              </Box>
+            </DialogContent>
+          </Dialog>
+
+          {/* Inspection/Drill Details Dialog */}
+          <Dialog
+            open={inspectionDialogOpen}
+            onClose={() => {
+              setInspectionDialogOpen(false);
+              setSelectedInspectionType(null);
+              setSelectedDrillStatus(null);
+            }}
+            maxWidth="lg"
+            fullWidth
+            disableEnforceFocus
+            PaperProps={{
+              sx: {
+                backgroundColor: colors.background.black,
+                color: colors.text.white
+              }
+            }}
+          >
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography>
+                {selectedInspectionType}
+              </Typography>
+              <IconButton
+                onClick={() => {
+                  setInspectionDialogOpen(false);
+                  setSelectedInspectionType(null);
+                  setSelectedDrillStatus(null);
+                }}
+                sx={{ color: colors.text.grey }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent sx={{ 
+              display: 'flex', 
+              justifyContent: 'center',
+              padding: '24px'
+            }}>
+              <Box sx={{ 
+                width: '100%',
+                maxWidth: '800px'
+              }}>
+                <Box sx={{ overflowX: 'auto' }}>
+                  <table style={{ 
+                    width: '100%', 
+                    borderCollapse: 'collapse',
+                    color: colors.text.white
+                  }}>
+                    <thead>
+                      <tr style={{ 
+                        backgroundColor: colors.background.darkGrey,
+                        textAlign: 'right'
+                      }}>
+                        <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>מס"ד</th>
+                        <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>אתר</th>
+                        <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>תאריך</th>
+                        {selectedInspectionType === 'ביקורות' && (
+                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>הערות</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedInspectionType === 'ביקורות' ? 
+                        dashboardData.overview.inspectionDetails : 
+                        dashboardData.overview.drillDetails
+                          .filter(drill => selectedDrillStatus ? drill.status === selectedDrillStatus : true)
+                          .map((drill, index) => ({ ...drill, serialNumber: index + 1 }))
+                      )?.map((item) => (
+                        <tr key={`${item.site}-${item.date}-${item.serialNumber}`} style={{
+                          '&:hover': {
+                            backgroundColor: colors.background.darkGrey
+                          }
+                        }}>
+                          <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                            {item.serialNumber}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                            {item.site}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                            {new Date(item.date).toLocaleDateString('he-IL')}
+                          </td>
+                          {selectedInspectionType === 'ביקורות' && (
+                            <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                              {item.notes}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
               </Box>
             </DialogContent>
           </Dialog>

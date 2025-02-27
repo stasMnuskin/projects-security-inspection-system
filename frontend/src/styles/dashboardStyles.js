@@ -108,15 +108,43 @@ const dashboardStyles = {
   // Chart paper styles
   chartPaper: {
     backgroundColor: colors.background.darkGrey,
-    padding: { xs: '12px', sm: '16px' },
+    padding: { xs: '12px', sm: '16px', lg: '20px' },
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    '@media (min-width: 600px) and (max-width: 769px)': {
+      minHeight: '300px',
+      padding: '24px',
+      '& > div': {
+        width: '100%',
+        maxWidth: '500px'  // Increased for better use of full width
+      }
+    },
+    '@media (min-width: 770px) and (max-width: 899px)': {
+      minHeight: '300px',
+      padding: '20px',
+      '& > div': {
+        width: '100%',
+        maxWidth: '450px'
+      }
+    },
+    '@media (min-width: 900px) and (max-width: 1199px)': {
+      minHeight: '280px',
+      padding: '16px',
+      '& > div': {
+        width: '100%',
+        maxWidth: '400px'
+      }
+    },
     '& h6': {
       color: colors.text.white,
-      marginBottom: { xs: '8px', sm: '12px' },
+      marginBottom: { xs: '8px', sm: '12px', lg: '16px' },
       fontSize: { xs: '0.875rem', sm: '1rem' },
-      fontWeight: 'normal'
+      fontWeight: 'normal',
+      textAlign: 'center'
     }
   }
 };

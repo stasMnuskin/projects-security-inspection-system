@@ -947,11 +947,43 @@ export const formFieldStyles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px'
+    gap: '4px',
+    position: 'relative',
+    '@media (max-width: 599px)': {
+      '& .MuiAutocomplete-root': {
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        backgroundColor: colors.background.darkGrey,
+        borderRadius: '4px',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+        zIndex: 1000,
+        marginTop: '4px',
+        display: 'none',
+        '& .MuiOutlinedInput-root': {
+          backgroundColor: colors.background.darkGrey,
+          borderRadius: '4px'
+        }
+      }
+    }
   },
   label: {
     color: colors.text.grey,
-    fontSize: '0.9rem'
+    fontSize: '0.9rem',
+    '@media (max-width: 599px)': {
+      margin: 0,
+      padding: '8px 12px',
+      borderRadius: '4px',
+      backgroundColor: colors.background.darkGrey,
+      border: `1px solid ${colors.border.grey}`,
+      cursor: 'pointer',
+      textAlign: 'center',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        borderColor: colors.border.orange
+      }
+    }
   },
   required: {
     color: colors.primary.orange
@@ -963,39 +995,39 @@ export const datePickerStyles = {
     width: '100%',
     '& .MuiOutlinedInput-root': {
       ...selectStyles.control,
-      padding: '2px 8px',
-      '@media (max-width:600px)': {
-        minHeight: '48px !important',
-        height: '48px',
-        '& input': {
-          height: '36px',
-          padding: '6px 8px',
-          fontSize: '0.75rem'
-        }
-      },
-      '@media (min-width:600px) and (max-width:960px)': {
-        minHeight: '40px !important',
-        height: '40px',
-        '& input': {
-          height: '24px',
-          padding: '6px 8px',
-          fontSize: '0.8rem'
-        }
-      },
-      '@media (min-width:960px)': {
-        minHeight: '40px !important',
-        height: '40px',
-        '& input': {
-          height: '24px',
-          padding: '6px 8px',
-          fontSize: '0.875rem'
-        }
-      },
+      padding: '2px 4px',
+      minHeight: '40px !important',
+      height: '40px',
       '& input': {
-        color: colors.text.white
+        height: '24px',
+        padding: '6px 4px',
+        fontSize: '0.875rem',
+        color: colors.text.white,
+        width: '100%',
+        minWidth: '80px'
       },
       '& .MuiInputAdornment-root': {
-        marginLeft: '4px'
+        marginLeft: '2px',
+        marginRight: '2px',
+        height: '100%',
+        maxHeight: 'none'
+      },
+      '@media (max-width: 599px)': {
+        display: 'none'
+      }
+    },
+    '@media (max-width: 599px)': {
+      '& .MuiPickersPopper-root': {
+        position: 'fixed !important',
+        top: '50% !important',
+        left: '50% !important',
+        transform: 'translate(-50%, -50%) !important',
+        maxWidth: '90vw',
+        maxHeight: '90vh',
+        '& .MuiPaper-root': {
+          maxWidth: '100%',
+          maxHeight: '100%'
+        }
       }
     }
   }
@@ -1004,91 +1036,64 @@ export const datePickerStyles = {
 export const filterStyles = {
   filterBar: {
     display: 'flex',
-    alignItems: 'flex-start',
     gap: '8px',
     padding: '12px',
     backgroundColor: colors.background.darkGrey,
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     marginBottom: { xs: '12px', sm: '20px' },
-    flexDirection: { xs: 'column', sm: 'row-reverse' },
-    flexWrap: { xs: 'wrap', sm: 'wrap', md: 'nowrap' },
     width: '100%',
     boxSizing: 'border-box',
-    overflowX: 'hidden',
+    alignItems: 'center',
+    '@media (min-width: 1020px)': {
+      flexWrap: 'nowrap'
+    },
+    '@media (min-width: 600px) and (max-width: 1020px)': {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: '8px'
+    },
+    '@media (max-width: 599px)': {
+      flexWrap: 'wrap'
+    },
     '& > div': {
-      flex: { 
-        xs: '1 1 100%',
-        sm: '0 1 calc(50% - 8px)',
-        md: '0.8 1 0' 
-      },
-      minWidth: { 
-        xs: '100%',
-        sm: 'calc(50% - 8px)',
-        md: '140px' 
-      },
-      maxWidth: '100%',
-      '@media (min-width: 350px) and (max-width: 600px)': {
-        flex: '1 1 calc(50% - 8px)',
-        minWidth: 'calc(50% - 8px)',
-      },
+      flex: 1,
       '& .MuiOutlinedInput-root': {
         ...selectStyles.control,
         padding: '2px 8px',
+        width: '100%',
         '& input, & textarea, & select': {
-          color: colors.text.white
-        }
-      }
-    },
-    '@media (max-width: 1300px)': {
-      flexWrap: 'wrap',
-      gap: '8px',
-      '& > div': {
-        flex: '1 1 calc((100% - 56px) / 7)', 
-        minWidth: 'calc((100% - 56px) / 7)',
-        '@media (max-width: 960px)': {
-          flex: '1 1 calc(50% - 8px)',
-          minWidth: 'calc(50% - 8px)',
-        },
-        '@media (max-width: 600px)': {
-          flex: '1 1 100%',
-          minWidth: '100%',
-        },
-        '@media (min-width: 350px) and (max-width: 600px)': {
-          flex: '1 1 calc(50% - 8px)',
-          minWidth: 'calc(50% - 8px)',
+          color: colors.text.white,
+          textAlign: 'center',
+          fontSize: '0.875rem'
         }
       },
-      '& > div:first-of-type': {
-        flex: '0 0 12px',
-        minWidth: '12px'
-      },
-      '& > div:last-child': {
-        flex: '2 1 calc(((100% - 56px) / 7) * 2)',
-        minWidth: 'calc(((100% - 56px) / 7) * 2)',
-        '@media (max-width: 960px)': {
-          flex: '1 1 100%',
-          minWidth: '100%',
+      '@media (max-width: 599px)': {
+        '& .MuiAutocomplete-root': {
+          display: 'none'
+        },
+        '& .MuiFormLabel-root': {
+          width: '100%',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          backgroundColor: colors.background.darkGrey,
+          border: `1px solid ${colors.border.grey}`,
+          cursor: 'pointer',
+          textAlign: 'center',
+          '&:hover': {
+            borderColor: colors.border.orange
+          }
         }
       }
     },
     '& > div:first-of-type': {
-      order: 1,
-      width: '12px',
-      minWidth: '12px',
-      maxWidth: '12px',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 0,
-      margin: '2px',
-      alignSelf: 'center',
-      '@media (max-width: 1200px)': {
-        display: 'none'
-      }
+      display: 'none'
     },
-    '& > div:last-child': {
-      flex: { xs: '1 1 100%', sm: '1.5 1 0' }
+    '& > div:nth-of-type(2)': {
+      flex: 2,
+      '@media (min-width: 600px) and (max-width: 1020px)': {
+        gridColumn: 'span 2'
+      }
     }
   },
   filterIcon: {
@@ -1102,9 +1107,11 @@ export const filterStyles = {
   },
   entrepreneurFilter: {
     width: '100%',
+    height: '100%',
     '& .MuiOutlinedInput-root': {
       ...selectStyles.control,
       padding: '2px 8px',
+      height: '100%',
       '& input': {
         color: colors.text.white
       }
@@ -1112,9 +1119,11 @@ export const filterStyles = {
   },
   filterSelect: {
     width: '100%',
+    height: '100%',
     '& .MuiOutlinedInput-root': {
       ...selectStyles.control,
       padding: '2px 8px',
+      height: '100%',
       '& input, & textarea, & select': {
         color: colors.text.white
       }
@@ -1122,93 +1131,53 @@ export const filterStyles = {
   },
   datePicker: {
     width: '100%',
-    minWidth: { xs: '100%', sm: '220px' },
+    height: '100%',
     '& .MuiOutlinedInput-root': {
       ...selectStyles.control,
       padding: '2px 8px',
-      '@media (max-width:600px)': {
-        minHeight: '48px !important',
-        height: '48px',
-        '& input': {
-          height: '36px',
-          padding: '6px 8px',
-          fontSize: '0.75rem'
-        }
-      },
-      '@media (min-width:600px) and (max-width:960px)': {
-        minHeight: '40px !important',
-        height: '40px',
-        '& input': {
-          height: '24px',
-          padding: '6px 8px',
-          fontSize: '0.8rem'
-        }
-      },
-      '@media (min-width:960px)': {
-        minHeight: '40px !important',
-        height: '40px',
-        '& input': {
-          height: '24px',
-          padding: '6px 8px',
-          fontSize: '0.875rem'
-        }
-      },
+      height: '40px',
       '& input': {
+        height: '24px',
+        padding: '6px 8px',
+        fontSize: '0.875rem',
         color: colors.text.white,
         textAlign: 'center'
-      },
-      '& .MuiInputAdornment-root': {
-        marginLeft: '4px',
-        marginRight: '4px'
-      }
-    },
-    '& .MuiButtonBase-root': {
-      padding: '4px',
-      marginRight: 0,
-      '& .MuiSvgIcon-root': {
-        color: colors.text.grey,
-        fontSize: '14px',
-        cursor: 'pointer',
-        '&:hover': {
-          color: colors.text.white
-        }
       }
     }
   },
   dateRangeContainer: {
     display: 'flex',
-    flexDirection: { xs: 'column', sm: 'row' },
+    flexDirection: 'row-reverse',
     gap: '8px',
     width: '100%',
     '& > div': {
-      flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 4px)' },
-      minWidth: { xs: '100%', sm: 'calc(50% - 4px)' },
-      maxWidth: '100%',
-      '@media (min-width: 350px) and (max-width: 600px)': {
-        flex: '1 1 calc(50% - 4px)',
-        minWidth: 'calc(50% - 4px)',
+      flex: 1,
+      '& .MuiFormControl-root': {
+        width: '100%'
       }
     },
-    '@media (max-width: 1300px)': {
-      flexDirection: 'row',
-      flexWrap: 'nowrap',
-      '& > div': {
-        flex: '1 1 calc((100% - 8px) / 2)',
-        minWidth: 'calc((100% - 8px) / 2)',
+    '& .MuiInputAdornment-root': {
+      position: 'absolute',
+      right: '8px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      margin: 0,
+      pointerEvents: 'auto',
+      cursor: 'pointer',
+      zIndex: 1,
+      '& .MuiSvgIcon-root': {
+        fontSize: '20px',
+        transition: 'color 0.2s ease',
+        '&:hover': {
+          color: colors.text.white
+        }
       }
     },
-    '@media (max-width: 960px)': {
-      flexDirection: 'row',
-      '& > div': {
-        flex: '1 1 calc(50% - 4px)',
-        minWidth: 'calc(50% - 4px)',
-      }
-    },
-    '@media (max-width: 350px)': {
-      flexDirection: 'column',
-      '& > div': {
-        flex: '1 1 100%',
-        minWidth: '100%'
+    '& .MuiOutlinedInput-root': {
+      paddingRight: '32px',
+      '& input': {
+        textAlign: 'center',
+        direction: 'rtl'
       }
     }
   }

@@ -108,7 +108,7 @@ exports.getDashboardOverview = async (req, res, next) => {
         acc[status] = (acc[status] || 0) + 1;
       }
       return acc;
-    }, { 'הצלחה': 0, 'הצלחה חלקית': 0, 'נכשל': 0 });
+    }, { 'הצלחה': 0, 'הצלחה חלקית': 0, 'כישלון': 0 });
 
     const [openFaults, criticalFaults, recurringFaults] = await Promise.all([
       db.Fault.findAll({
@@ -165,11 +165,56 @@ exports.getDashboardOverview = async (req, res, next) => {
       })
     ]);
 
+    // Get detailed inspection and drill data
+    const [inspectionDetails, drillDetails] = await Promise.all([
+      db.Inspection.findAll({
+        where: {
+          siteId: { [Op.in]: siteIds },
+          type: 'inspection',
+          formData: {
+            date: dateRange
+          }
+        },
+        include: [{
+          model: db.Site,
+          attributes: ['id', 'name']
+        }],
+        order: [['createdAt', 'DESC']]
+      }),
+      db.Inspection.findAll({
+        where: {
+          siteId: { [Op.in]: siteIds },
+          type: 'drill',
+          formData: {
+            date: dateRange
+          }
+        },
+        include: [{
+          model: db.Site,
+          attributes: ['id', 'name']
+        }],
+        order: [['createdAt', 'DESC']]
+      })
+    ]);
+
     const formattedResponse = {
       overview: {
         inspections: inspectionsCount,
         drills: drillsCount,
-        drillResults: drillStatusCounts
+        drillResults: drillStatusCounts,
+        inspectionDetails: inspectionDetails.map((inspection, index) => ({
+          serialNumber: index + 1,
+          site: inspection.Site.name,
+          date: inspection.formData.date,
+          notes: inspection.formData.notes || ''
+        })),
+        drillDetails: drillDetails.map((drill, index) => ({
+          serialNumber: index + 1,
+          site: drill.Site.name,
+          date: drill.formData.date,
+          notes: drill.formData.notes || '',
+          status: drill.getDrillStatus()
+        }))
       },
       faults: {
         open: openFaults.map((fault, index) => ({
@@ -182,7 +227,8 @@ exports.getDashboardOverview = async (req, res, next) => {
           type: fault.type,
           description: fault.description,
           fault: fault.type === 'אחר' ? fault.description : fault.type,
-          isCritical: fault.isCritical
+          isCritical: fault.isCritical,
+          reportedTime: fault.reportedTime
         })),
         critical: criticalFaults.map((fault, index) => ({
           id: fault.id,
@@ -193,39 +239,66 @@ exports.getDashboardOverview = async (req, res, next) => {
           },
           type: fault.type,
           description: fault.description,
-          fault: fault.type === 'אחר' ? fault.description : fault.type
+          fault: fault.type === 'אחר' ? fault.description : fault.type,
+          reportedTime: fault.reportedTime
         })),
-        recurring: recurringFaults
-        .reduce((acc, fault) => {
-          const key = fault.type === 'אחר' ? 
-            `${fault.type}-${fault.description}` : 
-            fault.type;
-          
-          const existing = acc.find(item => 
-            fault.type === 'אחר' ? 
-              (item.type === fault.type && item.description === fault.description) : 
-              item.type === fault.type
-          );
-          
-          if (existing) {
-            existing.count += parseInt(fault.get('count'));
-          } else {
-            acc.push({
-              type: fault.type,
-              description: fault.description,
-              fault: fault.type === 'אחר' ? fault.description : fault.type,
-              count: parseInt(fault.get('count'))
-            });
-          }
-          
-          return acc;
-        }, [])
-        .sort((a, b) => b.count - a.count)
-        .filter(fault => fault.count > 1)
-        .map((fault, index) => ({
-          ...fault,
-          serialNumber: index + 1
-        }))
+        recurring: await Promise.all(
+          recurringFaults
+            .reduce((acc, fault) => {
+              const key = fault.type === 'אחר' ? 
+                `${fault.type}-${fault.description}` : 
+                fault.type;
+              
+              const existing = acc.find(item => 
+                fault.type === 'אחר' ? 
+                  (item.type === fault.type && item.description === fault.description) : 
+                  item.type === fault.type
+              );
+              
+              if (existing) {
+                existing.count += parseInt(fault.get('count'));
+              } else {
+                acc.push({
+                  type: fault.type,
+                  description: fault.description,
+                  fault: fault.type === 'אחר' ? fault.description : fault.type,
+                  count: parseInt(fault.get('count'))
+                });
+              }
+              
+              return acc;
+            }, [])
+            .sort((a, b) => b.count - a.count)
+            .filter(fault => fault.count > 1)
+            .map(async (fault) => {
+              // Get all faults of this type with site and date information
+              const faultDetails = await db.Fault.findAll({
+                where: {
+                  type: fault.type,
+                  ...(fault.type === 'אחר' && { description: fault.description }),
+                  siteId: { [Op.in]: siteIds },
+                  reportedTime: dateRange,
+                  ...userFilters,
+                  status: { [Op.in]: ['פתוח', 'בטיפול', 'סגור'] }
+                },
+                include: [{
+                  model: db.Site,
+                  as: 'site',
+                  attributes: ['id', 'name']
+                }],
+                order: [['reportedTime', 'DESC']]
+              });
+
+              return {
+                ...fault,
+                details: faultDetails.map((detail, idx) => ({
+                  serialNumber: idx + 1,
+                  site: detail.site.name,
+                  reportedTime: detail.reportedTime
+                }))
+              };
+            })
+        )
       }
     };
 

@@ -21,7 +21,6 @@ import {
   updateFaultStatus, 
   updateFaultDetails,
   deleteFault,
-  getOrganizations,
   getFaultById
 } from '../services/api';
 import FilterBar from '../components/FilterBar';
@@ -47,8 +46,6 @@ const Faults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [faults, setFaults] = useState([]);
-  const [maintenanceOrgs, setMaintenanceOrgs] = useState([]);
-  const [integratorOrgs, setIntegratorOrgs] = useState([]);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
@@ -59,7 +56,6 @@ const Faults = () => {
   const canViewFaults = user.hasPermission(PERMISSIONS.VIEW_FAULTS);
   const canCreateFault = user.hasPermission(PERMISSIONS.NEW_FAULT);
   const isAdmin = user.hasPermission(PERMISSIONS.ADMIN);
-  const canEditMaintenanceIntegrator = isAdmin;
   const canEditTechnicianAndStatus = user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS);
   const canEditDescription = ['admin', 'security_officer', 'integrator', 'maintenance'].includes(user.role);
 
@@ -79,8 +75,6 @@ const Faults = () => {
       endDate: initialDateRange.endDate,
       sites: [],
       isCritical: null,
-      maintenance: '',
-      integrator: '',
       entrepreneur: '',
       type: '',
       description: '',
@@ -97,19 +91,6 @@ const Faults = () => {
     site: null,
     isCritical: false
   });
-
-  const fetchOrganizations = useCallback(async () => {
-    try {
-      const [maintenance, integrators] = await Promise.all([
-        getOrganizations('maintenance'),
-        getOrganizations('integrator')
-      ]);
-      setMaintenanceOrgs(maintenance);
-      setIntegratorOrgs(integrators);
-    } catch (error) {
-      console.error('Error fetching organizations:', error);
-    }
-  }, []);
 
   const fetchFaults = useCallback(async () => {
     if (!canViewFaults) {
@@ -147,12 +128,6 @@ const Faults = () => {
       if (filters.isCritical !== null) {
         queryParams.isCritical = filters.isCritical;
       }
-      if (filters.maintenance) {
-        queryParams.maintenanceOrg = filters.maintenance;
-      }
-      if (filters.integrator) {
-        queryParams.integratorOrg = filters.integrator;
-      }
       if (filters.entrepreneur) {
         queryParams.entrepreneur = filters.entrepreneur;
       }
@@ -180,10 +155,6 @@ const Faults = () => {
       setLoading(false);
     }
   }, [filters, canViewFaults]);
-
-  useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
 
   // Show dialog when accessing /faults/new
   useEffect(() => {
@@ -303,50 +274,6 @@ const Faults = () => {
     }
   };
 
-  const handleMaintenanceChange = async (faultId, organizationId) => {
-    if (!canEditMaintenanceIntegrator) {
-      showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
-      return;
-    }
-
-    try {
-      await updateFaultDetails(faultId, { maintenanceOrganizationId: organizationId });
-      const maintenanceOrg = maintenanceOrgs.find(org => org.id === organizationId);
-      handleFaultUpdated({
-        id: faultId,
-        maintenanceOrganization: maintenanceOrg ? {
-          id: maintenanceOrg.id,
-          name: maintenanceOrg.name
-        } : null
-      });
-    } catch (error) {
-      showNotification('שגיאה בעדכון ארגון האחזקה', 'error');
-      console.error('Error updating maintenance organization:', error);
-    }
-  };
-
-  const handleIntegratorChange = async (faultId, organizationId) => {
-    if (!canEditMaintenanceIntegrator) {
-      showNotification('אין לך הרשאה לעדכן פרטי תקלה', 'error');
-      return;
-    }
-
-    try {
-      await updateFaultDetails(faultId, { integratorOrganizationId: organizationId });
-      const integratorOrg = integratorOrgs.find(org => org.id === organizationId);
-      handleFaultUpdated({
-        id: faultId,
-        integratorOrganization: integratorOrg ? {
-          id: integratorOrg.id,
-          name: integratorOrg.name
-        } : null
-      });
-    } catch (error) {
-      showNotification('שגיאה בעדכון ארגון האינטגרציה', 'error');
-      console.error('Error updating integrator organization:', error);
-    }
-  };
-
   const handleTechnicianChange = async (faultId, technicianName) => {
     if (!canEditTechnicianAndStatus) {
       showNotification('אין לך הרשאה לעדכן שם טכנאי', 'error');
@@ -453,13 +380,9 @@ const Faults = () => {
               faults={faults}
               onSiteClick={handleSiteClick}
               onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
-              onMaintenanceOrgChange={canEditMaintenanceIntegrator ? handleMaintenanceChange : null}
-              onIntegratorOrgChange={canEditMaintenanceIntegrator ? handleIntegratorChange : null}
               onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
               onDescriptionChange={canEditDescription ? handleDescriptionChange : null}
               onDeleteFault={isAdmin ? handleDeleteFault : null}
-              maintenanceOrgs={maintenanceOrgs}
-              integratorOrgs={integratorOrgs}
             />
           </Box>
         </Box>
