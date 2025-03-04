@@ -340,10 +340,6 @@ errors.type = isDrill ? 'יש לבחור סוג תרגיל' : 'יש לבחור �
 
 // Validate form fields
 formStructure?.forEach(field => {
-if (field.required && !formData[field.id]) {
-  errors[field.id] = 'שדה חובה';
-  return;
-}
 
 if (field.requiredIf) {
   const { field: dependentField, value: dependentValue } = field.requiredIf;
@@ -655,7 +651,6 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
                   <FormField 
                     key={field.id}
                     label={field.label}
-                    required={field.required}
                     error={validationErrors[field.id]}
                   >
                     <TextField

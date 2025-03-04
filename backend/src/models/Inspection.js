@@ -168,14 +168,8 @@ module.exports = (sequelize, DataTypes) => {
             const enabledFields = inspectionType.formStructure.filter(field => 
               field.enabled && !field.autoFill
             );
-
-            // Validate required fields
+          
             enabledFields.forEach(field => {
-              if (field.required && !data.hasOwnProperty(field.id)) {
-                throw new Error(`שדה חובה חסר: ${field.label}`);
-              }
-
-              // Check if field is required based on another field's value
               if (field.requiredIf) {
                 const { field: dependentField, value: dependentValue } = field.requiredIf;
                 if (data[dependentField] === dependentValue && !data[field.id]?.trim()) {
@@ -183,7 +177,6 @@ module.exports = (sequelize, DataTypes) => {
                 }
               }
 
-              // Validate field type if value exists
               if (data.hasOwnProperty(field.id)) {
                 const value = data[field.id];
                 
@@ -198,9 +191,7 @@ module.exports = (sequelize, DataTypes) => {
                     if (typeof value !== 'string') {
                       throw new Error(`שדה ${field.label} חייב להיות טקסט`);
                     }
-                    if (field.required && !value.trim()) {
-                      throw new Error(`שדה ${field.label} לא יכול להיות ריק`);
-                    }
+                    // No validation for required fields
                     break;
                   case 'date':
                     if (!(value instanceof Date) && isNaN(Date.parse(value))) {

@@ -390,11 +390,10 @@ const Faults = () => {
         <Dialog
           open={newFaultDialog}
           onClose={() => setNewFaultDialog(false)}
-          maxWidth="sm"
+          maxWidth="md"
           fullWidth
-          sx={dialogStyles.dialog}
         >
-          <DialogTitle sx={dialogStyles.dialogTitle}>
+          <DialogTitle>
             תקלה חדשה
             <IconButton
               onClick={() => setNewFaultDialog(false)}
@@ -412,7 +411,7 @@ const Faults = () => {
               <CloseIcon />
             </IconButton>
           </DialogTitle>
-          <DialogContent sx={dialogStyles.dialogContent}>
+          <DialogContent>
             <NewFaultForm onFaultDataChange={setNewFault} />
           </DialogContent>
           <DialogActions sx={dialogStyles.dialogActions}>

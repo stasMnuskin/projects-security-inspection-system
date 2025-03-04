@@ -107,7 +107,16 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
   };
 
   return (
-    <Box sx={{ display: 'grid', gap: 2, mt: 2, position: 'relative' }}>
+    <Box sx={{ 
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2, 
+      width: '100%',
+      maxWidth: '100%',
+      '& .MuiFormControl-root, & .MuiAutocomplete-root, & .MuiTextField-root': {
+        width: '100%'
+      }
+    }}>
       {onClose && (
         <IconButton
           onClick={onClose}
@@ -234,7 +243,7 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
       {/* Description field - appears after selecting type */}
       {faultData.type && (
         <FormField 
-          label={faultData.type === 'אחר' ? 'הערות' : 'הערות'} 
+          label={faultData.type === 'אחר' ? 'תיאור התקלה' : 'תיאור התקלה'} 
           required={faultData.type === 'אחר'}
         >
           <TextField

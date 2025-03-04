@@ -12,7 +12,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import NewFaultForm from '../components/NewFaultForm';
 import { dialogStyles } from '../styles/components';
-import { colors } from '../styles/colors';
+// import { colors } from '../styles/colors';
 import { createFault } from '../services/api';
 
 const FaultContext = createContext();
@@ -86,29 +86,19 @@ export const FaultProvider = ({ children }) => {
       <Dialog
         open={newFaultDialog}
         onClose={() => setNewFaultDialog(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
-        sx={dialogStyles.dialog}
       >
-        <DialogTitle sx={dialogStyles.dialogTitle}>
+        <DialogTitle>
           תקלה חדשה
           <IconButton
             onClick={() => setNewFaultDialog(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: colors.text.grey,
-              '&:hover': {
-                color: colors.text.white,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-              }
-            }}
+            sx={dialogStyles.closeButton}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={dialogStyles.dialogContent}>
+        <DialogContent>
           <NewFaultForm onFaultDataChange={setNewFault} />
         </DialogContent>
         <DialogActions sx={dialogStyles.dialogActions}>

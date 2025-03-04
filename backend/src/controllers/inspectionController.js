@@ -167,8 +167,7 @@ exports.createInspection = async (req, res, next) => {
       return next(new AppError('Inspection type not found', 400));
     }
 
-    try {
-      
+  try {
       const inspection = await db.Inspection.create({
         siteId,
         inspectionTypeId,

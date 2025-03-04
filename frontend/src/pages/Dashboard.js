@@ -219,7 +219,8 @@ const Dashboard = () => {
                     }));
                     setSelectedFaultType({
                       title: entry.name,
-                      data: details
+                      data: details,
+                      source: 'recurring'
                     });
                     setFaultDialogOpen(true);
                   }}
@@ -259,7 +260,8 @@ const Dashboard = () => {
                         site: fault.site.name,
                         type: fault.type === 'אחר' ? fault.description : fault.type,
                         reportedTime: new Date(fault.reportedTime).toLocaleDateString('he-IL')
-                      }))
+                      })),
+                      source: 'faults'
                     });
                     setFaultDialogOpen(true);
                   }}
@@ -408,7 +410,9 @@ const Dashboard = () => {
                         }}>
                           <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>מס"ד</th>
                           <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>אתר</th>
-                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>רכיב</th>
+                          {selectedFaultType?.source === 'faults' && (
+                            <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>רכיב</th>
+                          )}
                           <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>תאריך פתיחה</th>
                         </tr>
                       </thead>
@@ -425,9 +429,11 @@ const Dashboard = () => {
                             <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
                               {item.site}
                             </td>
-                            <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
-                              {item.type}
-                            </td>
+                            {selectedFaultType?.source === 'faults' && (
+                              <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                                {item.type}
+                              </td>
+                            )}
                             <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
                               {item.reportedTime}
                             </td>
@@ -497,9 +503,10 @@ const Dashboard = () => {
                         <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>מס"ד</th>
                         <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>אתר</th>
                         <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>תאריך</th>
-                        {selectedInspectionType === 'ביקורות' && (
-                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>הערות</th>
+                        {selectedInspectionType === 'תרגילים' && !selectedInspectionType.includes(' - ') && (
+                          <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>סטטוס</th>
                         )}
+                        <th style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>הערות</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -523,11 +530,14 @@ const Dashboard = () => {
                           <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
                             {new Date(item.date).toLocaleDateString('he-IL')}
                           </td>
-                          {selectedInspectionType === 'ביקורות' && (
+                          {selectedInspectionType === 'תרגילים' && !selectedInspectionType.includes(' - ') && (
                             <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
-                              {item.notes}
+                              {item.status}
                             </td>
                           )}
+                          <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
+                            {item.notes}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

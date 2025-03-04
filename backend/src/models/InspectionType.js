@@ -176,12 +176,7 @@ module.exports = (sequelize, DataTypes) => {
       const fields = Array.isArray(this.formStructure) ? this.formStructure : [];
       
       fields.forEach(field => {
-        // Check required field
-        if (field.required && !formData[field.id]) {
-          throw new Error(`שדה ${field.label} הוא חובה`);
-        }
-
-        // Check requiredIf condition
+        
         if (field.requiredIf) {
           const { field: dependentField, value } = field.requiredIf;
           if (formData[dependentField] === value && !formData[field.id]?.trim()) {

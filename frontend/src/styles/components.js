@@ -11,7 +11,6 @@ let theme = createTheme({
       main: colors.primary.orange,
     },
     background: {
-    flexWrap: 'wrap',
       paper: colors.background.darkGreyOpaque,
     },
     text: {
