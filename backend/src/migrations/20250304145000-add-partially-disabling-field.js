@@ -3,36 +3,29 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     try {
-      // 1. Create ENUM type for severity
-      await queryInterface.sequelize.query(`
-        CREATE TYPE "enum_Faults_severity" AS ENUM ('non_disabling', 'partially_disabling', 'fully_disabling');
-      `).catch(err => {
-        // Ignore error if type already exists
-        console.log('ENUM type might already exist, continuing...');
-      });
+      // Check if the isPartiallyDisabling column exists, if not add it
+      const tableInfo = await queryInterface.describeTable('Faults');
       
-      // 2. Add severity column
-      await queryInterface.addColumn('Faults', 'severity', {
-        type: Sequelize.ENUM('non_disabling', 'partially_disabling', 'fully_disabling'),
-        allowNull: false,
-        defaultValue: 'non_disabling'
-      }).catch(err => {
-        if (err.message.includes('already exists')) {
-          console.log('Column severity already exists, skipping...');
-        } else {
-          throw err;
-        }
-      });
+      if (!tableInfo.isPartiallyDisabling) {
+        console.log('Adding isPartiallyDisabling column to Faults table');
+        await queryInterface.addColumn('Faults', 'isPartiallyDisabling', {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+          defaultValue: false
+        });
+        
+        // Update isPartiallyDisabling values (all to false initially)
+        await queryInterface.sequelize.query(`
+          UPDATE "Faults" SET "isPartiallyDisabling" = false
+          WHERE "isPartiallyDisabling" IS NULL
+        `);
+        
+        console.log('Successfully added isPartiallyDisabling column');
+      } else {
+        console.log('isPartiallyDisabling column already exists');
+      }
       
-      // 3. Update severity values based on existing isCritical values
-      await queryInterface.sequelize.query(`
-        UPDATE "Faults" SET "severity" = CASE 
-          WHEN "isCritical" = true THEN 'fully_disabling'
-          ELSE 'non_disabling'
-        END
-      `);
-      
-      // We're keeping isCritical as boolean for backward compatibility
+      console.log('Migration completed successfully');
     } catch (error) {
       console.error('Migration error:', error);
       throw error;
@@ -41,10 +34,12 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     try {
-      // Remove the severity column
-      await queryInterface.removeColumn('Faults', 'severity');
+      const tableInfo = await queryInterface.describeTable('Faults');
       
-      // We don't drop the enum type as it might be used elsewhere
+      // Remove the isPartiallyDisabling column if it exists
+      if (tableInfo.isPartiallyDisabling) {
+        await queryInterface.removeColumn('Faults', 'isPartiallyDisabling');
+      }
     } catch (error) {
       console.error('Migration rollback error:', error);
       throw error;
