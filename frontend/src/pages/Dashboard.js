@@ -241,18 +241,38 @@ const Dashboard = () => {
                   data={[
                     { 
                       name: 'תקלות משביתות', 
-                      value: dashboardData.faults.critical.length,
-                      isCritical: true
+                      value: dashboardData.faults.open.filter(f => f.isCritical).length,
+                      isCritical: true,
+                      isPartiallyDisabling: false
+                    },
+                    { 
+                      name: 'תקלות משביתות חלקית', 
+                      value: dashboardData.faults.open.filter(f => !f.isCritical && f.isPartiallyDisabling).length,
+                      isCritical: false,
+                      isPartiallyDisabling: true
                     },
                     { 
                       name: 'תקלות רגילות',
-                      value: dashboardData.faults.open.filter(f => !f.isCritical).length,
-                      isCritical: false
+                      value: dashboardData.faults.open.filter(f => !f.isCritical && !f.isPartiallyDisabling).length,
+                      isCritical: false,
+                      isPartiallyDisabling: false
                     }
                   ]}
-                  chartColors={[colors.primary.orange, colors.text.grey]}
+                  chartColors={[colors.primary.orange, colors.border.orange, colors.text.grey]}
                   onSliceClick={(entry) => {
-                    const data = entry.isCritical ? dashboardData.faults.critical : dashboardData.faults.open;
+                    let data;
+                    if (entry.isCritical) {
+                      // Fully disabling faults
+                      data = dashboardData.faults.critical;
+                    } else if (entry.isPartiallyDisabling) {
+                      // Partially disabling faults
+                      data = dashboardData.faults.partiallyDisabling;
+                    } else {
+                      // Regular non-disabling faults
+                      data = dashboardData.faults.open.filter(f => 
+                        !f.isCritical && !f.isPartiallyDisabling);
+                    }
+                    
                     setSelectedFaultType({
                       title: entry.name,
                       data: data.map((fault, index) => ({
@@ -318,11 +338,14 @@ const Dashboard = () => {
                   acc[siteId] = {
                     name: fault.site.name,
                     criticalCount: 0,
+                    partiallyDisablingCount: 0,
                     regularCount: 0
                   };
                 }
                 if (fault.isCritical) {
                   acc[siteId].criticalCount++;
+                } else if (fault.isPartiallyDisabling) {
+                  acc[siteId].partiallyDisablingCount++;
                 } else {
                   acc[siteId].regularCount++;
                 }
@@ -333,22 +356,57 @@ const Dashboard = () => {
                 if (a.criticalCount !== b.criticalCount) {
                   return b.criticalCount - a.criticalCount;  // descending order
                 }
-                // If critical faults are equal, compare by regular faults
+                // If critical faults are equal, compare by partially disabling faults
+                if (a.partiallyDisablingCount !== b.partiallyDisablingCount) {
+                  return b.partiallyDisablingCount - a.partiallyDisablingCount;  // descending order
+                }
+                // If partially disabling faults are equal, compare by regular faults
                 return b.regularCount - a.regularCount;  // descending order
               })
               .slice(0, 10)}
-              onBarClick={({ site, isCritical }) => {
-                const siteData = dashboardData.faults.open.find(fault => fault.site.name === site);
-                if (siteData) {
-                  navigate('/faults', {
-                    state: {
-                      initialFilters: {
-                        ...filters,
-                        sites: [siteData.site.id],
-                        isCritical
-                      }
-                    }
+              onBarClick={({ site, severity }) => {
+                
+                let faultsToShow = [];
+                let dialogTitle = "";
+                
+                if (severity === 'fully_disabling') {
+                  // Critical faults
+                  faultsToShow = dashboardData.faults.critical.filter(fault => 
+                    fault.site.name === site
+                  );
+                  dialogTitle = `תקלות משביתות - ${site}`;
+                } else if (severity === 'partially_disabling') {
+                  // Partially disabling faults
+                  faultsToShow = dashboardData.faults.partiallyDisabling.filter(fault => 
+                    fault.site.name === site
+                  );
+                  dialogTitle = `תקלות משביתות חלקית - ${site}`;
+                } else {
+                  // Regular non-disabling faults
+                  faultsToShow = dashboardData.faults.open.filter(fault => 
+                    fault.site.name === site && 
+                    !fault.isCritical && 
+                    !fault.isPartiallyDisabling
+                  );
+                  dialogTitle = `תקלות רגילות - ${site}`;
+                }
+                
+                // Format data for the dialog
+                const formattedData = faultsToShow.map((fault, index) => ({
+                  serialNumber: index + 1,
+                  site: fault.site.name,
+                  type: fault.type === 'אחר' ? fault.description : fault.type,
+                  reportedTime: new Date(fault.reportedTime).toLocaleDateString('he-IL')
+                }));
+                
+                // Open the dialog with the formatted data
+                if (formattedData.length > 0) {
+                  setSelectedFaultType({
+                    title: dialogTitle,
+                    data: formattedData,
+                    source: 'faults'
                   });
+                  setFaultDialogOpen(true);
                 }
               }}
             />
@@ -551,5 +609,4 @@ const Dashboard = () => {
     </Box>
   );
 };
-
 export default Dashboard;

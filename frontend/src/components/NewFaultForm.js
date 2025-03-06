@@ -3,8 +3,11 @@ import PropTypes from 'prop-types';
 import {
   Box,
   TextField,
+  FormControl,
   FormControlLabel,
-  Switch,
+  // FormLabel,
+  Radio,
+  RadioGroup,
   Autocomplete,
   CircularProgress,
   IconButton,
@@ -30,7 +33,9 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
     description: '',
     siteId: '',
     site: null,
-    isCritical: false
+    isCritical: false,
+    isPartiallyDisabling: false,
+    severity: 'non_disabling'
   });
 
   useEffect(() => {
@@ -265,30 +270,68 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
         </FormField>
       )}
 
-      {/* Critical Fault Switch */}
-      <FormControlLabel
-        control={
-          <Switch
-            checked={faultData.isCritical}
-            onChange={(e) => updateFaultData({ isCritical: e.target.checked })}
-            sx={{
-              '& .MuiSwitch-switchBase.Mui-checked': {
-                color: colors.primary.orange,
-                '& + .MuiSwitch-track': {
-                  backgroundColor: colors.primary.orange
-                }
+      {/* Fault Severity Selection */}
+      <FormField label="חומרת התקלה">
+        <FormControl component="fieldset">
+          <RadioGroup
+            value={faultData.severity || 'non_disabling'}
+            onChange={(e) => {
+              const severity = e.target.value;
+              // Set both the new severity field and maintain backward compatibility
+              updateFaultData({ 
+                severity,
+                isCritical: severity === 'fully_disabling',
+                isPartiallyDisabling: severity === 'partially_disabling'
+              });
+            }}
+            sx={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              '& .MuiFormControlLabel-label': {
+                color: colors.text.white
               }
             }}
-          />
-        }
-        label="תקלה משביתה"
-        sx={{ 
-          color: colors.text.white,
-          '& .MuiFormControlLabel-label': {
-            color: colors.text.white
-          }
-        }}
-      />
+          >
+            <FormControlLabel 
+              value="non_disabling" 
+              control={
+                <Radio 
+                  sx={{
+                    color: colors.text.grey,
+                    '&.Mui-checked': { color: colors.primary.orange }
+                  }}
+                />
+              } 
+              label="תקלה לא משביתה" 
+            />
+            <FormControlLabel 
+              value="partially_disabling" 
+              control={
+                <Radio 
+                  sx={{
+                    color: colors.text.grey,
+                    '&.Mui-checked': { color: colors.primary.orange }
+                  }}
+                />
+              } 
+              label="תקלה משביתה חלקית" 
+            />
+            <FormControlLabel 
+              value="fully_disabling" 
+              control={
+                <Radio 
+                  sx={{
+                    color: colors.text.grey,
+                    '&.Mui-checked': { color: colors.primary.orange }
+                  }}
+                />
+              } 
+              label="תקלה משביתה" 
+            />
+          </RadioGroup>
+        </FormControl>
+      </FormField>
     </Box>
   );
 };

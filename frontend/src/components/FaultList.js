@@ -338,7 +338,11 @@ const FaultList = ({
                         )}
                       </TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>{fault.type}</TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{fault.isCritical ? 'משביתה' : 'לא משביתה'}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        {fault.isCritical ? 'משביתה' : 
+                         fault.isPartiallyDisabling ? 'משביתה חלקית' : 
+                         'לא משביתה'}
+                      </TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>
                         {new Date(fault.reportedTime).toLocaleDateString('he-IL')}
                       </TableCell>
@@ -464,7 +468,8 @@ FaultList.propTypes = {
     type: PropTypes.string.isRequired,
     description: PropTypes.string,
     technician: PropTypes.string,
-    isCritical: PropTypes.bool.isRequired,
+    isCritical: PropTypes.bool.isRequired, 
+    severity: PropTypes.oneOf(['non_disabling', 'partially_disabling', 'fully_disabling']),
     status: PropTypes.string.isRequired,
     reportedTime: PropTypes.string.isRequired,
     closedTime: PropTypes.string,

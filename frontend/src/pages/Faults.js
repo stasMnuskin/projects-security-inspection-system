@@ -89,7 +89,9 @@ const Faults = () => {
     description: '',
     siteId: '',
     site: null,
-    isCritical: false
+    isCritical: false,
+    isPartiallyDisabling: false,
+    severity: 'non_disabling'
   });
 
   const fetchFaults = useCallback(async () => {
@@ -125,11 +127,26 @@ const Faults = () => {
       if (filters.sites !== undefined && filters.sites !== null && filters.sites.length > 0) {
         queryParams.sites = filters.sites.join(',');
       }
-      if (filters.isCritical !== null) {
-        queryParams.isCritical = filters.isCritical;
+      
+      // Handle severity filtering - always use the severity parameter
+      if (filters.severity) {
+        // Send severity directly, let server handle the logic
+        queryParams.severity = filters.severity;
+      } else if (filters.isCritical === true) {
+        // For backward compatibility, translate isCritical to severity
+        queryParams.severity = 'fully_disabling';
       }
+      // No default severity filter - this will show all faults regardless of severity
+      
       if (filters.entrepreneur) {
         queryParams.entrepreneur = filters.entrepreneur;
+      }
+      
+      if (filters.maintenance) {
+        queryParams.maintenanceOrg = filters.maintenance;
+      }
+      if (filters.integrator) {
+        queryParams.integratorOrg = filters.integrator;
       }
       if (filters.type === 'אחר' && filters.description) {
         queryParams.type = 'אחר';
@@ -211,7 +228,15 @@ const Faults = () => {
         return;
       }
 
-      const createdFault = await createFault(newFault);
+      // Ensure isPartiallyDisabling parameter is correctly passed
+      const faultData = {
+        ...newFault,
+        // Make sure isPartiallyDisabling is explicitly set based on severity
+        isPartiallyDisabling: newFault.severity === 'partially_disabling',
+        isCritical: newFault.severity === 'fully_disabling'
+      };
+      
+      const createdFault = await createFault(faultData);
       
       setFaults(prevFaults => [
         {
@@ -230,7 +255,9 @@ const Faults = () => {
         description: '',
         siteId: '',
         site: null,
-        isCritical: false
+        isCritical: false,
+        isPartiallyDisabling: false,
+        severity: 'non_disabling'
       });
       
       showNotification('התקלה נוצרה בהצלחה');

@@ -16,9 +16,10 @@ import {
   getSitesByEntrepreneur
 } from '../services/api';
 
-const FAULT_CRITICALITY = [
-  { value: true, label: 'משביתה' },
-  { value: false, label: 'לא משביתה' }
+const FAULT_SEVERITY = [
+  { value: 'non_disabling', label: 'לא משביתה' },
+  { value: 'partially_disabling', label: 'משביתה חלקית' },
+  { value: 'fully_disabling', label: 'משביתה' }
 ];
 
 const FilterBar = ({ 
@@ -286,10 +287,10 @@ const FilterBar = ({
           <FormField label="סוג תקלה">
             <Autocomplete
               {...commonAutocompleteProps}
-              options={FAULT_CRITICALITY}
+              options={FAULT_SEVERITY}
               getOptionLabel={(option) => option.label}
-              value={FAULT_CRITICALITY.find(opt => opt.value === filters.isCritical) || null}
-              onChange={(_, newValue) => onFilterChange('isCritical', newValue?.value)}
+              value={FAULT_SEVERITY.find(opt => opt.value === filters.severity) || null}
+              onChange={(_, newValue) => onFilterChange('severity', newValue?.value)}
               renderInput={params => renderTextField(params)}
             />
           </FormField>
@@ -378,7 +379,8 @@ FilterBar.propTypes = {
     startDate: PropTypes.instanceOf(Date),
     endDate: PropTypes.instanceOf(Date),
     sites: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
-    isCritical: PropTypes.bool,
+    isCritical: PropTypes.bool, 
+    severity: PropTypes.oneOf(['non_disabling', 'partially_disabling', 'fully_disabling']),
     securityOfficer: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     drillType: PropTypes.string
   }).isRequired,

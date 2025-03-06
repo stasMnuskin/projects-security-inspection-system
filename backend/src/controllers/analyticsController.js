@@ -110,7 +110,7 @@ exports.getDashboardOverview = async (req, res, next) => {
       return acc;
     }, { 'הצלחה': 0, 'הצלחה חלקית': 0, 'כישלון': 0 });
 
-    const [openFaults, criticalFaults, recurringFaults] = await Promise.all([
+    const [openFaults, criticalFaults, partiallyDisablingFaults, recurringFaults] = await Promise.all([
       db.Fault.findAll({
         where: {
           siteId: { [Op.in]: siteIds },
@@ -133,6 +133,23 @@ exports.getDashboardOverview = async (req, res, next) => {
           ...userFilters,
           status: 'פתוח',
           isCritical: true
+        },
+        include: [{
+          model: db.Site,
+          as: 'site',
+          attributes: ['id', 'name']
+        }],
+        order: [['reportedTime', 'DESC']]
+      }),
+      
+      db.Fault.findAll({
+        where: {
+          siteId: { [Op.in]: siteIds },
+          reportedTime: dateRange,
+          ...userFilters,
+          status: 'פתוח',
+          isCritical: false,
+          isPartiallyDisabling: true
         },
         include: [{
           model: db.Site,
@@ -228,6 +245,7 @@ exports.getDashboardOverview = async (req, res, next) => {
           description: fault.description,
           fault: fault.type === 'אחר' ? fault.description : fault.type,
           isCritical: fault.isCritical,
+          isPartiallyDisabling: fault.isPartiallyDisabling || false,
           reportedTime: fault.reportedTime
         })),
         critical: criticalFaults.map((fault, index) => ({
@@ -240,6 +258,22 @@ exports.getDashboardOverview = async (req, res, next) => {
           type: fault.type,
           description: fault.description,
           fault: fault.type === 'אחר' ? fault.description : fault.type,
+          isCritical: fault.isCritical,
+          isPartiallyDisabling: fault.isPartiallyDisabling || false,
+          reportedTime: fault.reportedTime
+        })),
+        partiallyDisabling: partiallyDisablingFaults.map((fault, index) => ({
+          id: fault.id,
+          serialNumber: index + 1,
+          site: { 
+            id: fault.site.id,
+            name: fault.site.name 
+          },
+          type: fault.type,
+          description: fault.description,
+          fault: fault.type === 'אחר' ? fault.description : fault.type,
+          isCritical: fault.isCritical,
+          isPartiallyDisabling: true,
           reportedTime: fault.reportedTime
         })),
         recurring: await Promise.all(

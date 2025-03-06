@@ -70,7 +70,8 @@ exports.getOpenFaults = async (req, res, next) => {
       description: fault.description,
       fault: fault.type === 'אחר' ? fault.description : fault.type,
       serialNumber: index + 1,
-      isCritical: fault.isCritical
+      isCritical: fault.isCritical,
+      isPartiallyDisabling: fault.isPartiallyDisabling || false
     }));
 
     res.json(formattedFaults);
@@ -131,7 +132,10 @@ exports.getCriticalFaults = async (req, res, next) => {
 
     const faults = await db.Fault.findAll({
       where: {
-        isCritical: true,
+        [db.Sequelize.Op.or]: [
+          { isCritical: true },
+          { isPartiallyDisabling: true }
+        ],
         status: 'פתוח',
         siteId: { [db.Sequelize.Op.in]: siteIds }
       },
@@ -152,7 +156,9 @@ exports.getCriticalFaults = async (req, res, next) => {
       type: fault.type,
       description: fault.description,
       fault: fault.type === 'אחר' ? fault.description : fault.type,
-      serialNumber: index + 1
+      serialNumber: index + 1,
+      isCritical: fault.isCritical,
+      isPartiallyDisabling: fault.isPartiallyDisabling || false
     }));
 
     res.json(formattedFaults);
@@ -194,7 +200,30 @@ exports.getAllFaults = async (req, res, next) => {
 
     // Handle criticality
     if (isCritical !== undefined) {
-      whereClause.isCritical = isCritical === 'true';
+      if (isCritical === 'true') {
+        // For backward compatibility, true returns fully disabling only
+        whereClause.isCritical = true;
+      } else {
+        // For backward compatibility, false returns non disabling and partially disabling
+        whereClause.isCritical = false;
+      }
+    }
+    
+    // Handle severity if specified directly
+    const { severity } = req.query;
+    if (severity !== undefined) {
+      if (severity === 'fully_disabling') {
+        whereClause.isCritical = true;
+        whereClause.isPartiallyDisabling = false;
+      } else if (severity === 'partially_disabling') {
+        whereClause.isCritical = false;
+        whereClause.isPartiallyDisabling = true;
+      } else if (severity === 'non_disabling') {
+        whereClause.isCritical = false;
+        whereClause.isPartiallyDisabling = { 
+          [db.Sequelize.Op.or]: [false, null] 
+        };
+      }
     }
 
     // Handle status
@@ -317,6 +346,7 @@ exports.getAllFaults = async (req, res, next) => {
       description: fault.description,
       technician: fault.technician,
       isCritical: fault.isCritical,
+      isPartiallyDisabling: fault.isPartiallyDisabling || false,
       reportedTime: fault.reportedTime,
       closedTime: fault.closedTime,
       status: fault.status,
@@ -332,7 +362,7 @@ exports.getAllFaults = async (req, res, next) => {
 
 exports.createFault = async (req, res, next) => {
   try {
-    const { siteId, type, description, isCritical } = req.body;
+    const { siteId, type, description, isCritical, isPartiallyDisabling, severity } = req.body;
 
     if (!req.user.hasPermission(PERMISSIONS.NEW_FAULT)) {
       return next(new AppError('אין הרשאה ליצירת תקלה', 403));
@@ -368,11 +398,18 @@ exports.createFault = async (req, res, next) => {
     const maintenanceOrg = site.serviceOrganizations.find(org => org.type === 'maintenance');
     const integratorOrg = site.serviceOrganizations.find(org => org.type === 'integrator');
 
+    // Determine isPartiallyDisabling based on severity if not explicitly provided
+    let partiallyDisabling = isPartiallyDisabling;
+    if (partiallyDisabling === undefined && severity) {
+      partiallyDisabling = severity === 'partially_disabling';
+    }
+
     const fault = await db.Fault.create({
       siteId,
       type,
       description: description ? description.trim() : null,
-      isCritical,
+      isCritical: isCritical === true || severity === 'fully_disabling',
+      isPartiallyDisabling: partiallyDisabling,
       status: 'פתוח',
       reportedBy: req.user.name,
       reportedTime: new Date(),
@@ -417,6 +454,7 @@ exports.createFault = async (req, res, next) => {
       type: createdFault.type,
       description: createdFault.description,
       isCritical: createdFault.isCritical,
+      isPartiallyDisabling: createdFault.isPartiallyDisabling || false,
       reportedTime: createdFault.reportedTime,
       closedTime: createdFault.closedTime,
       status: createdFault.status,
@@ -503,6 +541,7 @@ exports.updateFaultStatus = async (req, res, next) => {
       description: fault.description,
       technician: fault.technician,
       isCritical: fault.isCritical,
+      isPartiallyDisabling: fault.isPartiallyDisabling || false,
       reportedTime: fault.reportedTime,
       closedTime: fault.closedTime,
       status: fault.status,
@@ -629,6 +668,7 @@ exports.updateFaultDetails = async (req, res, next) => {
       description: updatedFault.description,
       technician: updatedFault.technician,
       isCritical: updatedFault.isCritical,
+      isPartiallyDisabling: updatedFault.isPartiallyDisabling || false,
       reportedTime: updatedFault.reportedTime,
       closedTime: updatedFault.closedTime,
       status: updatedFault.status,
@@ -727,6 +767,7 @@ exports.getFaultById = async (req, res, next) => {
       description: fault.description,
       technician: fault.technician,
       isCritical: fault.isCritical,
+      isPartiallyDisabling: fault.isPartiallyDisabling || false,
       reportedTime: fault.reportedTime,
       closedTime: fault.closedTime,
       status: fault.status,

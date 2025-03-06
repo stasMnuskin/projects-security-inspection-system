@@ -1,147 +1,311 @@
-import React, { useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { PieChart, Pie, Cell } from 'recharts';
+import { PieChart as RechartsPieChart, Pie, Cell, Sector } from 'recharts';
 import { Box, Typography } from '@mui/material';
 import { colors } from '../styles/colors';
 
-const chartContainerStyles = {
+// Clean container styles
+const containerStyles = {
   width: '100%',
+  height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  padding: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
+  justifyContent: 'center',
+  position: 'relative',
+  padding: 0,
+  boxSizing: 'border-box',
   '& h6': {
     color: colors.text.white,
-    marginBottom: { xs: '10px', sm: '12px', md: '14px', lg: '16px' },
-    fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.925rem', lg: '1rem' },
+    marginBottom: '10px',
     fontWeight: 'normal',
     width: '100%',
-    textAlign: 'center',
-    lineHeight: { xs: 1.2, sm: 1.3, md: 1.4 },
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    display: '-webkit-box',
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical',
-    maxHeight: { xs: '2.4em', sm: '2.6em', md: '2.8em' },
-    padding: { xs: '0 4px', sm: '0 6px', md: '0 8px' }
-  },
-  '@media (min-width: 900px) and (max-width: 960px)': {
-    padding: 1.5,
-    '& h6': {
-      fontSize: '0.8rem',
-      marginBottom: '10px',
-      maxHeight: '2.4em',
-      lineHeight: 1.2
-    }
+    textAlign: 'center'
   }
 };
 
-const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, colors.primary.blue], onSliceClick }) => {
-  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
-  const [activeIndex, setActiveIndex] = React.useState(null);
-
+/**
+ * Custom Pie Chart component with sophisticated label placement algorithm
+ */
+const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, colors.text.grey], onSliceClick }) => {
+  const [activeIndex, setActiveIndex] = useState(null);
+  const [chartDimensions, setChartDimensions] = useState({ width: 0, height: 0 });
+  const containerRef = useRef(null);
+  
+  // Filter out zero values to prevent empty segments
+  const validData = data.filter(item => item.value > 0);
+  
+  // Calculate total value for percentage computation
+  const totalValue = validData.reduce((sum, item) => sum + item.value, 0);
+  
+  // Add percentage to each data item
+  const dataWithPercent = validData.map(item => ({
+    ...item,
+    percent: totalValue > 0 ? item.value / totalValue : 0
+  }));
+  
+  // Handle container resize - fixed ESLint warning by storing ref in local variable
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const currentRef = containerRef.current;
+    if (!currentRef) return;
+    
+    const updateDimensions = () => {
+      const { clientWidth, clientHeight } = currentRef;
+      setChartDimensions({
+        width: clientWidth,
+        height: clientHeight
+      });
+    };
+    
+    // Initial update
+    updateDimensions();
+    
+    // Set up resize observer
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(currentRef);
+    
+    // Use local variable in cleanup
+    return () => {
+      resizeObserver.unobserve(currentRef);
+    };
   }, []);
-
-  const getChartSize = (width) => {
-    if (width < 600) return { size: 200, outer: 70, inner: 50, labelOffset: 3, fontSize: 10 };
-    if (width < 1200) return { size: 250, outer: 90, inner: 65, labelOffset: 4, fontSize: 11 };
-    return { size: 250, outer: 100, inner: 80, labelOffset: 5, fontSize: 12 };
+  
+  // Calculate chart dimensions based on container - increased size for larger screens
+  const getChartSize = () => {
+    const { width, height } = chartDimensions;
+    if (!width || !height) return { size: 0, outerRadius: 0, innerRadius: 0 };
+    
+    const minDimension = Math.min(width, height * 0.9);
+    // Increased min and max size to look better on larger screens
+    const size = Math.min(450, Math.max(220, minDimension));
+    // Adjusted radius values for better proportions
+    const outerRadius = size * 0.42; // Increased from 0.38
+    const innerRadius = outerRadius * 0.58; // Reduced from 0.6 for wider slices
+    
+    return { size, outerRadius, innerRadius };
   };
-
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value, index }) => {
-    const RADIAN = Math.PI / 180;
-    const chartSize = getChartSize(windowWidth);
-    const radius = outerRadius + chartSize.labelOffset;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    const displayText = title === "תרגילים" ? 
-      `${name} ${(percent * 100).toFixed(0)}%` : 
-      `${name} (${value})`;
-
+  
+  // Render active shape with highlight effect
+  const renderActiveShape = (props) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+    
     return (
       <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 4}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          stroke={colors.background.black}
+          strokeWidth={2}
+          style={{cursor:'pointer'}}
+        />
+      </g>
+    );
+  };
+  
+  const renderCustomizedLabel = (props) => {
+    const { cx, cy, midAngle, outerRadius, name, value, percent, index } = props;
+    const { size } = getChartSize();
+    
+    // Constants
+    const RADIAN = Math.PI / 180;
+    
+    // Determine if this is a small slice (less than 10% of the pie)
+    const isSmallSlice = percent < 0.1;
+    const isTinySlice = percent < 0.05;
+    const isMicroSlice = percent < 0.03;
+    
+    // Dynamic radius based on slice size
+    let radiusMultiplier;
+    if (isMicroSlice) {
+      radiusMultiplier = 1.8; // Very far for micro slices
+    } else if (isTinySlice) {
+      radiusMultiplier = 1.5; // Far for tiny slices
+    } else if (isSmallSlice) {
+      radiusMultiplier = 1.3; // Medium distance for small slices
+    } else {
+      radiusMultiplier = 1.1; // Close for large slices
+    }
+    
+    // Calculate position with dynamic radius
+    const sin = Math.sin(-midAngle * RADIAN);
+    const cos = Math.cos(-midAngle * RADIAN);
+    const labelRadius = outerRadius * radiusMultiplier;
+    const x = cx + labelRadius * cos;
+    const y = cy + labelRadius * sin;
+    
+    // Calculate font size based on available space and slice size
+    // Larger text for screens wider than 1200px - ENHANCED
+    const getTextSize = () => {
+      if (chartDimensions.width > 1500) {
+        return Math.min(20, size * 0.06); // Extra large for very big screens
+      } else if (chartDimensions.width > 1200) {
+        return Math.min(18, size * 0.055); // Larger font for big screens
+      }
+      return Math.min(14, size * 0.045); // Enhanced standard size
+    };
+    
+    const baseFontSize = getTextSize();
+    // Slightly adjust font size for small slices to ensure visibility
+    const fontSize = isMicroSlice ? baseFontSize * 0.9 : 
+                    isTinySlice ? baseFontSize * 0.95 : 
+                    baseFontSize;
+    
+    // Format text based on chart type
+    let displayText;
+    if (title === "תרגילים") {
+      displayText = `${name} ${(percent * 100).toFixed(0)}%`;
+    } else {
+      displayText = `${name} (${value})`;
+    }
+    
+    // Special text anchor handling for RTL and slice position
+    // For RTL text handling: Use 'start' anchor for right side, 'end' for left side
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+    
+    // Generate a unique SVG path ID for this label (for the line path)
+    const pathId = `label-path-${index}`;
+    
+    // Create two-segment connecting line paths between slice and label
+    // First segment from slice to midpoint
+    const midPointRadius = outerRadius * (1 + (radiusMultiplier - 1) * 0.3);
+    const midX = cx + midPointRadius * cos;
+    const midY = cy + midPointRadius * sin;
+    
+    // Second segment is from midpoint to label
+    // For micro slices, add some offset to the line to avoid overcrowding
+    let xOffset = 0;
+    let yOffset = 0;
+    
+    if (isMicroSlice) {
+      // Calculate offset perpendicular to the radial line
+      const perpAngle = midAngle + 90;
+      const offsetMagnitude = fontSize * 0.5;
+      xOffset = offsetMagnitude * Math.cos(-perpAngle * RADIAN);
+      yOffset = offsetMagnitude * Math.sin(-perpAngle * RADIAN);
+      
+      // Apply the offset to avoid overlapping with other micro-slice labels
+      const offsetDirection = (index % 2 === 0) ? 1 : -1;
+      xOffset *= offsetDirection;
+      yOffset *= offsetDirection;
+    }
+    
+    return (
+      <g>
+        {/* Enhanced connecting line with midpoint for better routing */}
+        <path
+          d={`M${cx + outerRadius * cos},${cy + outerRadius * sin}
+              L${midX},${midY}
+              L${x + xOffset},${y + yOffset}`}
+          stroke={colors.text.lightGrey}
+          strokeWidth={1}
+          fill="none"
+          id={pathId}
+        />
+        
+        <rect
+          x={textAnchor === 'end' ? x - displayText.length * fontSize * 0.55 : x}
+          y={y - fontSize * 0.7}
+          width={displayText.length * fontSize * 0.55}
+          height={fontSize * 1.4}
+          rx={3}
+          fill="rgba(0,0,0,0)"
+          fillOpacity={0}
+        />
+        
+        {/* Label text with enhanced readability */}
         <text
-          x={x}
-          y={y}
-          fill={colors.text.white}
-          textAnchor={x > cx ? 'start' : 'end'}
+          x={x + xOffset}
+          y={y + yOffset}
+          textAnchor={textAnchor}
           dominantBaseline="central"
-          onClick={() => onSliceClick?.(data[index])}
+          fill={colors.text.white}
+          fontSize={fontSize}
+          fontWeight="bold"
           style={{
-            fontSize: `${chartSize.fontSize}px`,
-            fontWeight: 'medium',
-            filter: 'drop-shadow(0px 0px 1px rgba(0,0,0,0.5))',
-            cursor: onSliceClick ? 'pointer' : 'default',
-            transition: 'filter 0.2s ease'
+            cursor: 'pointer', 
+            fontSize: '11px',
+            textShadow: '0 0 1px rgba(0,0,0,0.7)' 
           }}
-          onMouseEnter={() => setActiveIndex(index)}
-          onMouseLeave={() => setActiveIndex(null)}
-          filter={activeIndex === index ? 'brightness(1.2)' : undefined}
         >
           {displayText}
         </text>
       </g>
     );
   };
-
-  const chartSize = getChartSize(windowWidth);
-  const halfSize = chartSize.size / 2;
-
+  
+  // Get chart dimensions
+  const { size, outerRadius, innerRadius } = getChartSize();
+  const centerX = size / 2;
+  const centerY = size / 2;
+  
   return (
-    <Box sx={chartContainerStyles}>
-      <Typography variant="h6" align="center">
+    <Box sx={containerStyles} ref={containerRef}>
+      <Typography variant="h6">
         {title}
       </Typography>
-      <Box 
-        sx={{ 
-          width: chartSize.size, 
-          height: chartSize.size,
+      
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '200px',
           position: 'relative',
-          outline: 'none'
+          '& svg *': { cursor: 'pointer' },
+          '&:focus, & *:focus': {
+            cursor: 'pointer',
+            outline: 'none !important', 
+          }
         }}
         tabIndex={-1}
       >
-        <PieChart width={chartSize.size} height={chartSize.size}>
-          <Pie
-            data={data}
-            cx={halfSize}
-            cy={halfSize}
-            labelLine={false}
-            label={renderCustomizedLabel}
-            outerRadius={chartSize.outer}
-            innerRadius={chartSize.inner}
-            fill="#8884d8"
-            dataKey="value"
-            startAngle={180}
-            endAngle={-180}
-            isAnimationActive={false}
-            onMouseEnter={(_, index) => setActiveIndex(index)}
-            onMouseLeave={() => setActiveIndex(null)}
-            onClick={(_, index) => onSliceClick && onSliceClick(data[index])}
-            minAngle={2}
+        {size > 0 && (
+          <RechartsPieChart
+            width={size}
+            height={size}
+            margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
           >
-            {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
-                fill={chartColors[index % chartColors.length]}
-                style={{
-                  cursor: onSliceClick ? 'pointer' : 'default',
-                  outline: 'none',
-                  filter: activeIndex === index ? 'brightness(1.2)' : 'none',
-                  transform: activeIndex === index ? 'scale(1.05)' : 'scale(1)',
-                  transformOrigin: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-              />
-            ))}
-          </Pie>
-        </PieChart>
+            <Pie
+              data={dataWithPercent}
+              cx={centerX}
+              cy={centerY}
+              labelLine={false}
+              label={renderCustomizedLabel}
+              outerRadius={outerRadius}
+              innerRadius={innerRadius}
+              dataKey="value"
+              startAngle={180}
+              endAngle={-180}
+              isAnimationActive={false}
+              paddingAngle={1}
+              minAngle={3}
+              activeIndex={activeIndex}
+              activeShape={renderActiveShape}
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+              onClick={(_, index) => onSliceClick && onSliceClick(dataWithPercent[index])}
+              style={{ cursor: 'pointer' }} // Add pointer cursor directly to the Pie
+            >
+              {dataWithPercent.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={chartColors[index % chartColors.length]}
+                  cursor="pointer" // Use SVG native cursor attribute
+                  style={{
+                    filter: activeIndex === index ? 'brightness(1.2)' : 'none', // Highlight on hover
+                    transition: 'filter 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                />
+              ))}
+            </Pie>
+          </RechartsPieChart>
+        )}
       </Box>
     </Box>
   );

@@ -37,9 +37,18 @@ router.post('/', [
     .if(check('type').equals('אחר'))
     .notEmpty()
     .withMessage('נדרש תיאור לתקלה מסוג אחר'),
+  check('severity')
+    .optional()
+    .isIn(['non_disabling', 'partially_disabling', 'fully_disabling'])
+    .withMessage('רמת חומרה לא חוקית'),
   check('isCritical')
+    .optional()
     .isBoolean()
     .withMessage('נדרש לציין האם התקלה משביתה'),
+  check('isPartiallyDisabling')
+    .optional()
+    .isBoolean()
+    .withMessage('ערך לא חוקי לשדה תקלה משביתה חלקית'),
   validate
 ], faultController.createFault);
 

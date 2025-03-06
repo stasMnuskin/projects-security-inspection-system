@@ -82,7 +82,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: 'האם התקלה משביתה'
+      comment: 'האם התקלה משביתה לחלוטין'
+    },
+    isPartiallyDisabling: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'האם התקלה משביתה חלקית'
     },
     status: {
       type: DataTypes.ENUM('פתוח', 'בטיפול', 'סגור'),

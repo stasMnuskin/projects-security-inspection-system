@@ -26,7 +26,9 @@ export const FaultProvider = ({ children }) => {
     description: '',
     siteId: '',
     site: null,
-    isCritical: false
+    isCritical: false,
+    isPartiallyDisabling: false,
+    severity: 'non_disabling'
   });
   const [notification, setNotification] = useState({
     open: false,
@@ -59,7 +61,13 @@ export const FaultProvider = ({ children }) => {
         return;
       }
 
-      await createFault(newFault);
+      // Make sure isPartiallyDisabling is properly set based on severity
+      const faultData = {
+        ...newFault,
+        isPartiallyDisabling: newFault.severity === 'partially_disabling'
+      };
+      
+      await createFault(faultData);
       
       setNewFaultDialog(false);
       setNewFault({
@@ -67,7 +75,9 @@ export const FaultProvider = ({ children }) => {
         description: '',
         siteId: '',
         site: null,
-        isCritical: false
+        isCritical: false,
+        isPartiallyDisabling: false,
+        severity: 'non_disabling'
       });
       
       showNotification('התקלה נוצרה בהצלחה');

@@ -2,7 +2,9 @@ export const colors = {
   primary: {
     orange: 'rgb(241, 89, 35)',
     orangeHover: 'rgba(241, 89, 35, 0.8)',
-    blue: '#007bff'
+    orangeMedium: '#FF8A50', // New medium orange for partially disabling faults
+    blue: '#007bff',
+    blueMedium: '#4D9BFF' // New medium blue for better contrast
   },
   background: {
     black: 'rgb(13, 13, 13)',
@@ -15,7 +17,8 @@ export const colors = {
   text: {
     white: '#FFFFFF',
     grey: 'rgb(166, 166, 166)',
-    orange: 'rgb(241, 89, 35)'
+    orange: 'rgb(241, 89, 35)',
+    lightGrey: '#B0B0B0' // Lighter grey for better visibility
   },
   border: {
     grey: 'rgba(166, 166, 166, 0.3)',
