@@ -99,7 +99,7 @@ const Dashboard = () => {
     const timer = setTimeout(() => {
       setLoading(true);
       loadDashboardData();
-    }, 300); // 300ms debounce
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [loadDashboardData]);
@@ -205,10 +205,10 @@ const Dashboard = () => {
                     }))}
                   chartColors={[
                     colors.primary.orange,
-                    'rgba(166, 166, 166, 1)',    // אפור כהה
-                    'rgba(166, 166, 166, 0.8)',  // אפור בינוני
-                    'rgba(166, 166, 166, 0.6)',  // אפור בהיר
-                    'rgba(166, 166, 166, 0.4)'   // אפור בהיר מאוד
+                    'rgba(166, 166, 166, 1)',    
+                    'rgba(166, 166, 166, 0.8)',  
+                    'rgba(166, 166, 166, 0.6)',  
+                    'rgba(166, 166, 166, 0.4)'   
                   ]}
                   onSliceClick={(entry) => {
                     const details = entry.originalData.details.map((detail, index) => ({
@@ -262,13 +262,10 @@ const Dashboard = () => {
                   onSliceClick={(entry) => {
                     let data;
                     if (entry.isCritical) {
-                      // Fully disabling faults
                       data = dashboardData.faults.critical;
                     } else if (entry.isPartiallyDisabling) {
-                      // Partially disabling faults
                       data = dashboardData.faults.partiallyDisabling;
                     } else {
-                      // Regular non-disabling faults
                       data = dashboardData.faults.open.filter(f => 
                         !f.isCritical && !f.isPartiallyDisabling);
                     }
@@ -314,9 +311,9 @@ const Dashboard = () => {
                     }
                   ]}
                   chartColors={[
-                    colors.text.grey,          // אפור להצלחה
-                    colors.text.grey,          // אפור להצלחה חלקית
-                    colors.primary.orange      // כתום לכישלון
+                    colors.text.grey,          
+                    colors.text.grey,          
+                    colors.primary.orange      
                   ]}
                   onSliceClick={(entry) => {
                     setSelectedInspectionType(`תרגילים - ${entry.name}`);
@@ -354,14 +351,14 @@ const Dashboard = () => {
               .sort((a, b) => {
                 // First compare by critical faults
                 if (a.criticalCount !== b.criticalCount) {
-                  return b.criticalCount - a.criticalCount;  // descending order
+                  return b.criticalCount - a.criticalCount;  
                 }
                 // If critical faults are equal, compare by partially disabling faults
                 if (a.partiallyDisablingCount !== b.partiallyDisablingCount) {
-                  return b.partiallyDisablingCount - a.partiallyDisablingCount;  // descending order
+                  return b.partiallyDisablingCount - a.partiallyDisablingCount;  
                 }
                 // If partially disabling faults are equal, compare by regular faults
-                return b.regularCount - a.regularCount;  // descending order
+                return b.regularCount - a.regularCount;  
               })
               .slice(0, 10)}
               onBarClick={({ site, severity }) => {
@@ -399,7 +396,6 @@ const Dashboard = () => {
                   reportedTime: new Date(fault.reportedTime).toLocaleDateString('he-IL')
                 }));
                 
-                // Open the dialog with the formatted data
                 if (formattedData.length > 0) {
                   setSelectedFaultType({
                     title: dialogTitle,

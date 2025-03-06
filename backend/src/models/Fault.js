@@ -209,7 +209,25 @@ module.exports = (sequelize, DataTypes) => {
     });
   };
 
-  // Instance method to check if fault is overdue (open for more than 24 hours)
+  // Constants for reminder intervals (in hours)
+  const REMINDER_INTERVALS = {
+    CRITICAL: 24,               // Critical faults - daily
+    PARTIALLY_DISABLING: 72,    // Partially disabling faults - every 3 days
+    LOW_SEVERITY: 24 * 30       // Low severity faults - monthly (30 days)
+  };
+
+  // Helper method to get reminder interval based on fault severity
+  Fault.prototype.getReminderInterval = function() {
+    if (this.isCritical) {
+      return REMINDER_INTERVALS.CRITICAL;
+    } else if (this.isPartiallyDisabling) {
+      return REMINDER_INTERVALS.PARTIALLY_DISABLING;
+    } else {
+      return REMINDER_INTERVALS.LOW_SEVERITY;
+    }
+  };
+
+  // Instance method to check if fault is overdue based on severity
   Fault.prototype.isOverdue = function() {
     if (this.status === 'סגור') return false;
     
@@ -217,7 +235,7 @@ module.exports = (sequelize, DataTypes) => {
     const openTime = new Date(this.reportedTime);
     const diffHours = (now - openTime) / (1000 * 60 * 60);
     
-    return diffHours >= 24;
+    return diffHours >= this.getReminderInterval();
   };
 
   // Instance method to check if it's time to send another email
@@ -229,7 +247,7 @@ module.exports = (sequelize, DataTypes) => {
     const lastEmail = new Date(this.lastEmailTime);
     const diffHours = (now - lastEmail) / (1000 * 60 * 60);
     
-    return diffHours >= 24;
+    return diffHours >= this.getReminderInterval();
   };
 
   return Fault;

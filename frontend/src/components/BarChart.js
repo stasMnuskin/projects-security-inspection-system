@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Cell } fro
 import { Box, Typography, Paper, Tooltip } from '@mui/material';
 import { colors } from '../styles/colors';
 
-// Simple formatter function for bar labels
+// Formatter function for bar labels
 const renderLabel = (value) => {
   return value >= 1 ? value : '';
 };
@@ -13,15 +13,15 @@ const CustomTick = ({ x, y, payload, width, dataLength }) => {
   const maxWidth = width / dataLength - 10;
   const windowWidth = window.innerWidth;
   
-  // More aggressive truncation for smaller screens
+  // Truncation for smaller screens
   let charRatio = 8;
   let fontSize = '12px';
-  let verticalPosition = 5; // Moved higher up (was 12)
+  let verticalPosition = 5; 
   
   if (windowWidth < 731) {
-    charRatio = 10; // More aggressive truncation
+    charRatio = 10; 
     fontSize = '11px';
-    verticalPosition = 3; // Even higher for smaller screens
+    verticalPosition = 3; 
   }
   
   return (
@@ -88,11 +88,10 @@ const CustomBarChart = ({ data, title, onBarClick }) => {
   // Get fill color for a bar based on hover state
   const getBarFillColor = (index, type, defaultColor) => {
     if (activeIndex.dataIndex === index && activeIndex.type === type) {
-      // Return a darker version of the color (20% darker)
-      return defaultColor === colors.primary.orange ? '#C44620' : // Darker orange
-             defaultColor === colors.primary.orangeMedium ? '#DD7032' : // Darker medium orange
-             defaultColor === colors.text.lightGrey ? '#8D8D8D' : // Darker grey
-             defaultColor; // Fallback
+      return defaultColor === colors.primary.orange ? '#C44620' : 
+             defaultColor === colors.primary.orangeMedium ? '#DD7032' : 
+             defaultColor === colors.text.lightGrey ? '#8D8D8D' : 
+             defaultColor; 
     }
     return defaultColor;
   };

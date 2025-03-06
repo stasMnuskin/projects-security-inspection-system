@@ -128,16 +128,14 @@ const Faults = () => {
         queryParams.sites = filters.sites.join(',');
       }
       
-      // Handle severity filtering - always use the severity parameter
+      // Handle severity filtering
       if (filters.severity) {
-        // Send severity directly, let server handle the logic
         queryParams.severity = filters.severity;
       } else if (filters.isCritical === true) {
         // For backward compatibility, translate isCritical to severity
         queryParams.severity = 'fully_disabling';
       }
-      // No default severity filter - this will show all faults regardless of severity
-      
+
       if (filters.entrepreneur) {
         queryParams.entrepreneur = filters.entrepreneur;
       }
@@ -193,7 +191,6 @@ const Faults = () => {
     setFilters(prev => ({
       ...prev,
       [field]: value,
-      // Only clear ID when user changes a filter manually (not during sites auto-init)
       id: field === 'id' ? value : (field === 'sites' ? prev.id : null)
     }));
   }, []);
@@ -228,10 +225,8 @@ const Faults = () => {
         return;
       }
 
-      // Ensure isPartiallyDisabling parameter is correctly passed
       const faultData = {
         ...newFault,
-        // Make sure isPartiallyDisabling is explicitly set based on severity
         isPartiallyDisabling: newFault.severity === 'partially_disabling',
         isCritical: newFault.severity === 'fully_disabling'
       };

@@ -257,7 +257,7 @@ let theme = createTheme({
       },
     },
   },
-}, heIL); // Add Hebrew locale
+}, heIL); 
 
 theme = responsiveFontSizes(theme);
 

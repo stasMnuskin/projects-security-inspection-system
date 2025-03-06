@@ -61,7 +61,6 @@ export const FaultProvider = ({ children }) => {
         return;
       }
 
-      // Make sure isPartiallyDisabling is properly set based on severity
       const faultData = {
         ...newFault,
         isPartiallyDisabling: newFault.severity === 'partially_disabling'

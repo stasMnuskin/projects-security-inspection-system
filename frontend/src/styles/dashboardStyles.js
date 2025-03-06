@@ -108,7 +108,7 @@ const dashboardStyles = {
   // Chart paper styles
   chartPaper: {
     backgroundColor: colors.background.darkGrey,
-    padding: { xs: '8px', sm: '12px', lg: '16px' }, // Reduced padding
+    padding: { xs: '8px', sm: '12px', lg: '16px' }, 
     borderRadius: '8px',
     border: `2px solid ${colors.primary.orange}`,
     height: '100%',
@@ -116,35 +116,35 @@ const dashboardStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     '@media (min-width: 600px) and (max-width: 769px)': {
-      minHeight: '350px', // Increased height
-      padding: '16px', // Reduced padding
+      minHeight: '350px', 
+      padding: '16px', 
       '& > div': {
         width: '100%',
-        maxWidth: '550px'  // Increased for better use of full width
+        maxWidth: '550px'  
       }
     },
     '@media (min-width: 770px) and (max-width: 899px)': {
-      minHeight: '350px', // Increased height
-      padding: '16px', // Reduced padding
+      minHeight: '350px', 
+      padding: '16px', 
       '& > div': {
         width: '100%',
-        maxWidth: '500px' // Increased max width
+        maxWidth: '500px' 
       }
     },
     '@media (min-width: 900px) and (max-width: 1199px)': {
-      minHeight: '350px', // Increased height
-      padding: '12px', // Reduced padding
+      minHeight: '350px', 
+      padding: '12px', 
       '& > div': {
         width: '100%',
-        maxWidth: '450px' // Increased max width
+        maxWidth: '450px' 
       }
     },
     '@media (min-width: 1200px)': {
-      minHeight: '400px', // Larger height for large screens
-      padding: '12px', // Reduced padding
+      minHeight: '400px', 
+      padding: '12px', 
       '& > div': {
         width: '100%',
-        maxWidth: '600px' // Large max width for large screens
+        maxWidth: '600px' 
       }
     },
     '& h6': {

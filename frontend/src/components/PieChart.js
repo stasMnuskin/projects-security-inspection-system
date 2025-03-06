@@ -43,7 +43,6 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     percent: totalValue > 0 ? item.value / totalValue : 0
   }));
   
-  // Handle container resize - fixed ESLint warning by storing ref in local variable
   useEffect(() => {
     const currentRef = containerRef.current;
     if (!currentRef) return;
@@ -69,17 +68,14 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     };
   }, []);
   
-  // Calculate chart dimensions based on container - increased size for larger screens
+  // Calculate chart dimensions based on container
   const getChartSize = () => {
     const { width, height } = chartDimensions;
-    if (!width || !height) return { size: 0, outerRadius: 0, innerRadius: 0 };
-    
+    if (!width || !height) return { size: 0, outerRadius: 0, innerRadius: 0 }; 
     const minDimension = Math.min(width, height * 0.9);
-    // Increased min and max size to look better on larger screens
     const size = Math.min(450, Math.max(220, minDimension));
-    // Adjusted radius values for better proportions
-    const outerRadius = size * 0.42; // Increased from 0.38
-    const innerRadius = outerRadius * 0.58; // Reduced from 0.6 for wider slices
+    const outerRadius = size * 0.42; 
+    const innerRadius = outerRadius * 0.58; 
     
     return { size, outerRadius, innerRadius };
   };
@@ -121,13 +117,13 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     // Dynamic radius based on slice size
     let radiusMultiplier;
     if (isMicroSlice) {
-      radiusMultiplier = 1.8; // Very far for micro slices
+      radiusMultiplier = 1.8; 
     } else if (isTinySlice) {
-      radiusMultiplier = 1.5; // Far for tiny slices
+      radiusMultiplier = 1.5; 
     } else if (isSmallSlice) {
-      radiusMultiplier = 1.3; // Medium distance for small slices
+      radiusMultiplier = 1.3; 
     } else {
-      radiusMultiplier = 1.1; // Close for large slices
+      radiusMultiplier = 1.1; 
     }
     
     // Calculate position with dynamic radius
@@ -138,14 +134,13 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     const y = cy + labelRadius * sin;
     
     // Calculate font size based on available space and slice size
-    // Larger text for screens wider than 1200px - ENHANCED
     const getTextSize = () => {
       if (chartDimensions.width > 1500) {
-        return Math.min(20, size * 0.06); // Extra large for very big screens
+        return Math.min(20, size * 0.06); 
       } else if (chartDimensions.width > 1200) {
-        return Math.min(18, size * 0.055); // Larger font for big screens
+        return Math.min(18, size * 0.055); 
       }
-      return Math.min(14, size * 0.045); // Enhanced standard size
+      return Math.min(14, size * 0.045); 
     };
     
     const baseFontSize = getTextSize();
@@ -162,13 +157,8 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
       displayText = `${name} (${value})`;
     }
     
-    // Special text anchor handling for RTL and slice position
-    // For RTL text handling: Use 'start' anchor for right side, 'end' for left side
     const textAnchor = cos >= 0 ? 'start' : 'end';
-    
-    // Generate a unique SVG path ID for this label (for the line path)
     const pathId = `label-path-${index}`;
-    
     // Create two-segment connecting line paths between slice and label
     // First segment from slice to midpoint
     const midPointRadius = outerRadius * (1 + (radiusMultiplier - 1) * 0.3);
@@ -176,7 +166,6 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     const midY = cy + midPointRadius * sin;
     
     // Second segment is from midpoint to label
-    // For micro slices, add some offset to the line to avoid overcrowding
     let xOffset = 0;
     let yOffset = 0;
     
@@ -195,7 +184,6 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     
     return (
       <g>
-        {/* Enhanced connecting line with midpoint for better routing */}
         <path
           d={`M${cx + outerRadius * cos},${cy + outerRadius * sin}
               L${midX},${midY}
@@ -216,7 +204,6 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
           fillOpacity={0}
         />
         
-        {/* Label text with enhanced readability */}
         <text
           x={x + xOffset}
           y={y + yOffset}
@@ -289,15 +276,15 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
               onClick={(_, index) => onSliceClick && onSliceClick(dataWithPercent[index])}
-              style={{ cursor: 'pointer' }} // Add pointer cursor directly to the Pie
+              style={{ cursor: 'pointer' }} 
             >
               {dataWithPercent.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={chartColors[index % chartColors.length]}
-                  cursor="pointer" // Use SVG native cursor attribute
+                  cursor="pointer" 
                   style={{
-                    filter: activeIndex === index ? 'brightness(1.2)' : 'none', // Highlight on hover
+                    filter: activeIndex === index ? 'brightness(1.2)' : 'none', 
                     transition: 'filter 0.2s ease',
                     cursor: 'pointer'
                   }}
