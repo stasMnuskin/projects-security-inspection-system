@@ -208,16 +208,15 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     const isTinySlice = percent < 0.05;
     const isMicroSlice = percent < 0.03;
     
-    // Dynamic radius based on slice size
     let radiusMultiplier;
     if (isMicroSlice) {
-      radiusMultiplier = 1.8; 
+      radiusMultiplier = 1; 
     } else if (isTinySlice) {
-      radiusMultiplier = 1.5; 
+      radiusMultiplier = 1;
     } else if (isSmallSlice) {
-      radiusMultiplier = 1.3; 
+      radiusMultiplier = 1; 
     } else {
-      radiusMultiplier = 1.1; 
+      radiusMultiplier = 1; 
     }
     
     // Calculate position with dynamic radius
@@ -282,9 +281,9 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
         />
         
         <rect
-          x={textAnchor === 'end' ? x - displayText.length * fontSize * 0.7 : x}
-          y={y - fontSize * 0.7}
-          width={displayText.length * fontSize * 0.7}
+          x={textAnchor === 'end' ? x + xOffset - displayText.length * fontSize * 0.8 : x + xOffset}
+          y={y + yOffset - fontSize * 0.7}
+          width={displayText.length * fontSize * 0.8} 
           height={fontSize * 1.4}
           rx={3}
           fill="rgba(0,0,0,0)"
