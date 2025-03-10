@@ -23,9 +23,6 @@ const containerStyles = {
   }
 };
 
-/**
- * Custom Pie Chart component with sophisticated label placement algorithm
- */
 const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, colors.text.grey], onSliceClick }) => {
   const [activeIndex, setActiveIndex] = useState(null);
   const [chartDimensions, setChartDimensions] = useState({ width: 0, height: 0 });
@@ -278,18 +275,26 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
               onClick={(_, index) => onSliceClick && onSliceClick(dataWithPercent[index])}
               style={{ cursor: 'pointer' }} 
             >
-              {dataWithPercent.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={chartColors[index % chartColors.length]}
-                  cursor="pointer" 
-                  style={{
-                    filter: activeIndex === index ? 'brightness(1.2)' : 'none', 
-                    transition: 'filter 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                />
-              ))}
+              {dataWithPercent.map((entry, index) => {
+                let colorIndex = index % chartColors.length;
+
+                if (dataWithPercent.length === 2 && index === 1) {
+                  colorIndex = 1;
+                }
+                
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={chartColors[colorIndex]}
+                    cursor="pointer" 
+                    style={{
+                      filter: activeIndex === index ? 'brightness(1.2)' : 'none', 
+                      transition: 'filter 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                  />
+                );
+              })}
             </Pie>
           </RechartsPieChart>
         )}
