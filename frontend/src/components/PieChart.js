@@ -296,13 +296,13 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
           textAnchor={textAnchor}
           dominantBaseline="central"
           fill={colors.text.white}
-          fontSize={fontSize}
-          fontWeight="bold"
           onClick={() => onSliceClick && onSliceClick(payload)}
           style={{
-            cursor: 'pointer', 
-            fontSize: '11px',
-            textShadow: '0 0 1px rgba(0,0,0,0.7)' 
+            fontSize: `11px`,
+            fontWeight: 'bold',
+            textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7)',
+            filter: 'drop-shadow(0px 0px 2px rgba(0,0,0,0.9))',
+            cursor: 'pointer'
           }}
         >
           {displayText}
