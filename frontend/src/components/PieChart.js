@@ -40,6 +40,34 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     percent: totalValue > 0 ? item.value / totalValue : 0
   }));
   
+  // Helper function to determine the color for a specific slice
+  const getSliceColor = (index, entry) => {
+    if (title === "תרגילים") {
+      const isFailureSlice = entry.name === "כישלון";
+      const isPartialSuccessSlice = entry.name === "הצלחה חלקית";
+      
+      // If exactly 2 slices
+      if (dataWithPercent.length === 2) {
+        if (isFailureSlice) {
+          return colors.primary.orange;
+        }
+        if (isPartialSuccessSlice && dataWithPercent.some(d => d.name === "הצלחה")) {
+          return colors.primary.orange;
+        }
+        return index === 0 ? colors.text.grey : colors.text.lightGrey;
+      }
+      
+      return isFailureSlice ? colors.primary.orange : colors.text.grey;
+    }
+    
+    // For all other charts
+    if (dataWithPercent.length === 2) {
+      return index === 0 ? colors.primary.orange : colors.text.grey;
+    }
+    
+    return chartColors[index % chartColors.length];
+  };
+  
   useEffect(() => {
     const currentRef = containerRef.current;
     if (!currentRef) return;
@@ -275,26 +303,18 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
               onClick={(_, index) => onSliceClick && onSliceClick(dataWithPercent[index])}
               style={{ cursor: 'pointer' }} 
             >
-              {dataWithPercent.map((entry, index) => {
-                let colorIndex = index % chartColors.length;
-
-                if (dataWithPercent.length === 2 && index === 1) {
-                  colorIndex = 1;
-                }
-                
-                return (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={chartColors[colorIndex]}
-                    cursor="pointer" 
-                    style={{
-                      filter: activeIndex === index ? 'brightness(1.2)' : 'none', 
-                      transition: 'filter 0.2s ease',
-                      cursor: 'pointer'
-                    }}
-                  />
-                );
-              })}
+              {dataWithPercent.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={getSliceColor(index, entry)}
+                  cursor="pointer" 
+                  style={{
+                    filter: activeIndex === index ? 'brightness(1.2)' : 'none', 
+                    transition: 'filter 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                />
+              ))}
             </Pie>
           </RechartsPieChart>
         )}
