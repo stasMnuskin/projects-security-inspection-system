@@ -40,6 +40,9 @@ function getSeverityType(fault) {
     return 'ברמה נמוכה';
   }
 }
+function createFaultLink(faultId) {
+  return `${process.env.FRONTEND_URL}/faults?id=${faultId}`;
+}
 
 function formatDate(date) {
   if (!date) return '';
@@ -63,6 +66,8 @@ const emailTemplates = {
 רכיב: ${fault.type}
 הערות: ${fault.description}
 
+לצפייה בתקלה: ${createFaultLink(fault.id)}
+
 נעדכן ברגע שיהיו התפתחויות נוספות.`
   }),
 
@@ -75,6 +80,8 @@ const emailTemplates = {
 תאריך סגירה: ${formatDate(fault.closedTime)}
 רכיב: ${fault.type}
 הערות: ${fault.description}
+
+לצפייה בתקלה: ${createFaultLink(fault.id)}
 
 נעדכן ברגע שיהיו התפתחויות נוספות.`
   }),
@@ -90,6 +97,8 @@ const emailTemplates = {
 משך זמן שהתקלה פתוחה: ${openDuration}
 רכיב: ${fault.type}
 הערות: ${fault.description}
+
+לצפייה בתקלה: ${createFaultLink(fault.id)}
 
 נעדכן ברגע שיהיו התפתחויות נוספות.`
     };
