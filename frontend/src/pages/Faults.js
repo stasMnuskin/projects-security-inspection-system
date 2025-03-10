@@ -178,6 +178,20 @@ const Faults = () => {
     }
   }, [location.pathname, canCreateFault]);
 
+  // Check for fault ID in URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const idParam = params.get('id');
+    
+    if (idParam) {
+      // Update filters with the id from URL
+      setFilters(prev => ({
+        ...prev,
+        id: idParam
+      }));
+    }
+  }, [location.search]); 
+
   // Fetch faults when filters change
   useEffect(() => {
     const timer = setTimeout(() => {
