@@ -282,9 +282,9 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
         />
         
         <rect
-          x={textAnchor === 'end' ? x - displayText.length * fontSize * 0.55 : x}
+          x={textAnchor === 'end' ? x - displayText.length * fontSize * 0.7 : x}
           y={y - fontSize * 0.7}
-          width={displayText.length * fontSize * 0.55}
+          width={displayText.length * fontSize * 0.7}
           height={fontSize * 1.4}
           rx={3}
           fill="rgba(0,0,0,0)"
