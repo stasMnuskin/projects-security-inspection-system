@@ -85,7 +85,7 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     
     // For all other charts
     if (dataWithPercent.length === 2) {
-      return index === 0 ? colors.primary.orange : colors.text.grey;
+      return index === 0 ? colors.primary.orange : customGreys.darkGrey;
     }
     
     return distinctColors[index % distinctColors.length];

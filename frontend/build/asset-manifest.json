@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "https://soltan.lotangrp.com/static/css/main.a5139872.css",
-    "main.js": "https://soltan.lotangrp.com/static/js/main.cd750d4a.js",
+    "main.js": "https://soltan.lotangrp.com/static/js/main.282de012.js",
     "static/js/206.f8819006.chunk.js": "https://soltan.lotangrp.com/static/js/206.f8819006.chunk.js",
     "static/media/logo.svg": "https://soltan.lotangrp.com/static/media/logo.e250f636b1e671a9eebaccbe1245f59f.svg",
     "index.html": "https://soltan.lotangrp.com/index.html"
   },
   "entrypoints": [
     "static/css/main.a5139872.css",
-    "static/js/main.cd750d4a.js"
+    "static/js/main.282de012.js"
   ]
 }
