@@ -165,7 +165,12 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.4;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    let y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    if (dataWithPercent.length === 1) {
+      y += 18;
+    }
+    
     const displayText = formatLabelText(value, percent);
     
     const sliceSize = (endAngle - startAngle) / 360;
