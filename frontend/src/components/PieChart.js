@@ -40,8 +40,25 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     percent: totalValue > 0 ? item.value / totalValue : 0
   }));
   
+  // Custom gray scales with better visual distinction
+  const customGreys = {
+    darkGrey: 'rgb(100, 100, 100)',      // Dark gray
+    mediumGrey: 'rgb(140, 140, 140)',    // Medium gray
+    lightGrey: 'rgb(180, 180, 180)',     // Light gray
+    veryLightGrey: 'rgb(220, 220, 220)', // Very light gray
+  };
+
   // Helper function to determine the color for a specific slice
   const getSliceColor = (index, entry) => {
+    // Color array with distinct colors
+    const distinctColors = [
+      colors.primary.orange,         // Orange
+      customGreys.darkGrey,          // Dark gray
+      colors.primary.orangeMedium,   // Medium orange
+      customGreys.lightGrey,         // Light gray
+      customGreys.veryLightGrey,     // Very light gray
+    ];
+    
     if (title === "תרגילים") {
       const isFailureSlice = entry.name === "כישלון";
       const isPartialSuccessSlice = entry.name === "הצלחה חלקית";
@@ -54,10 +71,16 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
         if (isPartialSuccessSlice && dataWithPercent.some(d => d.name === "הצלחה")) {
           return colors.primary.orange;
         }
-        return index === 0 ? colors.text.grey : colors.text.lightGrey;
+        return index === 0 ? customGreys.darkGrey : customGreys.lightGrey;
       }
       
-      return isFailureSlice ? colors.primary.orange : colors.text.grey;
+      if (isFailureSlice) {
+        return colors.primary.orange;
+      } else if (isPartialSuccessSlice) {
+        return customGreys.darkGrey;
+      } else {
+        return customGreys.lightGrey;
+      }
     }
     
     // For all other charts
@@ -65,7 +88,7 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
       return index === 0 ? colors.primary.orange : colors.text.grey;
     }
     
-    return chartColors[index % chartColors.length];
+    return distinctColors[index % distinctColors.length];
   };
   
   useEffect(() => {
@@ -127,8 +150,54 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     );
   };
   
+  // Format label text for center labels
+  const formatLabelText = (value, percent) => {
+    if (title === "תרגילים") {
+      return `${(percent * 100).toFixed(0)}%`;
+    } else {
+      return value.toString();
+    }
+  };
+  
+  const renderCenterLabel = (props) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, midAngle, value, percent, key, onClick } = props;
+    
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.4;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const displayText = formatLabelText(value, percent);
+    
+    const sliceSize = (endAngle - startAngle) / 360;
+    const maxFontSize = 16;
+    const fontSize = Math.max(11, Math.min(maxFontSize, maxFontSize * sliceSize * 5));
+    
+    return (
+      <g key={key}>
+        <text
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill={colors.text.white}
+          onClick={onClick}
+          style={{
+            fontSize: `${fontSize}px`,
+            fontWeight: 'bold',
+            textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7)',
+            filter: 'drop-shadow(0px 0px 2px rgba(0,0,0,0.9))',
+            cursor: 'pointer'
+          }}
+        >
+          {displayText}
+        </text>
+      </g>
+    );
+  };
+  
+  // Renders the external label with only the name
   const renderCustomizedLabel = (props) => {
-    const { cx, cy, midAngle, outerRadius, name, value, percent, index } = props;
+    const { cx, cy, midAngle, outerRadius, name, percent, index, payload } = props;
     const { size } = getChartSize();
     
     // Constants
@@ -169,18 +238,11 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
     };
     
     const baseFontSize = getTextSize();
-    // Slightly adjust font size for small slices to ensure visibility
     const fontSize = isMicroSlice ? baseFontSize * 0.9 : 
                     isTinySlice ? baseFontSize * 0.95 : 
                     baseFontSize;
     
-    // Format text based on chart type
-    let displayText;
-    if (title === "תרגילים") {
-      displayText = `${name} ${(percent * 100).toFixed(0)}%`;
-    } else {
-      displayText = `${name} (${value})`;
-    }
+    const displayText = name;
     
     const textAnchor = cos >= 0 ? 'start' : 'end';
     const pathId = `label-path-${index}`;
@@ -237,6 +299,7 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
           fill={colors.text.white}
           fontSize={fontSize}
           fontWeight="bold"
+          onClick={() => onSliceClick && onSliceClick(payload)}
           style={{
             cursor: 'pointer', 
             fontSize: '11px',
@@ -287,13 +350,14 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
               cx={centerX}
               cy={centerY}
               labelLine={false}
-              label={renderCustomizedLabel}
+              label={(props) => {
+                return renderCustomizedLabel(props);
+              }}
               outerRadius={outerRadius}
               innerRadius={innerRadius}
               dataKey="value"
               startAngle={180}
               endAngle={-180}
-              isAnimationActive={false}
               paddingAngle={1}
               minAngle={3}
               activeIndex={activeIndex}
@@ -301,7 +365,8 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
               onClick={(_, index) => onSliceClick && onSliceClick(dataWithPercent[index])}
-              style={{ cursor: 'pointer' }} 
+              style={{ cursor: 'pointer' }}
+              isAnimationActive={false}
             >
               {dataWithPercent.map((entry, index) => (
                 <Cell
@@ -316,6 +381,30 @@ const CustomPieChart = ({ data, title, chartColors = [colors.primary.orange, col
                 />
               ))}
             </Pie>
+            {dataWithPercent.map((entry, index) => {
+              const sumBeforePercent = dataWithPercent
+                .slice(0, index)
+                .reduce((sum, e) => sum + e.percent, 0);
+              
+              const sumWithPercent = sumBeforePercent + entry.percent;
+              const startAngle = 180 - (360 * sumBeforePercent);
+              const endAngle = 180 - (360 * sumWithPercent);
+              const midAngle = (startAngle + endAngle) / 2;
+              
+              return renderCenterLabel({
+                ...entry,
+                cx: centerX,
+                cy: centerY,
+                midAngle: midAngle,
+                innerRadius: innerRadius,
+                outerRadius: outerRadius,
+                startAngle: startAngle,
+                endAngle: endAngle,
+                index: index,
+                key: `value-label-${index}`,
+                onClick: () => onSliceClick && onSliceClick(entry)
+              });
+            })}
           </RechartsPieChart>
         )}
       </Box>
