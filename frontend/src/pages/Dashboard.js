@@ -10,7 +10,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
@@ -590,7 +591,23 @@ const Dashboard = () => {
                             </td>
                           )}
                           <td style={{ padding: '12px', borderBottom: `1px solid ${colors.border.grey}` }}>
-                            {item.notes}
+                            <Tooltip 
+                              title={item.notes || ""}
+                              arrow
+                              placement="top" 
+                            >
+                              <div style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                lineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word'
+                              }}>
+                                {item.notes}
+                              </div>
+                            </Tooltip>
                           </td>
                         </tr>
                       ))}

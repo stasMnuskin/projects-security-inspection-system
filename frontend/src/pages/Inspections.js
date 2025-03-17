@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Typography, 
-  Paper, 
+  // Paper, 
   Box, 
   CircularProgress, 
   Table, 
@@ -25,21 +25,34 @@ import Sidebar from '../components/Sidebar';
 import { getInspections, getEnabledFields, deleteInspection } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { subMonths } from 'date-fns';
-import { colors } from '../styles/colors';
+// import { colors } from '../styles/colors';
 import { PERMISSIONS } from '../constants/roles';
+import { 
+  dialogStyles, 
+  pageContainerStyles, 
+  statusMessageStyles 
+} from '../styles/components';
+import {
+  tableStyles,
+  getCellStyle,
+  getHeadCellStyle,
+  formatDate,
+} from '../styles/tableStyles';
 
+// Helper to truncate text and add ellipsis
 const truncateText = (text, maxLength = 15) => {
   if (!text || text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 };
 
+// Render text with tooltip for longer content
 const renderTooltipText = (value) => {
   if (!value || !value.trim() || value.length <= 15) return value;
   
   return (
     <Tooltip 
       title={
-        <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+        <Typography sx={tableStyles.tooltipTypography}>
           {value}
         </Typography>
       }
@@ -47,31 +60,9 @@ const renderTooltipText = (value) => {
       arrow
       enterDelay={200}
       leaveDelay={200}
-      PopperProps={{
-        sx: {
-          '& .MuiTooltip-tooltip': {
-            backgroundColor: colors.background.black,
-            border: `1px solid ${colors.border.grey}`,
-            borderRadius: '4px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            maxWidth: 400,
-            p: 1
-          },
-          '& .MuiTooltip-arrow': {
-            color: colors.background.black,
-            '&::before': {
-              border: `1px solid ${colors.border.grey}`,
-              backgroundColor: colors.background.black
-            }
-          }
-        }
-      }}
+      PopperProps={tableStyles.tooltipProps}
     >
-      <span style={{ 
-        cursor: 'help',
-        borderBottom: `1px dotted ${colors.text.grey}`,
-        color: colors.text.white
-      }}>
+      <span style={tableStyles.truncatedText}>
         {truncateText(value)}
       </span>
     </Tooltip>
@@ -227,7 +218,8 @@ const Inspections = () => {
     
     switch (fieldId) {
       case 'date':
-        return new Date(value).toLocaleDateString('he-IL');
+        // Use the responsive date formatting utility
+        return formatDate(value, window.innerWidth);
       case 'time':
         return value;
       default:
@@ -242,10 +234,22 @@ const Inspections = () => {
     }
   };
 
+  const getCellSizeForColumn = (columnId) => {
+    if (columnId === 'date' || columnId === 'time') {
+      return 'date';
+    } else if (['notes', 'actions'].includes(columnId)) {
+      return 'widest';
+    } else if (['site', 'securityOfficer'].includes(columnId)) {
+      return 'wider';
+    } else {
+      return 'default';
+    }
+  };
+
   const renderTable = () => {
     if (!columns.length) {
       return (
-        <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
+        <Typography variant="h6" align="center" sx={statusMessageStyles.noDataMessage}>
           טוען את מבנה הטבלה...
         </Typography>
       );
@@ -253,7 +257,7 @@ const Inspections = () => {
 
     if (loading) {
       return (
-        <Box display="flex" justifyContent="center" p={3}>
+        <Box sx={statusMessageStyles.loadingContainer}>
           <CircularProgress />
         </Box>
       );
@@ -261,63 +265,66 @@ const Inspections = () => {
 
     if (inspections.length === 0) {
       return (
-        <Typography variant="h6" align="center" sx={{ color: colors.text.white }}>
+        <Typography variant="h6" align="center" sx={statusMessageStyles.noDataMessage}>
           לא נמצאו ביקורות בטווח התאריכים שנבחר
         </Typography>
       );
     }
 
     return (
-      <TableContainer component={Paper} sx={{ mt: 2, backgroundColor: colors.background.black }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              {columns.map((column, index) => (
-                <TableCell key={`${column.id}-${index}`} sx={{ color: colors.text.white, fontWeight: 'bold' }}>
-                  {column.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {inspections.map((inspection, rowIndex) => (
-              <TableRow key={inspection.id || rowIndex}>
-                {columns.map((column, colIndex) => (
-                  <TableCell key={`${column.id}-${rowIndex}-${colIndex}`} sx={{ color: colors.text.white }}>
-                    {column.id === 'actions' && user.hasPermission(PERMISSIONS.ADMIN) ? (
-                      <IconButton
-                        onClick={(e) => handleDeleteClick(inspection, e)}
-                        sx={{ 
-                          color: colors.text.error,
-                          '&:hover': {
-                            color: colors.text.errorHover
-                          }
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    ) : (
-                      formatValue(getValue(inspection, column), column.id)
-                    )}
+      <Box sx={tableStyles.container}>
+        <TableContainer sx={tableStyles.scrollContainer}>
+          <Table sx={tableStyles.table}>
+            <TableHead>
+              <TableRow>
+                {columns.map((column, index) => (
+                  <TableCell 
+                    key={`${column.id}-${index}`} 
+                    sx={getHeadCellStyle(getCellSizeForColumn(column.id))}
+                  >
+                    {column.label}
                   </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {inspections.map((inspection, rowIndex) => (
+                <TableRow key={inspection.id || rowIndex}>
+                  {columns.map((column, colIndex) => (
+                    <TableCell 
+                      key={`${column.id}-${rowIndex}-${colIndex}`} 
+                      sx={getCellStyle(getCellSizeForColumn(column.id))}
+                    >
+                      {column.id === 'actions' && user.hasPermission(PERMISSIONS.ADMIN) ? (
+                        <IconButton
+                          onClick={(e) => handleDeleteClick(inspection, e)}
+                          sx={{ color: 'white' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      ) : (
+                        formatValue(getValue(inspection, column), column.id)
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
     );
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={pageContainerStyles.container}>
       <Sidebar 
         activeSection="inspections"  
         userInfo={{ name: user.name }}
         onNewFault={() => navigate('/faults/new')}
       />
-      <Box sx={{ flexGrow: 1, p: 3 }}>
-        <Typography variant="h4" sx={{ color: colors.text.white, mb: 3 }}>
+      <Box sx={pageContainerStyles.content}>
+        <Typography variant="h4" sx={pageContainerStyles.title}>
           ביקורות
         </Typography>
 
@@ -330,7 +337,7 @@ const Inspections = () => {
         />
 
         {error ? (
-          <Typography color="error" align="center" sx={{ mt: 2 }}>
+          <Typography sx={statusMessageStyles.errorMessage}>
             {error}
           </Typography>
         ) : (
@@ -341,34 +348,27 @@ const Inspections = () => {
         <Dialog
           open={deleteDialogOpen}
           onClose={() => setDeleteDialogOpen(false)}
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.background.black,
-              color: colors.text.white
-            }
-          }}
+          sx={dialogStyles.dialog}
         >
-          <DialogTitle>אישור מחיקה</DialogTitle>
-          <DialogContent>
+          <DialogTitle sx={dialogStyles.dialogTitle}>
+            אישור מחיקה
+          </DialogTitle>
+          <DialogContent sx={dialogStyles.dialogContent}>
             <Typography>
               האם אתה בטוח שברצונך למחוק את הביקורת?
             </Typography>
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={dialogStyles.dialogActions}>
             <Button 
               onClick={() => setDeleteDialogOpen(false)}
-              sx={{ color: colors.text.white }}
+              sx={dialogStyles.cancelButton}
             >
               ביטול
             </Button>
             <Button 
               onClick={handleDeleteConfirm}
-              sx={{ 
-                color: colors.text.error,
-                '&:hover': {
-                  color: colors.text.errorHover
-                }
-              }}
+              variant="contained"
+              sx={dialogStyles.submitButton}
             >
               מחק
             </Button>

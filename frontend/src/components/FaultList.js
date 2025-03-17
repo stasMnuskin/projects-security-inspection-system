@@ -27,8 +27,14 @@ import {
   Edit as EditIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { colors } from '../styles/colors';
-import { dialogStyles } from '../styles/components';
+import { dialogStyles, dialogIconStyles } from '../styles/components';
+import { 
+  tableStyles, 
+  getCellStyle, 
+  getHeadCellStyle, 
+  composeStyles,
+  formatDate 
+} from '../styles/tableStyles';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
 
@@ -140,21 +146,6 @@ const FaultList = ({
     return `${hours} שעות`;
   };
 
-  // const getOrganizationByType = (organizations, type) => {
-  //   if (!organizations) return null;
-  //   return organizations.find(org => org.type === type);
-  // };
-
-  const getStatusStyle = () => ({
-    display: 'inline-block',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '0.875rem',
-    backgroundColor: colors.background.darkGrey,
-    border: `1px solid ${colors.border.orange}`,
-    color: colors.text.white
-  });
-
   const renderDescription = (fault) => {
     if (editingCell === `description-${fault.id}`) {
       return (
@@ -167,21 +158,18 @@ const FaultList = ({
           onKeyDown={(e) => handleDescriptionKeyDown(e, fault)}
           autoFocus
           fullWidth
-          sx={{ minWidth: '150px' }}
+          sx={tableStyles.cellFormField}
           placeholder="לחץ Enter לשמירה, Shift+Enter לשורה חדשה"
         />
       );
     }
 
     const content = (isLong = false) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={tableStyles.contentBox}>
         {canEditDescription && (
-          <EditIcon sx={{ fontSize: 16, color: colors.border.orange }} />
+          <EditIcon sx={tableStyles.cellIcon} />
         )}
-        <span style={{ 
-          color: colors.text.white,
-          cursor: isLong ? 'help' : 'inherit'
-        }}>
+        <span style={tableStyles.textContent}>
           {fault.description ? (fault.description.length > MAX_TEXT_LENGTH ? truncateText(fault.description) : fault.description) : ''}
         </span>
       </Box>
@@ -190,17 +178,12 @@ const FaultList = ({
     return (
       <Box 
         onClick={() => canEditDescription && handleCellClick(`description-${fault.id}`, fault.description || '')}
-        sx={{ 
-          cursor: canEditDescription ? 'pointer' : 'default',
-          '&:hover': canEditDescription ? {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)'
-          } : {}
-        }}
+        sx={canEditDescription ? tableStyles.editableCell : tableStyles.nonEditableCell}
       >
         {fault.description && fault.description.length > MAX_TEXT_LENGTH ? (
           <Tooltip 
             title={
-              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+              <Typography sx={tableStyles.tooltipTypography}>
                 {fault.description}
               </Typography>
             }
@@ -208,25 +191,7 @@ const FaultList = ({
             arrow
             enterDelay={200}
             leaveDelay={200}
-            PopperProps={{
-              sx: {
-                '& .MuiTooltip-tooltip': {
-                  backgroundColor: colors.background.black,
-                  border: `1px solid ${colors.border.grey}`,
-                  borderRadius: '4px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  maxWidth: 400,
-                  p: 1
-                },
-                '& .MuiTooltip-arrow': {
-                  color: colors.background.black,
-                  '&::before': {
-                    border: `1px solid ${colors.border.grey}`,
-                    backgroundColor: colors.background.black
-                  }
-                }
-              }
-            }}
+            PopperProps={tableStyles.tooltipProps}
           >
             {content(true)}
           </Tooltip>
@@ -239,43 +204,21 @@ const FaultList = ({
 
   return (
     <>
-      <Box sx={{ 
-        width: '100%', 
-        overflow: 'hidden',
-        backgroundColor: colors.background.darkGrey,
-        border: `1px solid ${colors.border.grey}`,
-        borderRadius: '4px'
-      }}>
-        <TableContainer sx={{ 
-          maxWidth: '100%',
-          overflowX: 'auto',
-          '&::-webkit-scrollbar': {
-            height: '6px'
-          },
-          '&::-webkit-scrollbar-track': {
-            background: colors.background.darkGrey
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: colors.border.grey,
-            borderRadius: '3px',
-            '&:hover': {
-              background: colors.border.orange
-            }
-          }
-        }}>
-          <Table sx={{ minWidth: { xs: '800px', md: '100%' } }}>
+      <Box sx={tableStyles.container}>
+        <TableContainer sx={tableStyles.scrollContainer}>
+          <Table sx={tableStyles.table}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '120px' }}>מתקן</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '120px' }}>שם הטכנאי</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>רכיב</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>סוג התקלה</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>תאריך פתיחה</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>תאריך סגירה</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>זמן טיפול</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '100px' }}>סטטוס</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '150px' }}>הערות</TableCell>
-                {onDeleteFault && <TableCell sx={{ whiteSpace: 'nowrap', minWidth: '80px' }}>פעולות</TableCell>}
+                <TableCell sx={getHeadCellStyle('wider')}>מתקן</TableCell>
+                <TableCell sx={getHeadCellStyle('wider')}>שם הטכנאי</TableCell>
+                <TableCell sx={getHeadCellStyle()}>רכיב</TableCell>
+                <TableCell sx={getHeadCellStyle()}>סוג התקלה</TableCell>
+                <TableCell sx={getHeadCellStyle('date')}>תאריך פתיחה</TableCell>
+                <TableCell sx={getHeadCellStyle('date')}>תאריך סגירה</TableCell>
+                <TableCell sx={getHeadCellStyle()}>זמן טיפול</TableCell>
+                <TableCell sx={getHeadCellStyle()}>סטטוס</TableCell>
+                <TableCell sx={getHeadCellStyle('widest')}>הערות</TableCell>
+                {onDeleteFault && <TableCell sx={getHeadCellStyle('narrow')}>פעולות</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -287,80 +230,58 @@ const FaultList = ({
                 </TableRow>
               ) : (
                 faults.map((fault) => {
-                  // const maintenanceOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'maintenance');
-                  // const integratorOrg = getOrganizationByType(fault.site?.serviceOrganizations, 'integrator');
-
                   return (
                     <TableRow key={fault.id}>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <TableCell sx={getCellStyle('wider')}>
                         <span
                           onClick={(e) => handleSiteClick(e, fault.site)}
-                          style={{ 
-                            color: colors.text.white,
-                            textDecoration: 'underline',
-                            cursor: 'pointer'
-                          }}
+                          style={tableStyles.linkCell}
                         >
                           {fault.site?.name || ''}
                         </span>
                       </TableCell>
                       <TableCell 
                         onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`, fault.technician)}
-                        sx={{ 
-                          cursor: canEditTechnicianAndStatus && onTechnicianChange ? 'pointer' : 'default',
-                          '&:hover': canEditTechnicianAndStatus && onTechnicianChange ? {
-                            backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                          } : {},
-                          whiteSpace: 'nowrap'
-                        }}
+                        sx={getCellStyle('wider', canEditTechnicianAndStatus && onTechnicianChange)}
                       >
                         {editingCell === `technician-${fault.id}` ? (
                           <TextField
-                            size="small"
                             value={editingTechnician}
                             onChange={(e) => setEditingTechnician(e.target.value)}
                             onBlur={() => handleTechnicianSave(fault.id)}
                             onKeyDown={(e) => handleTechnicianKeyDown(e, fault.id)}
-                            autoFocus
-                            fullWidth
-                            sx={{ minWidth: '120px' }}
                             placeholder="לחץ Enter לשמירה"
+                            sx={composeStyles(tableStyles.cellFormField, { minWidth: '120px' })}
                           />
                         ) : (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={tableStyles.contentBox}>
                             {canEditTechnicianAndStatus && onTechnicianChange && (
-                              <EditIcon sx={{ fontSize: 16, color: colors.border.orange }} />
+                              <EditIcon sx={tableStyles.cellIcon} />
                             )}
-                            <span style={{ color: colors.text.white }}>
+                            <span style={tableStyles.textContent}>
                               {fault.technician || ''}
                             </span>
                           </Box>
                         )}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{fault.type}</TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <TableCell sx={getCellStyle()}>{fault.type}</TableCell>
+                      <TableCell sx={getCellStyle()}>
                         {fault.isCritical ? 'משביתה' : 
                          fault.isPartiallyDisabling ? 'משביתה חלקית' : 
                          'לא משביתה'}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        {new Date(fault.reportedTime).toLocaleDateString('he-IL')}
+                      <TableCell sx={getCellStyle('date')}>
+                        {formatDate(fault.reportedTime, window.innerWidth)}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        {fault.closedTime ? new Date(fault.closedTime).toLocaleDateString('he-IL') : ''}
+                      <TableCell sx={getCellStyle('date')}>
+                        {fault.closedTime ? formatDate(fault.closedTime, window.innerWidth) : ''}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <TableCell sx={getCellStyle()}>
                         {calculateTreatmentTime(fault)}
                       </TableCell>
                       <TableCell 
                         onClick={() => canEditTechnicianAndStatus && onStatusChange && handleCellClick(`status-${fault.id}`)}
-                        sx={{ 
-                          cursor: canEditTechnicianAndStatus && onStatusChange ? 'pointer' : 'default',
-                          '&:hover': canEditTechnicianAndStatus && onStatusChange ? {
-                            backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                          } : {},
-                          whiteSpace: 'nowrap'
-                        }}
+                        sx={getCellStyle('default', canEditTechnicianAndStatus && onStatusChange)}
                       >
                         {editingCell === `status-${fault.id}` ? (
                           <FormControl fullWidth size="small">
@@ -377,20 +298,20 @@ const FaultList = ({
                             </Select>
                           </FormControl>
                         ) : (
-                          <span style={getStatusStyle()}>
+                          <span style={tableStyles.statusBadge}>
                             {fault.status}
                           </span>
                         )}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={getCellStyle('widest')}>
                         {renderDescription(fault)}
                       </TableCell>
                       {onDeleteFault && (
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        <TableCell sx={composeStyles(getCellStyle('narrow'), tableStyles.actionsCell)}>
                           <IconButton
                             onClick={() => handleDeleteClick(fault)}
-                            sx={{ color: colors.text.white }}
+                            sx={{ color: 'white' }}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -414,22 +335,13 @@ const FaultList = ({
           מחיקת תקלה
           <IconButton
             onClick={() => setDeleteDialog(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: colors.text.grey,
-              '&:hover': {
-                color: colors.text.white,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-              }
-            }}
+            sx={dialogIconStyles.closeButton}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={dialogStyles.dialogContent}>
-          <DialogContentText sx={{ color: colors.text.white }}>
+          <DialogContentText sx={{ color: 'white' }}>
             האם אתה בטוח שברצונך למחוק את התקלה?
           </DialogContentText>
         </DialogContent>

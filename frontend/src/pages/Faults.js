@@ -28,7 +28,7 @@ import NewFaultForm from '../components/NewFaultForm';
 import Sidebar from '../components/Sidebar';
 import FaultList from '../components/FaultList';
 import { colors } from '../styles/colors';
-import { dialogStyles } from '../styles/components';
+import { dialogStyles, pageContainerStyles, dialogIconStyles } from '../styles/components';
 import { PERMISSIONS } from '../constants/roles';
 
 const getInitialDateRange = () => {
@@ -364,21 +364,25 @@ const Faults = () => {
 
   if (!canViewFaults) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box sx={pageContainerStyles.noPermission}>
         <Typography>אין לך הרשאה לצפות בדף זה</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={pageContainerStyles.container}>
       <Sidebar
         activeSection="faults"
         userInfo={{ name: user.name }}
         onNewFault={canCreateFault ? () => setNewFaultDialog(true) : null}
       />
 
-      <Box sx={{ flexGrow: 1, p: 3 }}>
+      <Box sx={pageContainerStyles.content}>
+        <Typography variant="h4" sx={pageContainerStyles.title}>
+          תקלות
+        </Typography>
+        
         <FilterBar 
           filters={filters} 
           onFilterChange={handleFilterChange}
@@ -395,18 +399,7 @@ const Faults = () => {
 
         <Box position="relative">
           {loading && (
-            <Box
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              bgcolor="rgba(0, 0, 0, 0.3)"
-              zIndex={1}
-            >
+            <Box sx={pageContainerStyles.loadingOverlay}>
               <CircularProgress sx={{ color: colors.primary.orange }} />
             </Box>
           )}
@@ -428,26 +421,18 @@ const Faults = () => {
           onClose={() => setNewFaultDialog(false)}
           maxWidth="md"
           fullWidth
+          sx={dialogStyles.dialog}
         >
-          <DialogTitle>
+          <DialogTitle sx={dialogStyles.dialogTitle}>
             תקלה חדשה
             <IconButton
               onClick={() => setNewFaultDialog(false)}
-              sx={{
-                position: 'absolute',
-                right: 8,
-                top: 8,
-                color: colors.text.grey,
-                '&:hover': {
-                  color: colors.text.white,
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
+              sx={dialogIconStyles.closeButton}
             >
               <CloseIcon />
             </IconButton>
           </DialogTitle>
-          <DialogContent>
+          <DialogContent sx={dialogStyles.dialogContent}>
             <NewFaultForm onFaultDataChange={setNewFault} />
           </DialogContent>
           <DialogActions sx={dialogStyles.dialogActions}>

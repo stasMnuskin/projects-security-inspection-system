@@ -250,9 +250,51 @@ let theme = createTheme({
         root: {
           '@media (max-width:600px)': {
             '& .MuiTableCell-root': {
-              padding: '8px',
+              padding: '6px',
             },
           },
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          padding: '12px 8px',
+          '@media (max-width:1200px)': {
+            padding: '8px 6px',
+            fontSize: '0.875rem',
+          },
+          '@media (max-width:600px)': {
+            padding: '4px',
+            fontSize: '0.8125rem',
+          },
+        },
+        head: {
+          fontWeight: 'bold',
+          whiteSpace: 'normal',
+          wordBreak: 'keep-all',
+          overflowWrap: 'normal',
+          hyphens: 'none',
+          wordSpacing: 'normal',
+          minWidth: '70px',
+          position: 'relative',
+          '&.MuiTableCell-head': {
+            wordBreak: 'keep-all',
+            overflowWrap: 'normal'
+          },
+          '@media (max-width:1050px)': {
+            fontSize: '0.9rem'
+          },
+          '@media (max-width:600px)': {
+            fontSize: '0.8rem',
+            padding: '5px 3px',
+            minWidth: '50px'
+          },
+          '@media (max-width:425px)': {
+            fontSize: '0.7rem',
+            padding: '4px 2px',
+            minWidth: '40px'
+          }
         },
       },
     },
@@ -994,7 +1036,8 @@ export const datePickerStyles = {
     width: '100%',
     '& .MuiOutlinedInput-root': {
       ...selectStyles.control,
-      padding: '2px 4px',
+      padding: '2px 10px 2px 4px', 
+      position: 'relative',
       minHeight: '40px !important',
       height: '40px',
       '& input': {
@@ -1003,13 +1046,21 @@ export const datePickerStyles = {
         fontSize: '0.875rem',
         color: colors.text.white,
         width: '100%',
-        minWidth: '80px'
+        minWidth: '80px',
+        textAlign: 'center'
       },
       '& .MuiInputAdornment-root': {
-        marginLeft: '2px',
-        marginRight: '2px',
-        height: '100%',
-        maxHeight: 'none'
+        margin: 0,
+        position: 'absolute',
+        right: '8px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        height: 'auto',
+        zIndex: 1,
+        '& .MuiSvgIcon-root': {
+          fontSize: '20px',
+          color: colors.text.grey
+        }
       },
       '@media (max-width: 599px)': {
         display: 'none'
@@ -1032,6 +1083,336 @@ export const datePickerStyles = {
   }
 };
 
+export const statusMessageStyles = {
+  loadingContainer: {
+    display: 'flex', 
+    justifyContent: 'center', 
+    p: 3
+  },
+  noDataMessage: {
+    color: colors.text.white,
+    textAlign: 'center',
+    variant: 'h6'
+  },
+  errorMessage: {
+    color: 'error',
+    textAlign: 'center',
+    mt: 2
+  }
+};
+
+export const pageContainerStyles = {
+  container: {
+    display: 'flex', 
+    minHeight: '100vh',
+    maxWidth: '100vw',
+    overflow: 'hidden'
+  },
+  content: {
+    flexGrow: 1, 
+    py: { xs: 2, sm: 3 },
+    px: 0,
+    maxWidth: '100%',
+    overflow: 'hidden'
+  },
+  title: {
+    color: colors.text.white,
+    mb: { xs: 2, sm: 3 },
+    fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    bgcolor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1
+  },
+  noPermission: {
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh'
+  }
+};
+
+export const dialogIconStyles = {
+  closeButton: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    color: colors.text.grey,
+    '&:hover': {
+      color: colors.text.white,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)'
+    }
+  }
+};
+
+export const faultListStyles = {
+  container: {
+    width: '100%', 
+    overflow: 'hidden',
+    backgroundColor: colors.background.darkGrey,
+    border: `1px solid ${colors.border.grey}`,
+    borderRadius: '4px',
+    maxWidth: '100%'
+  },
+  dateCell: {
+    whiteSpace: 'normal',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontSize: '0.8rem',
+    minWidth: '60px',
+    wordBreak: 'keep-all',
+    hyphens: 'manual',
+    '@media (max-width: 600px)': {
+      minWidth: '50px',
+      fontSize: '0.75rem'
+    },
+    '@media (max-width: 425px)': {
+      minWidth: '42px',
+      fontSize: '0.65rem',
+      lineHeight: '1.2'
+    }
+  },
+  tableContainer: {
+    maxWidth: '100%',
+    overflowX: 'auto',
+    '&::-webkit-scrollbar': {
+      height: '6px'
+    },
+    '&::-webkit-scrollbar-track': {
+      background: colors.background.darkGrey
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: colors.border.grey,
+      borderRadius: '3px',
+      '&:hover': {
+        background: colors.border.orange
+      }
+    }
+  },
+  table: {
+    width: '100%',
+    tableLayout: 'fixed',
+    '@media (max-width: 600px)': {
+      tableLayout: 'fixed',
+      fontSize: '0.7rem'
+    },
+    '@media (max-width: 425px)': {
+      fontSize: '0.65rem'
+    }
+  },
+  tableCell: {
+    whiteSpace: 'normal',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: '200px',
+    wordBreak: 'normal',
+    wordWrap: 'normal',
+    overflowWrap: 'normal',
+    hyphens: 'none',
+    padding: '8px 6px',
+    minWidth: '70px',
+    position: 'relative',
+    '@media (max-width: 768px)': {
+      padding: '6px 4px',
+      fontSize: '0.75rem',
+      minWidth: '60px'
+    },
+    '@media (max-width: 600px)': {
+      minWidth: '50px'
+    },
+    '@media (max-width: 425px)': {
+      padding: '4px 2px',
+      fontSize: '0.65rem',
+      lineHeight: '1.2',
+      minWidth: '40px'
+    }
+  },
+  cellWithMinWidth: {
+    whiteSpace: 'normal',
+    minWidth: '70px',
+    wordBreak: 'break-word',
+    '@media (max-width: 600px)': {
+      minWidth: '50px',
+      fontSize: '0.75rem'
+    },
+    '@media (max-width: 425px)': {
+      minWidth: '40px',
+      fontSize: '0.65rem'
+    },
+    '@media (min-width: 1200px)': {
+      minWidth: '80px'
+    },
+    '@media (min-width: 1600px)': {
+      minWidth: '100px'
+    }
+  },
+  widerCell: {
+    whiteSpace: 'normal',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    minWidth: '90px',
+    wordBreak: 'break-word',
+    '@media (max-width: 600px)': {
+      minWidth: '60px',
+      fontSize: '0.75rem'
+    },
+    '@media (max-width: 425px)': {
+      minWidth: '45px',
+      fontSize: '0.65rem'
+    },
+    '@media (min-width: 1200px)': {
+      minWidth: '100px'
+    },
+    '@media (min-width: 1600px)': {
+      minWidth: '120px'
+    }
+  },
+  widestCell: {
+    whiteSpace: 'normal',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    minWidth: '110px',
+    wordBreak: 'break-word',
+    '@media (max-width: 600px)': {
+      minWidth: '70px',
+      fontSize: '0.75rem'
+    },
+    '@media (max-width: 425px)': {
+      minWidth: '50px',
+      fontSize: '0.65rem'
+    },
+    '@media (min-width: 1200px)': {
+      minWidth: '120px'
+    },
+    '@media (min-width: 1600px)': {
+      minWidth: '150px'
+    }
+  },
+  narrowCell: {
+    whiteSpace: 'normal',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    minWidth: '60px',
+    wordBreak: 'break-word',
+    '@media (max-width: 600px)': {
+      minWidth: '45px',
+      fontSize: '0.75rem'
+    },
+    '@media (max-width: 425px)': {
+      minWidth: '35px',
+      fontSize: '0.65rem'
+    },
+    '@media (min-width: 1200px)': {
+      minWidth: '70px'
+    },
+    '@media (min-width: 1600px)': {
+      minWidth: '80px'
+    }
+  },
+  editableCell: {
+    cursor: 'pointer',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)'
+    }
+  },
+  nonEditableCell: {
+    cursor: 'default',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  siteLink: {
+    color: colors.text.white,
+    textDecoration: 'underline',
+    cursor: 'pointer'
+  },
+  statusStyle: {
+    display: 'inline-block',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    fontSize: '0.875rem',
+    backgroundColor: colors.background.darkGrey,
+    border: `1px solid ${colors.border.orange}`,
+    color: colors.text.white
+  },
+  editField: {
+    multiline: true,
+    size: 'small',
+    autoFocus: true,
+    fullWidth: true,
+    minWidth: '150px'
+  },
+  technicianEditField: {
+    size: 'small',
+    autoFocus: true,
+    fullWidth: true,
+    minWidth: '120px'
+  },
+  editIcon: {
+    fontSize: 16,
+    color: colors.border.orange
+  },
+  descriptionText: {
+    color: colors.text.white
+  },
+  descriptionTextHelp: {
+    color: colors.text.white,
+    cursor: 'help'
+  },
+  descriptionBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  },
+  tooltipProps: {
+    sx: {
+      '& .MuiTooltip-tooltip': {
+        backgroundColor: colors.background.black,
+        border: `1px solid ${colors.border.grey}`,
+        borderRadius: '4px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        maxWidth: 400,
+        p: 1
+      },
+      '& .MuiTooltip-arrow': {
+        color: colors.background.black,
+        '&::before': {
+          border: `1px solid ${colors.border.grey}`,
+          backgroundColor: colors.background.black
+        }
+      }
+    }
+  },
+  tooltipTypography: {
+    whiteSpace: 'pre-wrap'
+  },
+  statusSelect: {
+    minWidth: '100px'
+  },
+  dialogContentText: {
+    color: colors.text.white
+  },
+  actionsCell: {
+    whiteSpace: 'nowrap'
+  },
+  deleteIcon: {
+    color: colors.text.white
+  }
+};
+
 export const filterStyles = {
   filterBar: {
     display: 'flex',
@@ -1044,8 +1425,17 @@ export const filterStyles = {
     width: '100%',
     boxSizing: 'border-box',
     alignItems: 'center',
-    '@media (min-width: 1020px)': {
-      flexWrap: 'nowrap'
+    '@media (min-width: 1600px)': {
+      flexWrap: 'nowrap',
+      gap: '8px'
+    },
+    '@media (min-width: 1020px) and (max-width: 1599px)': {
+      flexWrap: 'nowrap',
+      gap: '4px',
+      '& > div': {
+        flex: '0 1 auto',
+        minWidth: 'auto'
+      }
     },
     '@media (min-width: 600px) and (max-width: 1020px)': {
       display: 'grid',
@@ -1155,25 +1545,7 @@ export const filterStyles = {
         width: '100%'
       }
     },
-    '& .MuiInputAdornment-root': {
-      position: 'absolute',
-      right: '8px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      margin: 0,
-      pointerEvents: 'auto',
-      cursor: 'pointer',
-      zIndex: 1,
-      '& .MuiSvgIcon-root': {
-        fontSize: '20px',
-        transition: 'color 0.2s ease',
-        '&:hover': {
-          color: colors.text.white
-        }
-      }
-    },
     '& .MuiOutlinedInput-root': {
-      paddingRight: '32px',
       '& input': {
         textAlign: 'center',
         direction: 'rtl'
