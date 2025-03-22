@@ -148,6 +148,8 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
       <FormField label="יזם">
         <Autocomplete
           loading={loading}
+          disablePortal={false}
+          openOnFocus={true}
           options={entrepreneurs}
           getOptionLabel={(option) => {
             if (!option) return '';
@@ -188,6 +190,8 @@ const NewFaultForm = ({ onFaultDataChange, onClose }) => {
       <FormField label="אתר">
         <Autocomplete
           loading={loading}
+          disablePortal={false}
+          openOnFocus={true}
           options={filteredSites}
           getOptionLabel={(option) => option?.name || ''}
           value={selectedSite}

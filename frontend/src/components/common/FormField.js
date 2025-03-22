@@ -7,13 +7,17 @@ const FormField = ({ label, required, children }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClick = (e) => {
-    // Only handle click on mobile
+    
     if (window.innerWidth < 600) {
-      setIsOpen(!isOpen);
+      // Skip if the FormField contains a DatePicker
+      if (e.currentTarget.querySelector('.MuiDatePicker-root, [role="combobox"][aria-haspopup="dialog"]')) {
+        return;
+      }
       
-      // Find the Autocomplete and toggle its display
+      // Handle only Autocomplete components
       const autocomplete = e.currentTarget.querySelector('.MuiAutocomplete-root');
       if (autocomplete) {
+        setIsOpen(!isOpen);
         autocomplete.style.display = isOpen ? 'none' : 'block';
         
         // If opening, focus the input

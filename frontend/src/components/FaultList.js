@@ -52,6 +52,7 @@ const FaultList = ({
   onStatusChange, 
   onTechnicianChange,
   onDescriptionChange,
+  onTechnicianNotesChange,
   onDeleteFault
 }) => {
   const { user } = useAuth();
@@ -60,6 +61,7 @@ const FaultList = ({
   const [editingCell, setEditingCell] = useState(null);
   const [editingDescription, setEditingDescription] = useState('');
   const [editingTechnician, setEditingTechnician] = useState('');
+  const [editingTechnicianNotes, setEditingTechnicianNotes] = useState('');
 
   const canEditTechnicianAndStatus = user.hasPermission(PERMISSIONS.UPDATE_FAULT_STATUS);
   const canEditDescription = ['admin', 'security_officer', 'integrator', 'maintenance'].includes(user.role);
@@ -98,21 +100,31 @@ const FaultList = ({
     }
   };
 
-  const handleDescriptionChange = async (fault) => {
-    try {
-      if (onDescriptionChange) {
-        await onDescriptionChange(fault.id, editingDescription);
-      }
-    } catch (error) {
-      console.error('Error updating fault description:', error);
+  const handleTechnicianNotesSave = async (faultId) => {
+    if (onTechnicianNotesChange) {
+      await onTechnicianNotesChange(faultId, editingTechnicianNotes);
     }
     setEditingCell(null);
   };
 
-  const handleDescriptionKeyDown = (event, fault) => {
+  const handleTechnicianNotesKeyDown = (event, faultId) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleTechnicianNotesSave(faultId);
+    }
+  };
+
+  const handleDescriptionSave = async (faultId) => {
+    if (onDescriptionChange) {
+      await onDescriptionChange(faultId, editingDescription);
+    }
+    setEditingCell(null);
+  };
+
+  const handleDescriptionKeyDown = (event, faultId) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      handleDescriptionChange(fault);
+      handleDescriptionSave(faultId);
     }
   };
 
@@ -122,6 +134,8 @@ const FaultList = ({
       setEditingDescription(currentValue);
     } else if (cellId.startsWith('technician-')) {
       setEditingTechnician(currentValue || '');
+    } else if (cellId.startsWith('technicianNotes-')) {
+      setEditingTechnicianNotes(currentValue || '');
     }
   };
 
@@ -154,8 +168,8 @@ const FaultList = ({
           size="small"
           value={editingDescription}
           onChange={(e) => setEditingDescription(e.target.value)}
-          onBlur={() => handleDescriptionChange(fault)}
-          onKeyDown={(e) => handleDescriptionKeyDown(e, fault)}
+          onBlur={() => handleDescriptionSave(fault.id)}
+          onKeyDown={(e) => handleDescriptionKeyDown(e, fault.id)}
           autoFocus
           fullWidth
           sx={tableStyles.cellFormField}
@@ -210,14 +224,15 @@ const FaultList = ({
             <TableHead>
               <TableRow>
                 <TableCell sx={getHeadCellStyle('wider')}>מתקן</TableCell>
-                <TableCell sx={getHeadCellStyle('wider')}>שם הטכנאי</TableCell>
-                <TableCell sx={getHeadCellStyle()}>רכיב</TableCell>
                 <TableCell sx={getHeadCellStyle()}>סוג התקלה</TableCell>
+                <TableCell sx={getHeadCellStyle()}>רכיב</TableCell>
+                <TableCell sx={getHeadCellStyle('widest')}>תיאור התקלה</TableCell>
+                <TableCell sx={getHeadCellStyle('wider')}>שם הטכנאי</TableCell>
+                <TableCell sx={getHeadCellStyle()}>סטטוס</TableCell>
+                <TableCell sx={getHeadCellStyle('widest')}>הערות טכנאי</TableCell>
                 <TableCell sx={getHeadCellStyle('date')}>תאריך פתיחה</TableCell>
                 <TableCell sx={getHeadCellStyle('date')}>תאריך סגירה</TableCell>
                 <TableCell sx={getHeadCellStyle()}>זמן טיפול</TableCell>
-                <TableCell sx={getHeadCellStyle()}>סטטוס</TableCell>
-                <TableCell sx={getHeadCellStyle('widest')}>הערות</TableCell>
                 {onDeleteFault && <TableCell sx={getHeadCellStyle('narrow')}>פעולות</TableCell>}
               </TableRow>
             </TableHead>
@@ -232,6 +247,7 @@ const FaultList = ({
                 faults.map((fault) => {
                   return (
                     <TableRow key={fault.id}>
+                      {/* 1. מתקן (Site/Facility) */}
                       <TableCell sx={getCellStyle('wider')}>
                         <span
                           onClick={(e) => handleSiteClick(e, fault.site)}
@@ -240,6 +256,23 @@ const FaultList = ({
                           {fault.site?.name || ''}
                         </span>
                       </TableCell>
+                      
+                      {/* 2. סוג התקלה (Fault Type) */}
+                      <TableCell sx={getCellStyle()}>
+                        {fault.isCritical ? 'משביתה' : 
+                         fault.isPartiallyDisabling ? 'משביתה חלקית' : 
+                         'לא משביתה'}
+                      </TableCell>
+                      
+                      {/* 3. רכיב (Component) */}
+                      <TableCell sx={getCellStyle()}>{fault.type}</TableCell>
+                      
+                      {/* 4. תיאור התקלה (Fault Description) */}
+                      <TableCell sx={getCellStyle('widest')}>
+                        {renderDescription(fault)}
+                      </TableCell>
+                      
+                      {/* 5. שם הטכנאי (Technician Name) */}
                       <TableCell 
                         onClick={() => canEditTechnicianAndStatus && onTechnicianChange && handleCellClick(`technician-${fault.id}`, fault.technician)}
                         sx={getCellStyle('wider', canEditTechnicianAndStatus && onTechnicianChange)}
@@ -264,21 +297,8 @@ const FaultList = ({
                           </Box>
                         )}
                       </TableCell>
-                      <TableCell sx={getCellStyle()}>{fault.type}</TableCell>
-                      <TableCell sx={getCellStyle()}>
-                        {fault.isCritical ? 'משביתה' : 
-                         fault.isPartiallyDisabling ? 'משביתה חלקית' : 
-                         'לא משביתה'}
-                      </TableCell>
-                      <TableCell sx={getCellStyle('date')}>
-                        {formatDate(fault.reportedTime, window.innerWidth)}
-                      </TableCell>
-                      <TableCell sx={getCellStyle('date')}>
-                        {fault.closedTime ? formatDate(fault.closedTime, window.innerWidth) : ''}
-                      </TableCell>
-                      <TableCell sx={getCellStyle()}>
-                        {calculateTreatmentTime(fault)}
-                      </TableCell>
+                      
+                      {/* 6. סטטוס (Status) */}
                       <TableCell 
                         onClick={() => canEditTechnicianAndStatus && onStatusChange && handleCellClick(`status-${fault.id}`)}
                         sx={getCellStyle('default', canEditTechnicianAndStatus && onStatusChange)}
@@ -303,10 +323,49 @@ const FaultList = ({
                           </span>
                         )}
                       </TableCell>
-
-                      <TableCell sx={getCellStyle('widest')}>
-                        {renderDescription(fault)}
+                      
+                      {/* 7. הערות טכנאי (Technician Notes) */}
+                      <TableCell 
+                        onClick={() => canEditTechnicianAndStatus && onTechnicianNotesChange && handleCellClick(`technicianNotes-${fault.id}`, fault.technicianNotes)}
+                        sx={getCellStyle('wider', canEditTechnicianAndStatus && onTechnicianNotesChange)}
+                      >
+                        {editingCell === `technicianNotes-${fault.id}` ? (
+                          <TextField
+                            value={editingTechnicianNotes}
+                            onChange={(e) => setEditingTechnicianNotes(e.target.value)}
+                            onBlur={() => handleTechnicianNotesSave(fault.id)}
+                            onKeyDown={(e) => handleTechnicianNotesKeyDown(e, fault.id)}
+                            placeholder="לחץ Enter לשמירה"
+                            sx={composeStyles(tableStyles.cellFormField, { minWidth: '120px' })}
+                          />
+                        ) : (
+                          <Box sx={tableStyles.contentBox}>
+                            {canEditTechnicianAndStatus && onTechnicianNotesChange && (
+                              <EditIcon sx={tableStyles.cellIcon} />
+                            )}
+                            <span style={tableStyles.textContent}>
+                              {fault.technicianNotes || ''}
+                            </span>
+                          </Box>
+                        )}
                       </TableCell>
+                      
+                      {/* 8. תאריך פתיחה (Opening Date) */}
+                      <TableCell sx={getCellStyle('date')}>
+                        {formatDate(fault.reportedTime, window.innerWidth)}
+                      </TableCell>
+                      
+                      {/* 9. תאריך סגירה (Closing Date) */}
+                      <TableCell sx={getCellStyle('date')}>
+                        {fault.closedTime ? formatDate(fault.closedTime, window.innerWidth) : ''}
+                      </TableCell>
+                      
+                      {/* 10. זמן טיפול (Treatment Time) */}
+                      <TableCell sx={getCellStyle()}>
+                        {calculateTreatmentTime(fault)}
+                      </TableCell>
+                      
+                      {/* 11. פעולות (Actions) - conditional */}
                       {onDeleteFault && (
                         <TableCell sx={composeStyles(getCellStyle('narrow'), tableStyles.actionsCell)}>
                           <IconButton
@@ -380,6 +439,7 @@ FaultList.propTypes = {
     type: PropTypes.string.isRequired,
     description: PropTypes.string,
     technician: PropTypes.string,
+    technicianNotes: PropTypes.string,
     isCritical: PropTypes.bool.isRequired, 
     severity: PropTypes.oneOf(['non_disabling', 'partially_disabling', 'fully_disabling']),
     status: PropTypes.string.isRequired,
@@ -391,6 +451,7 @@ FaultList.propTypes = {
   onStatusChange: PropTypes.func,
   onTechnicianChange: PropTypes.func,
   onDescriptionChange: PropTypes.func,
+  onTechnicianNotesChange: PropTypes.func,
   onDeleteFault: PropTypes.func
 };
 

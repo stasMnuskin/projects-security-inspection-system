@@ -345,6 +345,7 @@ exports.getAllFaults = async (req, res, next) => {
       type: fault.type,
       description: fault.description,
       technician: fault.technician,
+      technicianNotes: fault.technicianNotes,
       isCritical: fault.isCritical,
       isPartiallyDisabling: fault.isPartiallyDisabling || false,
       reportedTime: fault.reportedTime,
@@ -559,7 +560,7 @@ exports.updateFaultStatus = async (req, res, next) => {
 exports.updateFaultDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { technician, maintenanceOrganizationId, integratorOrganizationId, description } = req.body;
+  const { technician, maintenanceOrganizationId, integratorOrganizationId, description, technicianNotes } = req.body;
 
     const fault = await db.Fault.findByPk(id, {
       include: [
@@ -595,6 +596,10 @@ exports.updateFaultDetails = async (req, res, next) => {
 
     if (technician !== undefined) {
       fault.technician = technician;
+    }
+
+    if (technicianNotes !== undefined) {
+      fault.technicianNotes = technicianNotes;
     }
 
     if (description !== undefined) {
@@ -667,6 +672,7 @@ exports.updateFaultDetails = async (req, res, next) => {
       type: updatedFault.type,
       description: updatedFault.description,
       technician: updatedFault.technician,
+      technicianNotes: updatedFault.technicianNotes,
       isCritical: updatedFault.isCritical,
       isPartiallyDisabling: updatedFault.isPartiallyDisabling || false,
       reportedTime: updatedFault.reportedTime,

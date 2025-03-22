@@ -16,10 +16,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';
-// import logo from '../assets/logo-black.svg'
-import logo from '../assets/logo.svg'
-
-
+import logo from '../assets/logo.svg';
 
 const Sidebar = ({ 
   activeSection, 
@@ -294,7 +291,7 @@ const Sidebar = ({
           src={logo} 
           alt="Logo"
           sx={{ 
-            height: '140px',
+            height: { xs: '100px', sm: '120px', md: '140px' },
             filter: 'invert(1)'
           }} 
         />

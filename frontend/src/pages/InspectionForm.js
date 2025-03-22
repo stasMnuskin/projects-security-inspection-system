@@ -455,6 +455,8 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
               {/* Entrepreneur Selection */}
               <FormField label="יזם" error={validationErrors.entrepreneur}>
                 <Autocomplete
+                  disablePortal={false}
+                  openOnFocus={true}
                   options={entrepreneurs}
                   getOptionLabel={(option) => {
                     if (!option) return '';
@@ -484,6 +486,8 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
               {/* Site Selection */}
               <FormField label="אתר" error={validationErrors.site}>
                 <Autocomplete
+                  disablePortal={false}
+                  openOnFocus={true}
                   options={selectedEntrepreneur ? sites.filter(site => site.entrepreneur?.id === selectedEntrepreneur.id) : sites}
                   getOptionLabel={(option) => option?.name || ''}
                   value={selectedSite}
@@ -511,6 +515,8 @@ setError(error instanceof AppError ? error.message : `Failed to submit ${isDrill
               {!isDrill && (
                 <FormField label="סוג ביקורת" required error={validationErrors.type}>
                   <Autocomplete
+                    disablePortal={false}
+                    openOnFocus={true}
                     options={inspectionTypes}
                     getOptionLabel={(option) => option?.name || ''}
                     value={selectedType}

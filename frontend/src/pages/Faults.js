@@ -346,6 +346,24 @@ const Faults = () => {
     }
   };
 
+  const handleTechnicianNotesChange = async (faultId, technicianNotes) => {
+    if (!canEditTechnicianAndStatus) {
+      showNotification('אין לך הרשאה לעדכן הערות טכנאי', 'error');
+      return;
+    }
+
+    try {
+      await updateFaultDetails(faultId, { technicianNotes });
+      handleFaultUpdated({
+        id: faultId,
+        technicianNotes
+      });
+    } catch (error) {
+      showNotification('שגיאה בעדכון הערות הטכנאי', 'error');
+      console.error('Error updating technician notes:', error);
+    }
+  };
+
   const handleDeleteFault = async (faultId) => {
     if (!isAdmin) {
       showNotification('אין לך הרשאה למחוק תקלה', 'error');
@@ -378,7 +396,11 @@ const Faults = () => {
         onNewFault={canCreateFault ? () => setNewFaultDialog(true) : null}
       />
 
-      <Box sx={pageContainerStyles.content}>
+      <Box sx={{
+        ...pageContainerStyles.content,
+        ml: { xs: 0, md: 0 },
+        pt: { xs: '48px', md: 2 }
+      }}>
         <Typography variant="h4" sx={pageContainerStyles.title}>
           תקלות
         </Typography>
@@ -411,6 +433,7 @@ const Faults = () => {
               onStatusChange={canEditTechnicianAndStatus ? handleStatusChange : null}
               onTechnicianChange={canEditTechnicianAndStatus ? handleTechnicianChange : null}
               onDescriptionChange={canEditDescription ? handleDescriptionChange : null}
+              onTechnicianNotesChange={canEditTechnicianAndStatus ? handleTechnicianNotesChange : null}
               onDeleteFault={isAdmin ? handleDeleteFault : null}
             />
           </Box>

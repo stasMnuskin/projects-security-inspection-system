@@ -13,7 +13,7 @@ const baseMixins = {
       padding: '6px 4px',
       fontSize: '0.85rem',
     },
-    '@media (max-width:600px)': {
+    '@media (maxWidth: 600px)': {
       padding: '4px 2px',
       fontSize: '0.8125rem',
     },
@@ -36,25 +36,25 @@ const baseMixins = {
     narrow: {
       minWidth: '55px',
       '@media (max-width: 1050px)': { minWidth: '50px' },
-      '@media (max-width: 600px)': { minWidth: '45px' },
+      '@media (maxWidth: 600px)': { minWidth: '45px' },
       '@media (max-width: 425px)': { minWidth: '35px' },
     },
     default: {
       minWidth: '65px',
       '@media (max-width: 1050px)': { minWidth: '60px' },
-      '@media (max-width: 600px)': { minWidth: '50px' },
+      '@media (maxWidth: 600px)': { minWidth: '50px' },
       '@media (max-width: 425px)': { minWidth: '40px' },
     },
     wider: {
       minWidth: '85px',
       '@media (max-width: 1050px)': { minWidth: '75px' },
-      '@media (max-width: 600px)': { minWidth: '60px' },
+      '@media (maxWidth: 600px)': { minWidth: '60px' },
       '@media (max-width: 425px)': { minWidth: '45px' },
     },
     widest: {
       minWidth: '100px',
       '@media (max-width: 1050px)': { minWidth: '90px' },
-      '@media (max-width: 600px)': { minWidth: '70px' },
+      '@media (maxWidth: 600px)': { minWidth: '70px' },
       '@media (max-width: 425px)': { minWidth: '50px' },
     },
   },
@@ -67,7 +67,7 @@ const baseMixins = {
       minWidth: '55px',
       fontSize: '0.75rem',
     },
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '50px',
       fontSize: '0.75rem',
     },
@@ -132,7 +132,7 @@ export const tableStyles = {
       // Set fixed minWidth below 1050px to ensure scrolling works
       minWidth: '880px',
     },
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       fontSize: '0.7rem',
       minWidth: '780px',
     },
@@ -160,7 +160,7 @@ export const tableStyles = {
       fontSize: '0.85rem',
       padding: '6px 3px',
     },
-    '@media (max-width:600px)': {
+    '@media (maxWidth: 600px)': {
       fontSize: '0.8rem',
       padding: '5px 3px',
     },
@@ -248,7 +248,7 @@ export const tableStyles = {
     backgroundColor: colors.background.darkGrey,
     border: `1px solid ${colors.border.orange}`,
     color: colors.text.white,
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       padding: '3px 5px',
       fontSize: '0.8rem',
     },
@@ -261,7 +261,7 @@ export const tableStyles = {
     autoFocus: true,
     fullWidth: true,
     minWidth: '120px',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '100px',
     },
   },
@@ -269,7 +269,7 @@ export const tableStyles = {
   cellIcon: {
     fontSize: 16,
     color: colors.border.orange,
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       fontSize: 14,
     },
   },

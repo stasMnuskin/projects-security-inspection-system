@@ -5,9 +5,7 @@ const dashboardStyles = {
   mainContainer: {
     flexGrow: 1, 
     p: 3,
-    overflowX: 'hidden',
-    width: '100%',
-    maxWidth: '100%'
+    overflowX: 'hidden'
   },
   pageTitle: {
     color: colors.text.white,

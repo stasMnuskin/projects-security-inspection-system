@@ -24,6 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { getDrillsBySite, getInspections, deleteInspection } from '../services/api';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
+// import Sidebar from '../components/Sidebar';
 import { colors } from '../styles/colors';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSIONS } from '../constants/roles';

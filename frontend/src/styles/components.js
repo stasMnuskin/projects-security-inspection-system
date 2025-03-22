@@ -601,10 +601,8 @@ export const pageStyles = {
 
 export const sidebarStyles = {
   sidebar: {
-    width: '100%',
-    '@media (min-width:960px)': {
-      width: '240px',
-    },
+    width: '25%',
+    minWidth: '200px',
     backgroundColor: colors.background.darkGrey,
     display: 'flex',
     flexDirection: 'column',
@@ -613,58 +611,70 @@ export const sidebarStyles = {
     '@media (min-width:600px)': {
       margin: '1rem',
     },
-    height: 'fit-content'
+    height: 'fit-content',
+    '@media (max-width:600px)': {
+      minWidth: '160px',
+    },
+    '@media (max-width:400px)': {
+      minWidth: '120px',
+    }
   },
   headerContainer: {
-    padding: '0.5rem',
+    padding: '0.25rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottom: `1px solid ${colors.border.grey}`
+    borderBottom: `1px solid ${colors.border.grey}`,
+    flexShrink: 0
   },
   userInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.5rem',
+    gap: '0.25rem',
     '@media (min-width:600px)': {
-      gap: '1rem',
+      gap: '0.5rem',
     },
-    padding: '1rem',
+    padding: '0.5rem',
     borderBottom: `1px solid ${colors.border.grey}`,
-    marginBottom: '1rem'
+    marginBottom: '0.5rem',
+    flexShrink: 0
   },
   userName: {
     color: colors.text.white,
-    fontSize: '0.875rem',
+    fontSize: '0.8rem',
     '@media (min-width:600px)': {
-      fontSize: '1rem',
+      fontSize: '0.9rem',
     },
     fontWeight: 500
   },
   userDate: {
     color: colors.text.lightGrey,
-    fontSize: '0.75rem',
+    fontSize: '0.7rem',
     '@media (min-width:600px)': {
-      fontSize: '0.875rem',
+      fontSize: '0.8rem',
     },
   },
   menuContainer: {
-    padding: '0.5rem',
+    padding: '0.25rem',
     '@media (min-width:600px)': {
-      padding: '1rem',
+      padding: '0.5rem',
     },
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.5rem'
+    gap: '0.25rem',
+    flexGrow: 1,
+    flexShrink: 1,
+    justifyContent: 'flex-start'
   },
   sidebarItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: 2,
-    padding: '0.75rem 1rem',
+    gap: 1,
+    padding: '0.4rem 0.5rem',
     cursor: 'pointer',
     borderRadius: '4px',
     transition: 'all 0.2s ease',
+    minHeight: '0',
     '&:hover': {
       backgroundColor: colors.background.hover
     },
@@ -1001,7 +1011,6 @@ export const formFieldStyles = {
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
         zIndex: 1000,
         marginTop: '4px',
-        display: 'none',
         '& .MuiOutlinedInput-root': {
           backgroundColor: colors.background.darkGrey,
           borderRadius: '4px'
@@ -1057,13 +1066,24 @@ export const datePickerStyles = {
         transform: 'translateY(-50%)',
         height: 'auto',
         zIndex: 1,
+        pointerEvents: 'auto',
+        cursor: 'pointer',
         '& .MuiSvgIcon-root': {
           fontSize: '20px',
           color: colors.text.grey
         }
       },
-      '@media (max-width: 599px)': {
-        display: 'none'
+      '@media (maxWidth: 599px)': {
+        opacity: 0,
+        position: 'absolute',
+        visibility: 'hidden',
+      }
+    },
+    '& .MuiPickersPopper-root': {
+      zIndex: 9999,
+      '& .MuiPaper-root': {
+        width: 'auto',
+        minWidth: '280px'
       }
     },
     '@media (max-width: 599px)': {
@@ -1106,7 +1126,7 @@ export const pageContainerStyles = {
     display: 'flex', 
     minHeight: '100vh',
     maxWidth: '100vw',
-    overflow: 'hidden'
+    overflow: 'visible'
   },
   content: {
     flexGrow: 1, 
@@ -1170,7 +1190,7 @@ export const faultListStyles = {
     minWidth: '60px',
     wordBreak: 'keep-all',
     hyphens: 'manual',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '50px',
       fontSize: '0.75rem'
     },
@@ -1200,7 +1220,7 @@ export const faultListStyles = {
   table: {
     width: '100%',
     tableLayout: 'fixed',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       tableLayout: 'fixed',
       fontSize: '0.7rem'
     },
@@ -1225,7 +1245,7 @@ export const faultListStyles = {
       fontSize: '0.75rem',
       minWidth: '60px'
     },
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '50px'
     },
     '@media (max-width: 425px)': {
@@ -1239,7 +1259,7 @@ export const faultListStyles = {
     whiteSpace: 'normal',
     minWidth: '70px',
     wordBreak: 'break-word',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '50px',
       fontSize: '0.75rem'
     },
@@ -1260,7 +1280,7 @@ export const faultListStyles = {
     textOverflow: 'ellipsis',
     minWidth: '90px',
     wordBreak: 'break-word',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '60px',
       fontSize: '0.75rem'
     },
@@ -1281,7 +1301,7 @@ export const faultListStyles = {
     textOverflow: 'ellipsis',
     minWidth: '110px',
     wordBreak: 'break-word',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '70px',
       fontSize: '0.75rem'
     },
@@ -1302,7 +1322,7 @@ export const faultListStyles = {
     textOverflow: 'ellipsis',
     minWidth: '60px',
     wordBreak: 'break-word',
-    '@media (max-width: 600px)': {
+    '@media (maxWidth: 600px)': {
       minWidth: '45px',
       fontSize: '0.75rem'
     },
@@ -1445,6 +1465,11 @@ export const filterStyles = {
     '@media (max-width: 599px)': {
       flexWrap: 'wrap'
     },
+    '@media (min-width: 400px) and (max-width: 599px)': {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: '8px'
+    },
     '& > div': {
       flex: 1,
       '& .MuiOutlinedInput-root': {
@@ -1459,16 +1484,17 @@ export const filterStyles = {
       },
       '@media (max-width: 599px)': {
         '& .MuiAutocomplete-root': {
-          display: 'none'
+          display: 'initial',
         },
         '& .MuiFormLabel-root': {
           width: '100%',
-          padding: '8px 12px',
+          padding: '4px 6px',
           borderRadius: '4px',
           backgroundColor: colors.background.darkGrey,
           border: `1px solid ${colors.border.grey}`,
           cursor: 'pointer',
           textAlign: 'center',
+          marginBottom: '4px',
           '&:hover': {
             borderColor: colors.border.orange
           }
@@ -1482,17 +1508,30 @@ export const filterStyles = {
       flex: 2,
       '@media (min-width: 600px) and (max-width: 1020px)': {
         gridColumn: 'span 2'
+      },
+      '@media (min-width: 400px) and (max-width: 599px)': {
+        gridColumn: 'span 2'
       }
     }
   },
-  filterIcon: {
-    color: colors.text.white,
-    fontSize: '12px',
+  // Mobile-specific header styles (for when we use them)
+  mobileFilterHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    padding: '12px 16px',
+    cursor: 'pointer',
+    borderBottom: `1px solid ${colors.border.grey}`,
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    },
+  },
+  mobileFilterTitle: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: '100%'
+    gap: '8px',
+    color: colors.text.white,
   },
   entrepreneurFilter: {
     width: '100%',

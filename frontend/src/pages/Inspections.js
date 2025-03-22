@@ -22,6 +22,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterBar from '../components/FilterBar';
 import Sidebar from '../components/Sidebar';
+// import Sidebar from '../components/Sidebar';
 import { getInspections, getEnabledFields, deleteInspection } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { subMonths } from 'date-fns';

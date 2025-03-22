@@ -67,9 +67,9 @@ router.put('/:id/details', [
   auth,
   roleAuth(PERMISSIONS.UPDATE_FAULT_DETAILS),
   check('technician')
-    .optional()
-    .notEmpty()
-    .withMessage('שם טכנאי לא יכול להיות ריק'),
+    .optional(),
+  check('technicianNotes')
+    .optional(),
   check('maintenanceOrganizationId')
     .optional()
     .custom(validateOrganizationId)

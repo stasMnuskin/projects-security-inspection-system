@@ -78,6 +78,13 @@ module.exports = (sequelize, DataTypes) => {
         this.setDataValue('technician', value ? value.trim() : null);
       }
     },
+    technicianNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      set(value) {
+        this.setDataValue('technicianNotes', value ? value.trim() : null);
+      }
+    },
     isCritical: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

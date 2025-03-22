@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import DateRangeSelector from './DateRangeSelector';
 import FormField from './common/FormField';
 import { 
-  getSites, 
+  getSites,
   getSecurityOfficers, 
   getOrganizations,
   getEntrepreneurs,
@@ -171,7 +171,8 @@ const FilterBar = ({
   }, []);
 
   const commonAutocompleteProps = {
-    disablePortal: true,
+    disablePortal: false,
+    openOnFocus: true,
     selectOnFocus: true,
     blurOnSelect: true,
     clearOnBlur: true,
