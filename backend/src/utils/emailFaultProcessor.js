@@ -3,19 +3,12 @@ const { sendEmail } = require('./emailService');
 const logger = require('./logger');
 const { Op } = require('sequelize');
 
-// Constants for fault reminder intervals (in hours)
-// These should match the constants in the Fault model
 const REMINDER_INTERVALS = {
-  CRITICAL: 24,               // Critical faults - daily
-  PARTIALLY_DISABLING: 72,    // Partially disabling faults - every 3 days
-  LOW_SEVERITY: 24 * 30       // Low severity faults - monthly (30 days)
+  CRITICAL: 24,               
+  PARTIALLY_DISABLING: 72,    
+  LOW_SEVERITY: 24 * 30       
 };
 
-/**
- * Get the appropriate reminder interval based on fault severity
- * @param {Object} fault - The fault object
- * @returns {number} - The reminder interval in hours
- */
 function getReminderHoursByFaultSeverity(fault) {
   if (fault.isCritical) {
     return REMINDER_INTERVALS.CRITICAL;
@@ -26,11 +19,6 @@ function getReminderHoursByFaultSeverity(fault) {
   }
 }
 
-/**
- * Get a friendly name for the fault severity level
- * @param {Object} fault - The fault object 
- * @returns {string} - Human-readable severity name in Hebrew
- */
 function getSeverityType(fault) {
   if (fault.isCritical) {
     return 'משביתה לחלוטין';
@@ -157,31 +145,21 @@ async function sendFaultNotification(fault, type) {
 }
 
 async function processNewFault(fault) {
-  await sendFaultNotification(fault, 'newFault');
+  // await sendFaultNotification(fault, 'newFault');
+  logger.info(`Email notification for new fault ${fault.id} is temporarily disabled`);
 }
 
 async function processFaultClosure(fault) {
-  await sendFaultNotification(fault, 'faultClosed');
+  // await sendFaultNotification(fault, 'faultClosed');
+  logger.info(`Email notification for fault closure ${fault.id} is temporarily disabled`);
 }
 
-/**
- * Creates a date threshold based on hours ago from now
- * @param {number} hoursAgo - Hours ago from current time
- * @returns {Date} - Date object representing the threshold
- */
 function createThresholdDate(hoursAgo) {
   const threshold = new Date();
   threshold.setHours(threshold.getHours() - hoursAgo);
   return threshold;
 }
 
-/**
- * Creates a query condition for a specific fault severity level
- * @param {boolean} isCritical - Is fault critical
- * @param {boolean|null} isPartiallyDisabling - Is fault partially disabling
- * @param {number} intervalHours - Reminder interval in hours
- * @returns {Object} - Query condition for Sequelize
- */
 function createFaultReminderCondition(isCritical, isPartiallyDisabling, intervalHours) {
   const threshold = createThresholdDate(intervalHours);
   
@@ -211,7 +189,6 @@ function createFaultReminderCondition(isCritical, isPartiallyDisabling, interval
 
 async function processOpenFaultReminders() {
   try {
-    // Find all open faults that need reminders based on their severity level
     const openFaults = await Fault.findAll({
       where: {
         status: 'פתוח',
@@ -229,13 +206,12 @@ async function processOpenFaultReminders() {
     });
 
     for (const fault of openFaults) {
-      await sendFaultNotification(fault, 'openFaultReminder');
+      // await sendFaultNotification(fault, 'openFaultReminder');
       
       // Update the lastEmailTime timestamp
       fault.lastEmailTime = new Date();
       await fault.save();
       
-      // Log with severity type for better monitoring
       const severityType = getSeverityType(fault);
       logger.info(`Sent reminder for ${severityType} fault #${fault.id} at site ${fault.siteId}`);
     }
