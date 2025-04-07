@@ -145,12 +145,12 @@ async function sendFaultNotification(fault, type) {
 }
 
 async function processNewFault(fault) {
-  // await sendFaultNotification(fault, 'newFault');
+  await sendFaultNotification(fault, 'newFault');
   logger.info(`Email notification for new fault ${fault.id} is temporarily disabled`);
 }
 
 async function processFaultClosure(fault) {
-  // await sendFaultNotification(fault, 'faultClosed');
+  await sendFaultNotification(fault, 'faultClosed');
   logger.info(`Email notification for fault closure ${fault.id} is temporarily disabled`);
 }
 
@@ -206,7 +206,7 @@ async function processOpenFaultReminders() {
     });
 
     for (const fault of openFaults) {
-      // await sendFaultNotification(fault, 'openFaultReminder');
+      await sendFaultNotification(fault, 'openFaultReminder');
       
       // Update the lastEmailTime timestamp
       fault.lastEmailTime = new Date();
